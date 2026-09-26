@@ -1,12 +1,14 @@
-```javascript
 /**
  * EMBEDX Forms Handling & Validation
  */
 
 document.addEventListener('DOMContentLoaded', () => {
+
   // 1. Join EMBEDX Application Form
   const joinForm = document.getElementById('joinEmbedxForm');
+
   if (joinForm) {
+
     // Restore draft if present
     loadFormDraft(joinForm, 'embedx_join_draft');
 
@@ -15,81 +17,174 @@ document.addEventListener('DOMContentLoaded', () => {
       saveFormDraft(joinForm, 'embedx_join_draft');
     });
 
-    joinForm.addEventListener('submit', (e) => {
+    joinForm.addEventListener('submit', async (e) => {
       e.preventDefault();
 
-      if (validateJoinForm(joinForm)) {
+      if (!validateJoinForm(joinForm)) {
+        return;
+      }
 
-        // Submit the validated form to Formspree
-        const submitButton = joinForm.querySelector('button[type="submit"]');
-        const originalButtonHTML = submitButton.innerHTML;
+      const submitButton = joinForm.querySelector('button[type="submit"]');
+      const originalButtonHTML = submitButton.innerHTML;
 
-        submitButton.disabled = true;
-        submitButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> SUBMITTING...';
+      submitButton.disabled = true;
+      submitButton.innerHTML =
+        '<i class="fa-solid fa-spinner fa-spin"></i> SUBMITTING...';
+
+      try {
 
         const formData = new FormData(joinForm);
 
-        fetch(joinForm.action, {
-          method: 'POST',
-          body: formData,
-          headers: {
-            'Accept': 'application/json'
-          }
-        })
-        .then(response => {
-          if (response.ok) {
+        // Convert FormData to a normal object
+        const data = {};
 
-            // Successful submission
-            showSubmissionSuccess(
-              'Application Submitted Successfully!',
-              'Thank you for applying to EMBEDX – Embedded Systems and Automation Club, Department of EEE. Our technical coordination committee will review your submission and contact you regarding the upcoming orientation and domain selection rounds.'
-            );
+        formData.forEach((value, key) => {
 
-            localStorage.removeItem('embedx_join_draft');
-            joinForm.reset();
+          if (key === 'interests') {
+
+            if (!data.interests) {
+              data.interests = [];
+            }
+
+            data.interests.push(value);
 
           } else {
-            return response.json().then(data => {
-              throw new Error(data.error || 'Form submission failed.');
-            });
-          }
-        })
-        .catch(error => {
-          console.error('Formspree submission error:', error);
 
-          showSubmissionSuccess(
-            'Submission Failed',
-            'We could not submit your application at this time. Please check your internet connection and try again.'
-          );
-        })
-        .finally(() => {
-          submitButton.disabled = false;
-          submitButton.innerHTML = originalButtonHTML;
+            data[key] = value;
+
+          }
+
         });
+
+        const response = await fetch('/api/join', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+          throw new Error(
+            result.message || 'Form submission failed.'
+          );
+        }
+
+        showSubmissionSuccess(
+          'Application Submitted Successfully!',
+          'Thank you for applying to EMBEDX – Embedded Systems and Automation Club, Department of EEE. Our technical coordination committee will review your submission and contact you regarding the upcoming orientation and domain selection rounds.'
+        );
+
+        localStorage.removeItem('embedx_join_draft');
+        joinForm.reset();
+
+      } catch (error) {
+
+        console.error('Join form submission error:', error);
+
+        showSubmissionSuccess(
+          'Submission Failed',
+          'We could not submit your application at this time. Please check your internet connection and try again.'
+        );
+
+      } finally {
+
+        submitButton.disabled = false;
+        submitButton.innerHTML = originalButtonHTML;
+
       }
     });
   }
 
+
   // 2. Contact Inquiry Form
   const contactForm = document.getElementById('contactForm');
+
   if (contactForm) {
-    contactForm.addEventListener('submit', (e) => {
+
+    contactForm.addEventListener('submit', async (e) => {
+
       e.preventDefault();
 
-      if (validateContactForm(contactForm)) {
+      if (!validateContactForm(contactForm)) {
+        return;
+      }
+
+      const submitButton =
+        contactForm.querySelector('button[type="submit"]');
+
+      const originalButtonHTML = submitButton
+        ? submitButton.innerHTML
+        : '';
+
+      if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.innerHTML =
+          '<i class="fa-solid fa-spinner fa-spin"></i> SENDING...';
+      }
+
+      try {
+
+        const data = {
+          name: document.getElementById('contactName').value.trim(),
+          email: document.getElementById('contactEmail').value.trim(),
+          subject: document.getElementById('contactSubject').value.trim(),
+          message: document.getElementById('contactMessage').value.trim()
+        };
+
+        const response = await fetch('/api/inquiry', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+          throw new Error(
+            result.message || 'Message submission failed.'
+          );
+        }
+
         showSubmissionSuccess(
           'Message Received!',
           'Thank you for contacting EMBEDX. Your message has been forwarded to the Department of Electrical and Electronics Engineering faculty and student coordinators.'
         );
 
         contactForm.reset();
+
+      } catch (error) {
+
+        console.error('Contact form submission error:', error);
+
+        showSubmissionSuccess(
+          'Submission Failed',
+          'We could not send your message at this time. Please check your internet connection and try again.'
+        );
+
+      } finally {
+
+        if (submitButton) {
+          submitButton.disabled = false;
+          submitButton.innerHTML = originalButtonHTML;
+        }
+
       }
     });
   }
 });
 
+
 function validateJoinForm(form) {
+
   let isValid = true;
+
   clearValidationErrors(form);
 
   const fullName = form.querySelector('#fullName');
@@ -97,62 +192,95 @@ function validateJoinForm(form) {
   const year = form.querySelector('#year');
   const email = form.querySelector('#email');
   const phone = form.querySelector('#phone');
-  const interests = form.querySelectorAll('input[name="interests"]:checked');
+  const interests = form.querySelectorAll(
+    'input[name="interests"]:checked'
+  );
   const motivation = form.querySelector('#motivation');
   const consent = form.querySelector('#consent');
 
   if (!fullName.value.trim()) {
-    setError(fullName, 'Please provide your full legal name.');
+    setError(
+      fullName,
+      'Please provide your full legal name.'
+    );
     isValid = false;
   }
 
   if (!department.value) {
-    setError(department, 'Please select your academic department.');
+    setError(
+      department,
+      'Please select your academic department.'
+    );
     isValid = false;
   }
 
   if (!year.value) {
-    setError(year, 'Please select your current year of study.');
+    setError(
+      year,
+      'Please select your current year of study.'
+    );
     isValid = false;
   }
 
   if (!validateEmail(email.value.trim())) {
-    setError(email, 'Please enter a valid academic/personal email address.');
+    setError(
+      email,
+      'Please enter a valid academic/personal email address.'
+    );
     isValid = false;
   }
 
   if (!validatePhone(phone.value.trim())) {
-    setError(phone, 'Please enter a valid 10-digit mobile contact number.');
+    setError(
+      phone,
+      'Please enter a valid 10-digit mobile contact number.'
+    );
     isValid = false;
   }
 
   if (interests.length === 0) {
+
     const group = form.querySelector('.interest-tag-group');
-    setError(group, 'Please choose at least one technical domain of interest.');
+
+    setError(
+      group,
+      'Please choose at least one technical domain of interest.'
+    );
+
     isValid = false;
   }
 
-  if (!motivation.value.trim() || motivation.value.trim().length < 20) {
+  if (
+    !motivation.value.trim() ||
+    motivation.value.trim().length < 20
+  ) {
+
     setError(
       motivation,
       'Please write a brief statement (at least 20 characters) explaining why you wish to join.'
     );
+
     isValid = false;
   }
 
   if (!consent.checked) {
+
     setError(
       consent,
       'You must agree to participate actively in club technical activities.'
     );
+
     isValid = false;
   }
 
   return isValid;
 }
 
+
 function validateContactForm(form) {
+
   let isValid = true;
+
   clearValidationErrors(form);
 
   const name = form.querySelector('#contactName');
@@ -160,40 +288,68 @@ function validateContactForm(form) {
   const message = form.querySelector('#contactMessage');
 
   if (!name.value.trim()) {
-    setError(name, 'Please enter your name.');
+
+    setError(
+      name,
+      'Please enter your name.'
+    );
+
     isValid = false;
   }
 
   if (!validateEmail(email.value.trim())) {
-    setError(email, 'Please enter a valid email address.');
+
+    setError(
+      email,
+      'Please enter a valid email address.'
+    );
+
     isValid = false;
   }
 
-  if (!message.value.trim() || message.value.trim().length < 10) {
-    setError(message, 'Please provide a message of at least 10 characters.');
+  if (
+    !message.value.trim() ||
+    message.value.trim().length < 10
+  ) {
+
+    setError(
+      message,
+      'Please provide a message of at least 10 characters.'
+    );
+
     isValid = false;
   }
 
   return isValid;
 }
 
+
 function setError(element, message) {
+
   element.classList.add('is-invalid');
 
-  const parent = element.closest('.form-group') || element.parentElement;
+  const parent =
+    element.closest('.form-group') ||
+    element.parentElement;
 
-  let feedback = parent.querySelector('.invalid-feedback');
+  let feedback =
+    parent.querySelector('.invalid-feedback');
 
   if (!feedback) {
+
     feedback = document.createElement('div');
+
     feedback.className = 'invalid-feedback';
+
     parent.appendChild(feedback);
   }
 
   feedback.textContent = message;
 }
 
+
 function clearValidationErrors(form) {
+
   form.querySelectorAll('.is-invalid').forEach(el => {
     el.classList.remove('is-invalid');
   });
@@ -203,23 +359,34 @@ function clearValidationErrors(form) {
   });
 }
 
+
 function validateEmail(email) {
+
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
+
 function validatePhone(phone) {
-  return /^[0-9+() -]{10,14}$/.test(phone.trim());
+
+  return /^[0-9+() -]{10,14}$/.test(
+    phone.trim()
+  );
 }
 
+
 function saveFormDraft(form, storageKey) {
+
   const data = {};
 
-  const inputs = form.querySelectorAll('input, select, textarea');
+  const inputs =
+    form.querySelectorAll('input, select, textarea');
 
   inputs.forEach(input => {
+
     if (input.type === 'checkbox') {
 
       if (input.name === 'interests') {
+
         if (!data.interests) {
           data.interests = [];
         }
@@ -229,20 +396,33 @@ function saveFormDraft(form, storageKey) {
         }
 
       } else {
-        data[input.id || input.name] = input.checked;
+
+        data[input.id || input.name] =
+          input.checked;
+
       }
 
     } else {
-      data[input.id || input.name] = input.value;
+
+      data[input.id || input.name] =
+        input.value;
+
     }
   });
 
-  localStorage.setItem(storageKey, JSON.stringify(data));
+  localStorage.setItem(
+    storageKey,
+    JSON.stringify(data)
+  );
 }
 
+
 function loadFormDraft(form, storageKey) {
+
   try {
-    const raw = localStorage.getItem(storageKey);
+
+    const raw =
+      localStorage.getItem(storageKey);
 
     if (!raw) {
       return;
@@ -251,43 +431,71 @@ function loadFormDraft(form, storageKey) {
     const data = JSON.parse(raw);
 
     Object.keys(data).forEach(key => {
+
       const input =
         form.querySelector(`#${key}`) ||
         form.querySelector(`[name="${key}"]`);
 
       if (input) {
+
         if (input.type === 'checkbox') {
+
           input.checked = data[key];
+
         } else {
+
           input.value = data[key];
+
         }
       }
     });
 
-    if (data.interests && Array.isArray(data.interests)) {
+    if (
+      data.interests &&
+      Array.isArray(data.interests)
+    ) {
+
       data.interests.forEach(val => {
-        const chk = form.querySelector(
-          `input[name="interests"][value="${val}"]`
-        );
+
+        const chk =
+          form.querySelector(
+            `input[name="interests"][value="${val}"]`
+          );
 
         if (chk) {
           chk.checked = true;
         }
+
       });
     }
 
   } catch (err) {
-    console.error('Could not load draft', err);
+
+    console.error(
+      'Could not load draft',
+      err
+    );
+
   }
 }
 
+
 function showSubmissionSuccess(title, message) {
-  let modal = document.getElementById('globalFeedbackModal');
+
+  let modal =
+    document.getElementById(
+      'globalFeedbackModal'
+    );
 
   if (!modal) {
+
     modal = document.createElement('div');
-    modal.id = 'globalFeedbackModal';
-    modal.className = 'modal-backdrop';
+
+    modal.id =
+      'globalFeedbackModal';
+
+    modal.className =
+      'modal-backdrop';
 
     modal.innerHTML = `
       <div class="modal-dialog text-center" style="max-width: 500px;">
@@ -346,9 +554,13 @@ function showSubmissionSuccess(title, message) {
 
   } else {
 
-    document.getElementById('feedbackModalTitle').textContent = title;
+    document.getElementById(
+      'feedbackModalTitle'
+    ).textContent = title;
 
-    document.getElementById('feedbackModalMessage').textContent = message;
+    document.getElementById(
+      'feedbackModalMessage'
+    ).textContent = message;
   }
 
   setTimeout(() => {
