@@ -1,0 +1,373 @@
+/* ==========================================================================
+   EMBEDX – Embedded Systems and Automation Club
+   Official Website Design System (Main Core CSS)
+   Department of Electrical and Electronics Engineering (EEE)
+   SRM TRP Engineering College, Tiruchirappalli
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Rajdhani:wght@500;600;700&family=Space+Grotesk:wght@500;600;700&family=Sora:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+:root {
+  /* Controlled Professional Brand Palette */
+  --primary-navy: #0B2A6F;
+  --secondary-blue: #123F8C;
+  --navy-dark: #071C4B;
+  --navy-deep: #04102C;
+  
+  --engineering-green: #146B3A;
+  --green-dark: #0E4E2A;
+  --green-light: #1E8C4E;
+  --green-glow: rgba(20, 107, 58, 0.25);
+  
+  --accent-blue: #2D72D9;
+  --accent-cyan: #00D2FF;
+  --blue-glow: rgba(45, 114, 217, 0.25);
+  
+  --accent-orange: #F47B20;
+  --orange-light: #FF8F3D;
+  --orange-glow: rgba(244, 123, 32, 0.3);
+  
+  --bg-primary: #FFFFFF;
+  --bg-secondary: #F5F8FC;
+  --bg-tertiary: #EDF3FA;
+  --bg-card: #FFFFFF;
+  --bg-card-hover: #FCFDFF;
+  --bg-dark-section: #081738;
+  --bg-dark-card: #0F234D;
+  
+  --border-light: rgba(11, 42, 111, 0.12);
+  --border-card: rgba(18, 63, 140, 0.1);
+  --border-hover: rgba(45, 114, 217, 0.35);
+  --border-glow: rgba(0, 210, 255, 0.4);
+  
+  --text-dark: #152238;
+  --text-primary: #1A2E50;
+  --text-muted: #617086;
+  --text-light: #8E9EBA;
+  --text-white: #FFFFFF;
+  
+  /* Elevation Shadows */
+  --shadow-sm: 0 2px 8px rgba(11, 42, 111, 0.06);
+  --shadow-md: 0 8px 24px rgba(11, 42, 111, 0.08);
+  --shadow-lg: 0 16px 40px rgba(11, 42, 111, 0.12);
+  --shadow-xl: 0 24px 60px rgba(11, 42, 111, 0.16);
+  --shadow-glow-blue: 0 0 25px rgba(45, 114, 217, 0.35);
+  --shadow-glow-orange: 0 0 25px rgba(244, 123, 32, 0.35);
+  --shadow-glow-green: 0 0 25px rgba(20, 107, 58, 0.35);
+
+  /* Typography Fonts */
+  --font-heading: 'Space Grotesk', 'Rajdhani', sans-serif;
+  --font-subheading: 'Sora', sans-serif;
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-code: 'JetBrains Mono', monospace;
+
+  /* Layout Spacing */
+  --container-max: 1320px;
+  --header-height: 84px;
+  --header-compact-height: 70px;
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-full: 9999px;
+  
+  /* Transitions */
+  --transition-fast: 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-smooth: 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-bounce: 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Base CSS Reset */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--font-body);
+  color: var(--text-dark);
+  background-color: var(--bg-secondary);
+  line-height: 1.65;
+  font-weight: 400;
+  overflow-x: hidden;
+  position: relative;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Subtle PCB / Grid Blueprint Texture */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    radial-gradient(rgba(11, 42, 111, 0.04) 1px, transparent 1px),
+    linear-gradient(to right, rgba(11, 42, 111, 0.02) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(11, 42, 111, 0.02) 1px, transparent 1px);
+  background-size: 40px 40px, 80px 80px, 80px 80px;
+  pointer-events: none;
+  z-index: -2;
+}
+
+/* Headings */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  color: var(--primary-navy);
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+}
+
+h1 { font-size: clamp(2.2rem, 4.5vw, 3.5rem); }
+h2 { font-size: clamp(1.8rem, 3vw, 2.5rem); }
+h3 { font-size: clamp(1.3rem, 2vw, 1.75rem); }
+h4 { font-size: clamp(1.1rem, 1.5vw, 1.35rem); }
+h5 { font-size: 1.1rem; }
+h6 { font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.08em; }
+
+p {
+  margin-bottom: 1rem;
+  color: var(--text-muted);
+}
+
+p:last-child {
+  margin-bottom: 0;
+}
+
+a {
+  color: var(--accent-blue);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+a:hover {
+  color: var(--secondary-blue);
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+ul, ol {
+  list-style-position: inside;
+}
+
+button, input, select, textarea {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+/* Layout Utilities */
+.container {
+  width: 100%;
+  max-width: var(--container-max);
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+.container-fluid {
+  width: 100%;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+.section {
+  padding-top: clamp(4rem, 8vw, 7rem);
+  padding-bottom: clamp(4rem, 8vw, 7rem);
+  position: relative;
+}
+
+.section-sm {
+  padding-top: clamp(2.5rem, 5vw, 4rem);
+  padding-bottom: clamp(2.5rem, 5vw, 4rem);
+}
+
+.section-bg-white {
+  background-color: var(--bg-primary);
+}
+
+.section-bg-alt {
+  background-color: var(--bg-secondary);
+}
+
+.section-bg-dark {
+  background-color: var(--bg-dark-section);
+  color: var(--text-white);
+}
+
+.section-bg-dark h1,
+.section-bg-dark h2,
+.section-bg-dark h3,
+.section-bg-dark h4 {
+  color: var(--text-white);
+}
+
+.section-bg-dark p {
+  color: var(--text-light);
+}
+
+/* Section Headers */
+.section-header {
+  text-align: center;
+  max-width: 780px;
+  margin: 0 auto clamp(2.5rem, 5vw, 4rem);
+}
+
+.section-header.text-left {
+  text-align: left;
+  margin-left: 0;
+}
+
+.section-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-heading);
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--engineering-green);
+  background: rgba(20, 107, 58, 0.08);
+  border: 1px solid rgba(20, 107, 58, 0.2);
+  padding: 0.35rem 1rem;
+  border-radius: var(--radius-full);
+  margin-bottom: 1rem;
+}
+
+.section-eyebrow.eyebrow-blue {
+  color: var(--accent-blue);
+  background: rgba(45, 114, 217, 0.08);
+  border-color: rgba(45, 114, 217, 0.2);
+}
+
+.section-eyebrow.eyebrow-orange {
+  color: var(--accent-orange);
+  background: rgba(244, 123, 32, 0.08);
+  border-color: rgba(244, 123, 32, 0.2);
+}
+
+.section-title {
+  margin-bottom: 1rem;
+  color: var(--primary-navy);
+}
+
+.section-subtitle {
+  font-size: clamp(1rem, 1.3vw, 1.15rem);
+  color: var(--text-muted);
+  line-height: 1.7;
+}
+
+/* Tagline Slogan Component */
+.slogan-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: 0.15em;
+  color: var(--primary-navy);
+  background: linear-gradient(135deg, rgba(11, 42, 111, 0.06), rgba(20, 107, 58, 0.06));
+  border: 1px solid rgba(11, 42, 111, 0.15);
+  padding: 0.5rem 1.25rem;
+  border-radius: var(--radius-full);
+}
+
+.slogan-pill .dot {
+  color: var(--accent-orange);
+}
+
+/* Circuit Track Decorator Line */
+.circuit-line-decor {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin: 1.25rem auto 0;
+  width: 120px;
+}
+
+.circuit-line-decor::before,
+.circuit-line-decor::after {
+  content: '';
+  height: 2px;
+  flex: 1;
+  background: linear-gradient(90deg, transparent, var(--accent-blue));
+}
+
+.circuit-line-decor::after {
+  background: linear-gradient(90deg, var(--accent-blue), transparent);
+}
+
+.circuit-line-decor .circuit-node {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--engineering-green);
+  border: 2px solid var(--accent-blue);
+  box-shadow: 0 0 8px var(--green-light);
+}
+
+/* Flex & Grid Helpers */
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2rem;
+}
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem;
+}
+
+.grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
+}
+
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.justify-center { justify-content: center; }
+.gap-1 { gap: 0.5rem; }
+.gap-2 { gap: 1rem; }
+.gap-3 { gap: 1.5rem; }
+.gap-4 { gap: 2rem; }
+
+/* Text Utilities */
+.text-center { text-align: center; }
+.text-left { text-align: left; }
+.text-right { text-align: right; }
+.text-navy { color: var(--primary-navy); }
+.text-green { color: var(--engineering-green); }
+.text-orange { color: var(--accent-orange); }
+.text-blue { color: var(--accent-blue); }
+.font-mono { font-family: var(--font-code); }
+.font-heading { font-family: var(--font-heading); }
+
+/* Focus States for Accessibility */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid var(--accent-blue);
+  outline-offset: 2px;
+}

@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Learning Hub & Resources | EMBEDX</title>
+  <meta name="description" content="Technical notes, cheatsheets, roadmaps, and guides for Embedded Systems, C/C++, ARM, RTOS, and PLC Automation." />
+  
+  <link rel="icon" type="image/png" href="assets/branding/embedx-logo-emblem.png" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/components.css" />
+  <link rel="stylesheet" href="css/animations.css" />
+  <link rel="stylesheet" href="css/responsive.css" />
+</head>
+<body>
+
+  <!-- Sticky Header -->
+  <header class="site-header" id="siteHeader">
+    <div class="container nav-container">
+      <a href="index.html" class="brand-lockup" title="EMBEDX — SRM TRP Engineering College">
+        <img src="assets/branding/srm-trp-logo-official.png" alt="SRM TRP Engineering College Logo" class="brand-college-logo" />
+        <div class="brand-divider"></div>
+        <div class="brand-club">
+          <img src="assets/branding/embedx-logo-emblem.png" alt="EMBEDX Club Emblem" class="brand-club-emblem" />
+          <div class="brand-club-text">
+            <span class="brand-club-title">EMBED<span>X</span></span>
+            <span class="brand-club-subtitle">EEE Department</span>
+          </div>
+        </div>
+      </a>
+
+      <nav aria-label="Main Navigation">
+        <ul class="nav-menu">
+          <li><a href="index.html" class="nav-link">Home</a></li>
+          <li><a href="about.html" class="nav-link">About</a></li>
+          <li><a href="domains.html" class="nav-link">Domains</a></li>
+          <li><a href="projects.html" class="nav-link">Projects</a></li>
+          <li><a href="events.html" class="nav-link">Events</a></li>
+          <li><a href="achievers.html" class="nav-link">Achievers</a></li>
+          <li><a href="team.html" class="nav-link">Team</a></li>
+          <li><a href="resources.html" class="nav-link active">Resources</a></li>
+          <li><a href="contact.html" class="nav-link">Contact</a></li>
+        </ul>
+      </nav>
+
+      <div class="nav-actions">
+        <a href="join.html" class="btn btn-sm btn-green btn-desktop">
+          <i class="fa-solid fa-bolt"></i> Join EMBEDX
+        </a>
+        <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation menu">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Mobile Drawer Menu -->
+  <div class="mobile-nav-backdrop" id="mobileNavBackdrop"></div>
+  <aside class="mobile-nav-drawer" id="mobileNavDrawer">
+    <div>
+      <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 2rem;">
+        <img src="assets/branding/embedx-logo-emblem.png" alt="EMBEDX" style="height: 38px; width: 38px;" />
+        <div>
+          <h3 class="text-navy" style="font-size: 1.2rem; margin: 0;">EMBED<span class="text-green">X</span></h3>
+          <p style="font-size: 0.75rem; margin: 0; color: var(--text-muted);">SRM TRP Engineering College</p>
+        </div>
+      </div>
+      <ul class="mobile-nav-menu">
+        <li><a href="index.html" class="mobile-nav-link">Home</a></li>
+        <li><a href="about.html" class="mobile-nav-link">About Us</a></li>
+        <li><a href="domains.html" class="mobile-nav-link">Technical Domains</a></li>
+        <li><a href="projects.html" class="mobile-nav-link">Projects Showcase</a></li>
+        <li><a href="events.html" class="mobile-nav-link">Events & EmbedNova</a></li>
+        <li><a href="achievers.html" class="mobile-nav-link">Hall of Achievers</a></li>
+        <li><a href="team.html" class="mobile-nav-link">Our Team</a></li>
+        <li><a href="resources.html" class="mobile-nav-link active">Learning Hub</a></li>
+        <li><a href="contact.html" class="mobile-nav-link">Contact & Location</a></li>
+      </ul>
+    </div>
+    <div style="margin-top: 2rem;">
+      <a href="join.html" class="btn btn-green" style="width: 100%;">
+        <i class="fa-solid fa-bolt"></i> Join EMBEDX Club
+      </a>
+    </div>
+  </aside>
+
+  <!-- Header Banner -->
+  <section style="padding-top: calc(var(--header-height) + 3rem); padding-bottom: 3.5rem; background: linear-gradient(180deg, #FFFFFF 0%, var(--bg-secondary) 100%);">
+    <div class="container text-center">
+      <div class="section-eyebrow eyebrow-blue">Knowledge Repository</div>
+      <h1 class="text-navy" style="margin-bottom: 1rem;">EMBEDX Learning Hub</h1>
+      <p class="section-subtitle" style="max-width: 800px; margin: 0 auto 2rem;">
+        Essential reference materials, cheatsheets, register guides, and interview roadmaps curated for student engineering mastery.
+      </p>
+
+      <div style="display: flex; justify-content: center; gap: 0.5rem; flex-wrap: wrap;">
+        <button class="btn btn-sm btn-outline resource-filter-btn active" data-category="all">All Resources</button>
+        <button class="btn btn-sm btn-outline resource-filter-btn" data-category="programming">Programming</button>
+        <button class="btn btn-sm btn-outline resource-filter-btn" data-category="embedded systems">Embedded Systems</button>
+        <button class="btn btn-sm btn-outline resource-filter-btn" data-category="electronics">Electronics & PCB</button>
+        <button class="btn btn-sm btn-outline resource-filter-btn" data-category="iot">IoT & Telemetry</button>
+        <button class="btn btn-sm btn-outline resource-filter-btn" data-category="automation">PLC Automation</button>
+        <button class="btn btn-sm btn-outline resource-filter-btn" data-category="career">Career Roadmap</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Resources Grid -->
+  <section class="section section-bg-white" style="padding-top: 2rem;">
+    <div class="container">
+      <div class="grid-3" style="gap: 2rem;" id="resourcesGrid">
+
+        <!-- Resource 1 -->
+        <div class="card resource-card-item" data-category="Programming">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+            <div class="domain-icon"><i class="fa-solid fa-code"></i></div>
+            <span class="tech-chip text-green">Beginner to Intermediate</span>
+          </div>
+          <h3 class="text-navy" style="font-size: 1.25rem; margin-bottom: 0.5rem;">Embedded C & Pointer Architecture Primer</h3>
+          <p style="font-size: 0.92rem; line-height: 1.7; margin-bottom: 1.25rem;">
+            Hands-on guide covering bitwise manipulation, volatile qualifiers, register manipulation, hardware pointers, and deterministic memory allocation.
+          </p>
+          <div class="domain-tech-chips" style="margin-bottom: 1.5rem;">
+            <span class="tech-chip">Bitwise Ops</span>
+            <span class="tech-chip">Memory Mapping</span>
+            <span class="tech-chip">Registers</span>
+          </div>
+          <div style="margin-top: auto; border-top: 1px solid var(--border-light); padding-top: 1rem; display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 0.82rem; font-weight: 600; color: var(--text-muted);">Curated Guide</span>
+            <button class="btn btn-sm btn-outline" onclick="alert('Embedded C Primer: Focus on volatile variables for ISRs, bit-masking (&, |, ^, ~), and memory-mapped I/O structure pointers.');">Read Summary</button>
+          </div>
+        </div>
+
+        <!-- Resource 2 -->
+        <div class="card resource-card-item" data-category="Embedded Systems">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+            <div class="domain-icon"><i class="fa-solid fa-microchip"></i></div>
+            <span class="tech-chip text-blue">Intermediate</span>
+          </div>
+          <h3 class="text-navy" style="font-size: 1.25rem; margin-bottom: 0.5rem;">ARM Cortex-M Quick Reference & Registers</h3>
+          <p style="font-size: 0.92rem; line-height: 1.7; margin-bottom: 1.25rem;">
+            Essential pinouts, vector tables, interrupt priority configuration (NVIC), and peripheral register mappings for STM32 and Cortex-M MCUs.
+          </p>
+          <div class="domain-tech-chips" style="margin-bottom: 1.5rem;">
+            <span class="tech-chip">ARM Cortex-M</span>
+            <span class="tech-chip">NVIC</span>
+            <span class="tech-chip">SysTick</span>
+            <span class="tech-chip">HAL</span>
+          </div>
+          <div style="margin-top: auto; border-top: 1px solid var(--border-light); padding-top: 1rem; display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 0.82rem; font-weight: 600; color: var(--text-muted);">Curated Guide</span>
+            <button class="btn btn-sm btn-outline" onclick="alert('ARM Reference: Cortex-M utilizes memory-mapped peripherals starting from 0x40000000 with nested vectored interrupt control (NVIC).');">Read Summary</button>
+          </div>
+        </div>
+
+        <!-- Resource 3 -->
+        <div class="card resource-card-item" data-category="Electronics">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+            <div class="domain-icon"><i class="fa-solid fa-screwdriver-wrench"></i></div>
+            <span class="tech-chip text-orange">All Levels</span>
+          </div>
+          <h3 class="text-navy" style="font-size: 1.25rem; margin-bottom: 0.5rem;">Hardware Debugging & Fault Diagnosis Handbook</h3>
+          <p style="font-size: 0.92rem; line-height: 1.7; margin-bottom: 1.25rem;">
+            Methodology for finding short circuits, floating grounds, noisy power rails, and cold solder joints in prototype boards using DMM and oscilloscopes.
+          </p>
+          <div class="domain-tech-chips" style="margin-bottom: 1.5rem;">
+            <span class="tech-chip">Multimeter</span>
+            <span class="tech-chip">Oscilloscope</span>
+            <span class="tech-chip">Fault Diagnosis</span>
+          </div>
+          <div style="margin-top: auto; border-top: 1px solid var(--border-light); padding-top: 1rem; display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 0.82rem; font-weight: 600; color: var(--text-muted);">Curated Guide</span>
+            <button class="btn btn-sm btn-outline" onclick="alert('Debugging Rule: Always verify power rails (3.3V/5V) with DMM before inserting expensive MCU silicon into breadboards.');">Read Summary</button>
+          </div>
+        </div>
+
+        <!-- Resource 4 -->
+        <div class="card resource-card-item" data-category="Embedded Systems">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+            <div class="domain-icon"><i class="fa-solid fa-layer-group"></i></div>
+            <span class="tech-chip text-navy">Advanced</span>
+          </div>
+          <h3 class="text-navy" style="font-size: 1.25rem; margin-bottom: 0.5rem;">FreeRTOS Task Scheduling & Semaphores</h3>
+          <p style="font-size: 0.92rem; line-height: 1.7; margin-bottom: 1.25rem;">
+            Architecting deterministic multi-tasking systems: task priorities, binary semaphores, queues, and avoiding priority inversion.
+          </p>
+          <div class="domain-tech-chips" style="margin-bottom: 1.5rem;">
+            <span class="tech-chip">FreeRTOS</span>
+            <span class="tech-chip">Semaphores</span>
+            <span class="tech-chip">Queues</span>
+          </div>
+          <div style="margin-top: auto; border-top: 1px solid var(--border-light); padding-top: 1rem; display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 0.82rem; font-weight: 600; color: var(--text-muted);">Curated Guide</span>
+            <button class="btn btn-sm btn-outline" onclick="alert('FreeRTOS Tip: Use xQueueSendFromISR inside interrupts and ensure task stack sizes prevent silent stack overflow.');">Read Summary</button>
+          </div>
+        </div>
+
+        <!-- Resource 5 -->
+        <div class="card resource-card-item" data-category="IoT">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+            <div class="domain-icon"><i class="fa-solid fa-wifi"></i></div>
+            <span class="tech-chip text-blue">Intermediate</span>
+          </div>
+          <h3 class="text-navy" style="font-size: 1.25rem; margin-bottom: 0.5rem;">ESP32 MQTT & Telemetry Architecture Blueprint</h3>
+          <p style="font-size: 0.92rem; line-height: 1.7; margin-bottom: 1.25rem;">
+            Connecting edge ESP32 microcontrollers to local MQTT brokers and cloud endpoints with non-blocking Wi-Fi reconnection routines.
+          </p>
+          <div class="domain-tech-chips" style="margin-bottom: 1.5rem;">
+            <span class="tech-chip">ESP32</span>
+            <span class="tech-chip">MQTT</span>
+            <span class="tech-chip">JSON Payload</span>
+          </div>
+          <div style="margin-top: auto; border-top: 1px solid var(--border-light); padding-top: 1rem; display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 0.82rem; font-weight: 600; color: var(--text-muted);">Curated Guide</span>
+            <button class="btn btn-sm btn-outline" onclick="alert('MQTT Architecture: Use QoS 1 for critical alarm telemetry and keep payload JSON compact under 256 bytes for edge efficiency.');">Read Summary</button>
+          </div>
+        </div>
+
+        <!-- Resource 6 -->
+        <div class="card resource-card-item" data-category="Automation">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+            <div class="domain-icon"><i class="fa-solid fa-industry"></i></div>
+            <span class="tech-chip text-orange">Beginner</span>
+          </div>
+          <h3 class="text-navy" style="font-size: 1.25rem; margin-bottom: 0.5rem;">Industrial PLC Ladder Logic & Timing Symbols</h3>
+          <p style="font-size: 0.92rem; line-height: 1.7; margin-bottom: 1.25rem;">
+            Standard IEC 61131-3 graphical ladder symbols, latching circuits, timer on/off delays (TON/TOF), and industrial safety interlock designs.
+          </p>
+          <div class="domain-tech-chips" style="margin-bottom: 1.5rem;">
+            <span class="tech-chip">Ladder Logic</span>
+            <span class="tech-chip">IEC 61131-3</span>
+            <span class="tech-chip">Safety Interlocks</span>
+          </div>
+          <div style="margin-top: auto; border-top: 1px solid var(--border-light); padding-top: 1rem; display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 0.82rem; font-weight: 600; color: var(--text-muted);">Curated Guide</span>
+            <button class="btn btn-sm btn-outline" onclick="alert('PLC Tip: Always hardware-wire emergency stop buttons in normally-closed (NC) fail-safe configuration.');">Read Summary</button>
+          </div>
+        </div>
+
+        <!-- Resource 7 -->
+        <div class="card resource-card-item" data-category="Career">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+            <div class="domain-icon"><i class="fa-solid fa-briefcase"></i></div>
+            <span class="tech-chip text-green">All Levels</span>
+          </div>
+          <h3 class="text-navy" style="font-size: 1.25rem; margin-bottom: 0.5rem;">Embedded & Automation Career Roadmap</h3>
+          <p style="font-size: 0.92rem; line-height: 1.7; margin-bottom: 1.25rem;">
+            Step-by-step roadmap covering foundational knowledge, project milestones, portfolio curation on GitHub, and technical interview preparation.
+          </p>
+          <div class="domain-tech-chips" style="margin-bottom: 1.5rem;">
+            <span class="tech-chip">Career</span>
+            <span class="tech-chip">Interview Prep</span>
+            <span class="tech-chip">Portfolio</span>
+          </div>
+          <div style="margin-top: auto; border-top: 1px solid var(--border-light); padding-top: 1rem; display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 0.82rem; font-weight: 600; color: var(--text-muted);">Curated Guide</span>
+            <button class="btn btn-sm btn-outline" onclick="alert('Career Roadmap: Build 2-3 deep, fully documented hardware+firmware projects with schematics and GitHub repositories.');">Read Summary</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <div class="footer-logo-row">
+            <img src="assets/branding/embedx-logo-emblem.png" alt="EMBEDX Logo" class="footer-logo-img" />
+            <div>
+              <div class="footer-club-name">EMBED<span>X</span></div>
+              <div style="font-size: 0.78rem; color: #fff; text-transform: uppercase;">Embedded Systems & Automation Club</div>
+            </div>
+          </div>
+          <p style="font-size: 0.9rem; line-height: 1.6; color: var(--text-light); margin-top: 0.5rem;">
+            Department of Electrical and Electronics Engineering (EEE)<br />
+            SRM TRP Engineering College (Autonomous)<br />
+            SRM Nagar, Samayapuram, Tiruchirappalli – 621 105.
+          </p>
+          <div class="footer-tagline">INNOVATE &bull; INTEGRATE &bull; INSPIRE</div>
+        </div>
+
+        <div>
+          <h4 class="footer-heading">Navigation</h4>
+          <ul class="footer-links">
+            <li><a href="index.html" class="footer-link"><i class="fa-solid fa-angle-right"></i> Home</a></li>
+            <li><a href="about.html" class="footer-link"><i class="fa-solid fa-angle-right"></i> About Us</a></li>
+            <li><a href="domains.html" class="footer-link"><i class="fa-solid fa-angle-right"></i> Technical Domains</a></li>
+            <li><a href="projects.html" class="footer-link"><i class="fa-solid fa-angle-right"></i> Projects Showcase</a></li>
+            <li><a href="events.html" class="footer-link"><i class="fa-solid fa-angle-right"></i> Events & EmbedNova</a></li>
+            <li><a href="achievers.html" class="footer-link"><i class="fa-solid fa-angle-right"></i> Achievers</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 class="footer-heading">Community</h4>
+          <ul class="footer-links">
+            <li><a href="team.html" class="footer-link"><i class="fa-solid fa-angle-right"></i> Meet the Team</a></li>
+            <li><a href="resources.html" class="footer-link"><i class="fa-solid fa-angle-right"></i> Learning Hub</a></li>
+            <li><a href="join.html" class="footer-link"><i class="fa-solid fa-angle-right"></i> Join EMBEDX</a></li>
+            <li><a href="contact.html" class="footer-link"><i class="fa-solid fa-angle-right"></i> Contact Department</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 class="footer-heading">Connect With Us</h4>
+          <div class="footer-socials">
+            <a href="https://www.instagram.com/trpengineeringcollege" target="_blank" rel="noopener" class="social-icon-btn"><i class="fa-brands fa-instagram"></i></a>
+            <a href="https://www.linkedin.com/school/srm-trp-engineering-college" target="_blank" rel="noopener" class="social-icon-btn"><i class="fa-brands fa-linkedin-in"></i></a>
+            <a href="https://www.facebook.com/SRMTRPEngg" target="_blank" rel="noopener" class="social-icon-btn"><i class="fa-brands fa-facebook-f"></i></a>
+            <a href="https://www.trpengg.ac.in" target="_blank" rel="noopener" class="social-icon-btn"><i class="fa-solid fa-globe"></i></a>
+          </div>
+          <div style="margin-top: 1.25rem; font-size: 0.85rem;">
+            <span style="color: #FFFFFF; font-weight: 600;">Tel:</span> 0431-2908050<br />
+            <span style="color: #FFFFFF; font-weight: 600;">Portal:</span> www.trpengg.ac.in
+          </div>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <div>&copy; 2026 <strong>EMBEDX – Embedded Systems and Automation Club</strong> &bull; Department of EEE.</div>
+        <div><strong>SRM TRP Engineering College</strong> (An Autonomous Institution, Affiliated to Anna University)</div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/data/resources.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

