@@ -1,18 +1,42 @@
 export async function onRequestPost({ request, env }) {
   try {
-    const body = await request.json();
+    if (!env.APPS_SCRIPT_URL) {
+      throw new Error("APPS_SCRIPT_URL is not configured");
+    }
+
+    const contentType = request.headers.get("content-type") || "";
+    let data = {};
+
+    if (contentType.includes("application/json")) {
+      data = await request.json();
+    } else {
+      const formData = await request.formData();
+
+      for (const [key, value] of formData.entries()) {
+        if (key === "interests") {
+          if (!data.interests) data.interests = [];
+          data.interests.push(String(value));
+        } else {
+          data[key] = String(value);
+        }
+      }
+    }
 
     const payload = {
       type: "join",
-      name: body.full_name || "",
-      email: body.email || "",
-      phone: body.phone || "",
-      department: body.department || "",
-      year: body.year || "",
-      interests: Array.isArray(body.interests) ? body.interests : [],
-      technical_skills: body.technical_skills || "",
-      motivation: body.motivation || "",
-      portfolio: body.portfolio || ""
+      full_name: data.full_name || "",
+      department: data.department || "",
+      year: data.year || "",
+      email: data.email || "",
+      phone: data.phone || "",
+      interests: Array.isArray(data.interests)
+        ? data.interests
+        : data.interests
+          ? [data.interests]
+          : [],
+      technical_skills: data.technical_skills || "",
+      motivation: data.motivation || "",
+      portfolio: data.portfolio || ""
     };
 
     const response = await fetch(env.APPS_SCRIPT_URL, {
@@ -25,28 +49,17 @@ export async function onRequestPost({ request, env }) {
 
     const result = await response.text();
 
-    if (!response.ok) {
-      throw new Error(result || "Apps Script request failed");
-    }
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        message: "Join request submitted successfully"
-      }),
-      {
-        status: 200,
-        headers: {
-          "Content-Type": "application/json"
-        }
+    return new Response(result, {
+      status: response.status,
+      headers: {
+        "Content-Type": "application/json"
       }
-    );
-
+    });
   } catch (error) {
     return new Response(
       JSON.stringify({
         success: false,
-        message: error.message || "Submission failed"
+        message: error.message
       }),
       {
         status: 500,

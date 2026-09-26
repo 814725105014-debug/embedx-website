@@ -1,0 +1,8 @@
+_worker.js
+wrangler.jsonc
+function/
+functions/
+.wrangler/
+.git/
+.gitignore
+.assetsignore
