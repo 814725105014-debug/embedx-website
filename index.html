@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EMBEDX – Embedded Systems & Automation Club | SRM TRP Engineering College</title>
+  <meta name="description" content="Official website of EMBEDX – Embedded Systems and Automation Club, Department of Electrical and Electronics Engineering (EEE), SRM TRP Engineering College, Tiruchirappalli. INNOVATE • INTEGRATE • INSPIRE." />
+  <meta name="keywords" content="EMBEDX, Embedded Systems, Automation, IoT, Robotics, SRM TRP Engineering College, EEE Department, EmbedNova, Arduino, STM32, PLC, SCADA" />
+  
+  <!-- Open Graph Meta -->
+  <meta property="og:title" content="EMBEDX – Embedded Systems & Automation Club | SRM TRP Engineering College" />
+  <meta property="og:description" content="A practical technology community where students learn embedded systems, automation, IoT, robotics, and real-world engineering." />
+  <meta property="og:image" content="assets/branding/embedx-full-logo.png" />
+  <meta property="og:type" content="website" />
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="assets/branding/embedx-logo-emblem.png" />
+
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
+  <!-- Core Stylesheets -->
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/components.css" />
+  <link rel="stylesheet" href="css/animations.css" />
+  <link rel="stylesheet" href="css/responsive.css" />
+</head>
+<body>
+
+  <!-- ========================================================================
+       1. STICKY HEADER / NAVIGATION
+       ======================================================================== -->
+  <header class="site-header" id="siteHeader">
+    <div class="container nav-container">
+      <!-- Dual Institutional & Club Branding Lockup -->
+      <a href="index.html" class="brand-lockup" title="EMBEDX — SRM TRP Engineering College">
+        <img src="assets/branding/srm-trp-logo-official.png" alt="SRM TRP Engineering College Logo" class="brand-college-logo" />
+        <div class="brand-divider"></div>
+        <div class="brand-club">
+          <img src="assets/branding/embedx-logo-emblem.png" alt="EMBEDX Club Emblem" class="brand-club-emblem" />
+          <div class="brand-club-text">
+            <span class="brand-club-title">EMBED<span>X</span></span>
+            <span class="brand-club-subtitle">EEE Department</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- Desktop Navigation Menu -->
+      <nav aria-label="Main Navigation">
+        <ul class="nav-menu">
+          <li><a href="index.html" class="nav-link active">Home</a></li>
+          <li><a href="about.html" class="nav-link">About</a></li>
+          <li><a href="domains.html" class="nav-link">Domains</a></li>
+          <li><a href="projects.html" class="nav-link">Projects</a></li>
+          <li><a href="events.html" class="nav-link">Events</a></li>
+          <li><a href="achievers.html" class="nav-link">Achievers</a></li>
+          <li><a href="team.html" class="nav-link">Team</a></li>
+          <li><a href="resources.html" class="nav-link">Resources</a></li>
+          <li><a href="contact.html" class="nav-link">Contact</a></li>
+        </ul>
+      </nav>
+
+      <!-- Header Action & Mobile Toggle -->
+      <div class="nav-actions">
+        <a href="join.html" class="btn btn-sm btn-green btn-desktop">
+          <i class="fa-solid fa-bolt"></i> Join EMBEDX
+        </a>
+        <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation menu">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Mobile Drawer Menu -->
+  <div class="mobile-nav-backdrop" id="mobileNavBackdrop"></div>
+  <aside class="mobile-nav-drawer" id="mobileNavDrawer" aria-label="Mobile Navigation">
+    <div>
+      <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 2rem;">
+        <img src="assets/branding/embedx-logo-emblem.png" alt="EMBEDX" style="height: 38px; width: 38px;" />
+        <div>
+          <h3 class="text-navy" style="font-size: 1.2rem; margin: 0;">EMBED<span class="text-green">X</span></h3>
+          <p style="font-size: 0.75rem; margin: 0; color: var(--text-muted);">SRM TRP Engineering College</p>
+        </div>
+      </div>
+      <ul class="mobile-nav-menu">
+        <li><a href="index.html" class="mobile-nav-link active">Home</a></li>
+        <li><a href="about.html" class="mobile-nav-link">About Us</a></li>
+        <li><a href="domains.html" class="mobile-nav-link">Technical Domains</a></li>
+        <li><a href="projects.html" class="mobile-nav-link">Projects Showcase</a></li>
+        <li><a href="events.html" class="mobile-nav-link">Events & EmbedNova</a></li>
+        <li><a href="achievers.html" class="mobile-nav-link">Hall of Achievers</a></li>
+        <li><a href="team.html" class="mobile-nav-link">Our Team</a></li>
+        <li><a href="resources.html" class="mobile-nav-link">Learning Hub</a></li>
+        <li><a href="contact.html" class="mobile-nav-link">Contact & Location</a></li>
+      </ul>
+    </div>
+    <div style="margin-top: 2rem;">
+      <a href="join.html" class="btn btn-green" style="width: 100%;">
+        <i class="fa-solid fa-bolt"></i> Join EMBEDX Club
+      </a>
+    </div>
+  </aside>
+
+  <!-- ========================================================================
+       2. HERO SECTION
+       ======================================================================== -->
+  <section class="hero-section" id="hero">
+    <canvas id="circuitCanvas" class="hero-circuit-canvas"></canvas>
+    
+    <div class="container">
+      <div class="hero-grid">
+        <!-- Hero Left Content -->
+        <div class="hero-content reveal">
+          <div class="hero-college-badge">
+            <i class="fa-solid fa-building-columns text-navy"></i>
+            <span>Department of EEE &bull; SRM TRP Engineering College</span>
+          </div>
+
+          <h1 class="hero-club-title">
+            EMBED<span>X</span>
+          </h1>
+          <h2 class="hero-club-subtitle">
+            Embedded Systems & Automation Club
+          </h2>
+
+          <p class="hero-description">
+            Building practical skills, intelligent embedded systems, robotic mechanisms, and real-world engineering solutions through hands-on innovation.
+          </p>
+
+          <div class="hero-slogan-wrapper">
+            <div class="slogan-pill">
+              <span>INNOVATE</span>
+              <span class="dot">&bull;</span>
+              <span>INTEGRATE</span>
+              <span class="dot">&bull;</span>
+              <span>INSPIRE</span>
+            </div>
+          </div>
+
+          <div class="hero-ctas">
+            <a href="projects.html" class="btn btn-primary">
+              <i class="fa-solid fa-microchip"></i> Explore EMBEDX
+            </a>
+            <a href="join.html" class="btn btn-green">
+              <i class="fa-solid fa-user-plus"></i> Join the Club
+            </a>
+          </div>
+
+          <!-- Highlights Bar -->
+          <div class="hero-highlights">
+            <div class="hero-highlight-item">
+              <span class="hero-highlight-value"><i class="fa-solid fa-microchip text-blue"></i> 12+</span>
+              <span class="hero-highlight-label">Technical Domains</span>
+            </div>
+            <div class="hero-highlight-item">
+              <span class="hero-highlight-value"><i class="fa-solid fa-trophy text-orange"></i> 2026</span>
+              <span class="hero-highlight-label">National Level Innovation</span>
+            </div>
+            <div class="hero-highlight-item">
+              <span class="hero-highlight-value"><i class="fa-solid fa-bolt text-green"></i> 100%</span>
+              <span class="hero-highlight-label">Hands-On Practice</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Hero Right Visual Composition -->
+        <div class="reveal reveal-delay-2">
+          <div class="hero-visual-card">
+            <div class="hero-floating-chip hero-chip-top-left">
+              <i class="fa-solid fa-microchip text-green"></i>
+              <span>Embedded C &bull; ARM &bull; RTOS</span>
+            </div>
+            <img 
+              src="assets/posters/embedx-club-poster.png" 
+              alt="EMBEDX Official Club Identity Poster" 
+              class="hero-visual-poster"
+              onclick="openLightbox('assets/posters/embedx-club-poster.png', 'EMBEDX Official Club Poster — Department of EEE, SRM TRP Engineering College')"
+              title="Click to expand high-resolution poster"
+            />
+            <div class="hero-floating-chip hero-chip-bottom-right">
+              <i class="fa-solid fa-robot text-orange"></i>
+              <span>Robotics & Industrial PLC</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================================================
+       3. QUICK INTRODUCTION (4 PILLARS)
+       ======================================================================== -->
+  <section class="section section-bg-white" id="intro">
+    <div class="container">
+      <div class="section-header reveal">
+        <div class="section-eyebrow">Practical Engineering</div>
+        <h2 class="section-title">Engineering Beyond the Classroom</h2>
+        <p class="section-subtitle">
+          EMBEDX is the technical club of the Department of Electrical and Electronics Engineering at SRM TRP Engineering College, focused on Embedded Systems, Automation, IoT, Robotics, Control Systems, Electronics, and emerging smart technologies.
+        </p>
+        <div class="circuit-line-decor">
+          <div class="circuit-node"></div>
+        </div>
+      </div>
+
+      <div class="grid-4">
+        <!-- Learn Card -->
+        <div class="pillar-card pillar-blue reveal reveal-delay-1">
+          <div class="pillar-icon-box">
+            <i class="fa-solid fa-graduation-cap"></i>
+          </div>
+          <h3 class="text-navy" style="font-size: 1.35rem; margin-bottom: 0.5rem;">Learn</h3>
+          <p style="font-size: 0.95rem;">
+            Deep hands-on technical learning covering microcontrollers, register architectures, embedded programming, and industrial protocols.
+          </p>
+        </div>
+
+        <!-- Build Card -->
+        <div class="pillar-card pillar-green reveal reveal-delay-2">
+          <div class="pillar-icon-box">
+            <i class="fa-solid fa-screwdriver-wrench"></i>
+          </div>
+          <h3 class="text-navy" style="font-size: 1.35rem; margin-bottom: 0.5rem;">Build</h3>
+          <p style="font-size: 0.95rem;">
+            Architect real hardware prototypes, autonomous rovers, smart sensor nodes, and industrial automation control systems from scratch.
+          </p>
+        </div>
+
+        <!-- Compete Card -->
+        <div class="pillar-card pillar-orange reveal reveal-delay-3">
+          <div class="pillar-icon-box">
+            <i class="fa-solid fa-trophy"></i>
+          </div>
+          <h3 class="text-navy" style="font-size: 1.35rem; margin-bottom: 0.5rem;">Compete</h3>
+          <p style="font-size: 0.95rem;">
+            Represent the institution in prestigious national-level hackathons, circuit debugging contests, and technical symposia.
+          </p>
+        </div>
+
+        <!-- Innovate Card -->
+        <div class="pillar-card pillar-blue reveal reveal-delay-4">
+          <div class="pillar-icon-box">
+            <i class="fa-solid fa-lightbulb"></i>
+          </div>
+          <h3 class="text-navy" style="font-size: 1.35rem; margin-bottom: 0.5rem;">Innovate</h3>
+          <p style="font-size: 0.95rem;">
+            Turn bold conceptual engineering ideas into scalable, real-world solutions that create genuine technological and social impact.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================================================
+       4. ABOUT EMBEDX & JOURNEY
+       ======================================================================== -->
+  <section class="section section-bg-alt" id="about">
+    <div class="container">
+      <div class="grid-2" style="align-items: center; gap: 3.5rem;">
+        <div class="reveal">
+          <div class="section-eyebrow eyebrow-green">About Our Community</div>
+          <h2 class="section-title" style="margin-bottom: 1.25rem;">
+            Fostering the Next Generation of Embedded & Automation Engineers
+          </h2>
+          <p style="font-size: 1.05rem; line-height: 1.8; margin-bottom: 1.5rem;">
+            EMBEDX is the official technical club of the Department of EEE at SRM TRP Engineering College, focusing on Embedded Systems, Automation, IoT, and Smart Technologies. The club aims to build technical skills, inspire innovation, and prepare students for real-world engineering challenges.
+          </p>
+          <p style="font-size: 1rem; line-height: 1.7; margin-bottom: 2rem;">
+            We operate as an agile, student-driven engineering powerhouse supported by departmental faculty mentorship, state-of-the-art laboratory infrastructure, and an unwavering commitment to hands-on craftsmanship.
+          </p>
+
+          <!-- 6-Stage Journey Concept -->
+          <div style="background: #FFFFFF; border: 1.5px solid var(--border-light); border-radius: var(--radius-md); padding: 1.5rem; box-shadow: var(--shadow-sm);">
+            <h4 class="text-navy" style="font-size: 1.05rem; margin-bottom: 1rem;">
+              <i class="fa-solid fa-route text-green" style="margin-right: 0.5rem;"></i> The EMBEDX Engineering Journey
+            </h4>
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; font-family: var(--font-heading); font-size: 0.88rem; font-weight: 700;">
+              <span class="tech-chip text-navy">Learn</span>
+              <i class="fa-solid fa-arrow-right text-muted" style="font-size: 0.75rem;"></i>
+              <span class="tech-chip text-navy">Experiment</span>
+              <i class="fa-solid fa-arrow-right text-muted" style="font-size: 0.75rem;"></i>
+              <span class="tech-chip text-navy">Build</span>
+              <i class="fa-solid fa-arrow-right text-muted" style="font-size: 0.75rem;"></i>
+              <span class="tech-chip text-orange">Compete</span>
+              <i class="fa-solid fa-arrow-right text-muted" style="font-size: 0.75rem;"></i>
+              <span class="tech-chip text-green">Innovate</span>
+              <i class="fa-solid fa-arrow-right text-muted" style="font-size: 0.75rem;"></i>
+              <span class="tech-chip text-blue">Impact</span>
+            </div>
+          </div>
+
+          <div style="margin-top: 2rem;">
+            <a href="about.html" class="btn btn-outline">
+              Learn More About EMBEDX <i class="fa-solid fa-arrow-right"></i>
+            </a>
+          </div>
+        </div>
+
+        <div class="reveal reveal-delay-2">
+          <div style="background: #FFFFFF; border: 1.5px solid var(--border-card); border-radius: var(--radius-lg); padding: 2rem; box-shadow: var(--shadow-lg); text-align: center;">
+            <img 
+              src="assets/branding/embedx-club-logo.png" 
+              alt="EMBEDX Official Department Branding" 
+              style="width: 100%; max-height: 440px; object-fit: contain; margin: 0 auto;"
+            />
+            <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border-light);">
+              <p style="font-family: var(--font-heading); font-size: 0.95rem; font-weight: 700; color: var(--primary-navy); margin: 0;">
+                EMBEDX – ENGINEERING THE FUTURE, TOGETHER.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================================================
+       5. TECHNICAL DOMAINS PREVIEW
+       ======================================================================== -->
+  <section class="section section-bg-white" id="domains">
+    <div class="container">
+      <div class="section-header reveal">
+        <div class="section-eyebrow eyebrow-blue">Core Technical Verticals</div>
+        <h2 class="section-title">What We Work On</h2>
+        <p class="section-subtitle">
+          Comprehensive exploration across hardware design, firmware architectures, robotics kinematics, connected edge intelligence, and industrial automation.
+        </p>
+        <div class="circuit-line-decor">
+          <div class="circuit-node"></div>
+        </div>
+      </div>
+
+      <div class="grid-3" style="gap: 1.75rem;">
+        <!-- Domain 1 -->
+        <div class="domain-card reveal reveal-delay-1">
+          <div>
+            <div class="domain-card-header">
+              <div class="domain-icon"><i class="fa-solid fa-microchip"></i></div>
+              <span class="domain-badge">Silicon & Architecture</span>
+            </div>
+            <h3 class="domain-card-title text-navy">Embedded Systems</h3>
+            <p style="font-size: 0.92rem;">Microcontroller hardware design, memory mapping, bare-metal architectures, and deterministic real-time execution.</p>
+          </div>
+          <div class="domain-tech-chips">
+            <span class="tech-chip">ARM Cortex</span>
+            <span class="tech-chip">STM32</span>
+            <span class="tech-chip">AVR</span>
+            <span class="tech-chip">Keil µVision</span>
+          </div>
+        </div>
+
+        <!-- Domain 2 -->
+        <div class="domain-card reveal reveal-delay-2">
+          <div>
+            <div class="domain-card-header">
+              <div class="domain-icon"><i class="fa-solid fa-code"></i></div>
+              <span class="domain-badge">Low-Level Systems</span>
+            </div>
+            <h3 class="domain-card-title text-navy">Embedded Software & RTOS</h3>
+            <p style="font-size: 0.92rem;">Deterministic multi-tasking, hardware abstraction layers, peripheral device drivers, and ISR timing optimization.</p>
+          </div>
+          <div class="domain-tech-chips">
+            <span class="tech-chip">Embedded C</span>
+            <span class="tech-chip">FreeRTOS</span>
+            <span class="tech-chip">Device Drivers</span>
+            <span class="tech-chip">GDB</span>
+          </div>
+        </div>
+
+        <!-- Domain 3 -->
+        <div class="domain-card reveal reveal-delay-3">
+          <div>
+            <div class="domain-card-header">
+              <div class="domain-icon"><i class="fa-solid fa-robot"></i></div>
+              <span class="domain-badge">Autonomous Motion</span>
+            </div>
+            <h3 class="domain-card-title text-navy">Robotics & Automation</h3>
+            <p style="font-size: 0.92rem;">Differential drive mobility, precision servo actuation, robotic manipulators, and sensor-guided navigation.</p>
+          </div>
+          <div class="domain-tech-chips">
+            <span class="tech-chip">Kinematics</span>
+            <span class="tech-chip">Motor Drivers</span>
+            <span class="tech-chip">Encoders</span>
+            <span class="tech-chip">PID Control</span>
+          </div>
+        </div>
+
+        <!-- Domain 4 -->
+        <div class="domain-card reveal reveal-delay-1">
+          <div>
+            <div class="domain-card-header">
+              <div class="domain-icon"><i class="fa-solid fa-network-wired"></i></div>
+              <span class="domain-badge">Connected Nodes</span>
+            </div>
+            <h3 class="domain-card-title text-navy">IoT & Edge Computing</h3>
+            <p style="font-size: 0.92rem;">Sensor-to-cloud pipelines, telemetric protocols, edge preprocessing, and real-time visualization dashboards.</p>
+          </div>
+          <div class="domain-tech-chips">
+            <span class="tech-chip">MQTT</span>
+            <span class="tech-chip">ESP32</span>
+            <span class="tech-chip">Node-RED</span>
+            <span class="tech-chip">AWS IoT</span>
+          </div>
+        </div>
+
+        <!-- Domain 5 -->
+        <div class="domain-card reveal reveal-delay-2">
+          <div>
+            <div class="domain-card-header">
+              <div class="domain-icon"><i class="fa-solid fa-industry"></i></div>
+              <span class="domain-badge">Industry 4.0</span>
+            </div>
+            <h3 class="domain-card-title text-navy">PLC & Industrial Automation</h3>
+            <p style="font-size: 0.92rem;">Programmable Logic Controllers, ladder logic programming, SCADA supervision, and industrial sensor integration.</p>
+          </div>
+          <div class="domain-tech-chips">
+            <span class="tech-chip">Ladder Logic</span>
+            <span class="tech-chip">SCADA</span>
+            <span class="tech-chip">TIA Portal</span>
+            <span class="tech-chip">Modbus</span>
+          </div>
+        </div>
+
+        <!-- Domain 6 -->
+        <div class="domain-card reveal reveal-delay-3">
+          <div>
+            <div class="domain-card-header">
+              <div class="domain-icon"><i class="fa-solid fa-layer-group"></i></div>
+              <span class="domain-badge">Hardware CAD</span>
+            </div>
+            <h3 class="domain-card-title text-navy">PCB Design & Prototyping</h3>
+            <p style="font-size: 0.92rem;">Schematic capture, multi-layer board routing, component footprint creation, and rapid breadboard verification.</p>
+          </div>
+          <div class="domain-tech-chips">
+            <span class="tech-chip">Altium Designer</span>
+            <span class="tech-chip">KiCad</span>
+            <span class="tech-chip">Proteus</span>
+            <span class="tech-chip">DRC</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="text-center" style="margin-top: 3rem;">
+        <a href="domains.html" class="btn btn-outline">
+          Explore All 12 Technical Domains <i class="fa-solid fa-arrow-right"></i>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================================================
+       6. FEATURED REAL PROJECTS
+       ======================================================================== -->
+  <section class="section section-bg-alt" id="projects">
+    <div class="container">
+      <div class="section-header reveal">
+        <div class="section-eyebrow eyebrow-orange">Hands-On Engineering</div>
+        <h2 class="section-title">Featured Club Projects</h2>
+        <p class="section-subtitle">
+          Real embedded prototypes engineered by EMBEDX student teams tackling autonomous mobility, healthcare, waste management, and robotics interfaces.
+        </p>
+        <div class="circuit-line-decor">
+          <div class="circuit-node"></div>
+        </div>
+      </div>
+
+      <div class="grid-4" style="gap: 1.5rem;">
+        <!-- Project 1 -->
+        <div class="project-card reveal reveal-delay-1">
+          <div class="project-img-wrapper">
+            <img src="assets/projects/autonomous-mobile-robot.png" alt="Autonomous Mobile Robot" class="project-img" />
+            <span class="project-category-badge">Robotics</span>
+            <span class="project-status-badge">Achieved</span>
+          </div>
+          <div class="project-card-body">
+            <h3 class="project-card-title text-navy">Autonomous Mobile Robot</h3>
+            <div class="project-highlight-bar">
+              <i class="fa-solid fa-trophy text-orange"></i>
+              <span>National Level Innovation 2026</span>
+            </div>
+            <p style="font-size: 0.9rem; margin-bottom: 1.25rem;">
+              Custom differential drive mobile rover featuring multi-sensor obstacle mapping, path-planning logic, and closed-loop motor control.
+            </p>
+            <div class="project-card-footer">
+              <span class="font-mono text-muted" style="font-size: 0.8rem;">Atmega &bull; PID</span>
+              <a href="project-detail.html?id=autonomous-mobile-robot" class="btn btn-sm btn-primary">Details</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Project 2 -->
+        <div class="project-card reveal reveal-delay-2">
+          <div class="project-img-wrapper">
+            <img src="assets/projects/smart-dustbin.png" alt="Smart Dustbin" class="project-img" />
+            <span class="project-category-badge">Smart Systems</span>
+            <span class="project-status-badge">Achieved</span>
+          </div>
+          <div class="project-card-body">
+            <h3 class="project-card-title text-navy">Smart Dustbin</h3>
+            <div class="project-highlight-bar">
+              <i class="fa-solid fa-award text-green"></i>
+              <span>Niral Thiruvizha 2026</span>
+            </div>
+            <p style="font-size: 0.9rem; margin-bottom: 1.25rem;">
+              Touchless municipal waste management prototype with automated lid opening, material sorting logic, and ultrasonic fill-level telemetry.
+            </p>
+            <div class="project-card-footer">
+              <span class="font-mono text-muted" style="font-size: 0.8rem;">Sensors &bull; Servos</span>
+              <a href="project-detail.html?id=smart-dustbin" class="btn btn-sm btn-primary">Details</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Project 3 -->
+        <div class="project-card reveal reveal-delay-3">
+          <div class="project-img-wrapper">
+            <img src="assets/projects/gesture-recognition.png" alt="Gesture Recognition Robot" class="project-img" />
+            <span class="project-category-badge">Robotics</span>
+            <span class="project-status-badge">Active Prototype</span>
+          </div>
+          <div class="project-card-body">
+            <h3 class="project-card-title text-navy">Gesture Recognition</h3>
+            <div class="project-highlight-bar">
+              <i class="fa-solid fa-hand text-blue"></i>
+              <span>Intelligent HMI System</span>
+            </div>
+            <p style="font-size: 0.9rem; margin-bottom: 1.25rem;">
+              Intelligent glove controller with 6-axis IMU sensors transmitting low-latency RF commands to an agile mobile robot.
+            </p>
+            <div class="project-card-footer">
+              <span class="font-mono text-muted" style="font-size: 0.8rem;">IMU &bull; 2.4GHz RF</span>
+              <a href="project-detail.html?id=gesture-recognition" class="btn btn-sm btn-primary">Details</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Project 4 -->
+        <div class="project-card reveal reveal-delay-4">
+          <div class="project-img-wrapper">
+            <img src="assets/projects/medibot.png" alt="MEDIBOT Healthcare Bot" class="project-img" />
+            <span class="project-category-badge">Healthcare</span>
+            <span class="project-status-badge">Active Prototype</span>
+          </div>
+          <div class="project-card-body">
+            <h3 class="project-card-title text-navy">MEDIBOT</h3>
+            <div class="project-highlight-bar">
+              <i class="fa-solid fa-heart-pulse text-orange"></i>
+              <span>Healthcare Assistant</span>
+            </div>
+            <p style="font-size: 0.9rem; margin-bottom: 1.25rem;">
+              Automated medication scheduler with RTC battery-backed timing, carousel pill dispensing, and optical beam-break verification.
+            </p>
+            <div class="project-card-footer">
+              <span class="font-mono text-muted" style="font-size: 0.8rem;">RTC &bull; Actuators</span>
+              <a href="project-detail.html?id=medibot" class="btn btn-sm btn-primary">Details</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="text-center" style="margin-top: 3rem;">
+        <a href="projects.html" class="btn btn-outline">
+          View All Projects & Blueprints <i class="fa-solid fa-arrow-right"></i>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================================================
+       7. ACHIEVERS & HALL OF FAME
+       ======================================================================== -->
+  <section class="section section-bg-white" id="achievers">
+    <div class="container">
+      <div class="section-header reveal">
+        <div class="section-eyebrow eyebrow-orange">Competitive Excellence</div>
+        <h2 class="section-title">Hall of Achievers</h2>
+        <p class="section-subtitle">
+          Celebrating the hard work, competitive representation, and engineering triumphs of EMBEDX club members across national and regional stages.
+        </p>
+        <div class="circuit-line-decor">
+          <div class="circuit-node"></div>
+        </div>
+      </div>
+
+      <div class="grid-2" style="gap: 2.5rem;">
+        <!-- Achiever Card 1 -->
+        <div class="achiever-card reveal reveal-delay-1">
+          <div class="achiever-badge">
+            <i class="fa-solid fa-trophy"></i> National Representation &bull; 2026
+          </div>
+          <h3 class="text-navy" style="font-size: 1.4rem; margin-bottom: 0.5rem;">Autonomous Mobile Robot</h3>
+          <p style="color: var(--secondary-blue); font-weight: 600; margin-bottom: 1rem;">
+            Represented Team at National Level Innovation 2026
+          </p>
+          <div style="display: flex; gap: 1.25rem; align-items: center; margin-bottom: 1.25rem;">
+            <img src="assets/projects/autonomous-mobile-robot.png" alt="Robot Team" style="width: 100px; height: 90px; object-fit: cover; border-radius: var(--radius-sm);" />
+            <p style="font-size: 0.92rem; margin: 0; line-height: 1.6;">
+              Demonstrated obstacle mapping, dynamic path navigation, and real-time sensor processing before national technology juries.
+            </p>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-light); padding-top: 1rem;">
+            <span style="font-size: 0.82rem; font-weight: 600; color: var(--text-muted);">Department of EEE</span>
+            <a href="project-detail.html?id=autonomous-mobile-robot" class="btn btn-sm btn-outline">Read Project Specs</a>
+          </div>
+        </div>
+
+        <!-- Achiever Card 2 -->
+        <div class="achiever-card reveal reveal-delay-2">
+          <div class="achiever-badge" style="background: var(--engineering-green);">
+            <i class="fa-solid fa-medal"></i> Innovation Showcase &bull; 2026
+          </div>
+          <h3 class="text-navy" style="font-size: 1.4rem; margin-bottom: 0.5rem;">Smart Dustbin for Waste Segregation</h3>
+          <p style="color: var(--secondary-blue); font-weight: 600; margin-bottom: 1rem;">
+            Presented in Niral Thiruvizha 2026
+          </p>
+          <div style="display: flex; gap: 1.25rem; align-items: center; margin-bottom: 1.25rem;">
+            <img src="assets/projects/smart-dustbin.png" alt="Smart Dustbin Team" style="width: 100px; height: 90px; object-fit: cover; border-radius: var(--radius-sm);" />
+            <p style="font-size: 0.92rem; margin: 0; line-height: 1.6;">
+              Showcased practical waste segregation logic, touchless sanitary actuation, and institutional smart city application.
+            </p>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-light); padding-top: 1rem;">
+            <span style="font-size: 0.82rem; font-weight: 600; color: var(--text-muted);">Department of EEE</span>
+            <a href="project-detail.html?id=smart-dustbin" class="btn btn-sm btn-outline">Read Project Specs</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="text-center" style="margin-top: 2.5rem;">
+        <a href="achievers.html" class="btn btn-outline">
+          Explore Achievers & Recognitions <i class="fa-solid fa-arrow-right"></i>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================================================
+       8. FLAGSHIP EVENT — EMBEDNOVA
+       ======================================================================== -->
+  <section class="section section-bg-dark" id="embednova" style="background: linear-gradient(135deg, #051433 0%, #0B2A6F 70%, #0A3D1E 100%);">
+    <div class="container">
+      <div class="embednova-feature-banner reveal">
+        <div class="grid-2" style="align-items: center; gap: 3rem;">
+          <div>
+            <div class="section-eyebrow" style="background: rgba(255,255,255,0.12); color: #FFFFFF; border-color: rgba(255,255,255,0.25);">
+              <i class="fa-solid fa-star text-orange"></i> Flagship Signature Event
+            </div>
+            
+            <div style="margin-bottom: 1.5rem;">
+              <img src="assets/branding/embednova-logo.png" alt="EMBEDNOVA Logo" style="max-height: 65px; width: auto;" />
+            </div>
+
+            <h2 style="color: #FFFFFF; font-size: clamp(1.8rem, 3.5vw, 2.6rem); margin-bottom: 0.75rem;">
+              A Tech-Powered Event for Innovative Minds
+            </h2>
+            <p style="font-family: var(--font-heading); font-size: 1.15rem; font-weight: 700; letter-spacing: 0.12em; color: var(--accent-orange); margin-bottom: 1.25rem;">
+              INNOVATE &bull; INTEGRATE &bull; AUTOMATE
+            </p>
+            <p style="color: rgba(255, 255, 255, 0.9); font-size: 1.05rem; line-height: 1.8; margin-bottom: 2rem;">
+              EMBEDNOVA is the premier technical competition by EMBEDX, bringing together engineering students across the state to tackle rapid embedded challenges, circuit troubleshooting, and innovative automation systems.
+            </p>
+
+            <div style="display: flex; gap: 1.25rem; flex-wrap: wrap;">
+              <a href="event-detail.html?id=embednova" class="btn btn-orange">
+                Explore Event Details <i class="fa-solid fa-arrow-right"></i>
+              </a>
+              <button class="btn btn-outline-white" onclick="openLightbox('assets/posters/embednova-event-poster.png', 'EMBEDNOVA Signature Event Official Poster')">
+                <i class="fa-solid fa-image"></i> View Event Poster
+              </button>
+            </div>
+          </div>
+
+          <!-- 3 Challenge Tracks Summary -->
+          <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+            <!-- Track 1 -->
+            <div class="embednova-track-card">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+                <span class="track-number" style="color: var(--accent-cyan); font-size: 1.8rem;">01</span>
+                <span style="font-family: var(--font-heading); font-size: 0.8rem; font-weight: 700; color: #fff; background: rgba(0, 210, 255, 0.2); padding: 0.2rem 0.6rem; border-radius: var(--radius-full);">MCQs & Logic</span>
+              </div>
+              <h4 style="color: #FFFFFF; font-size: 1.2rem; margin-bottom: 0.35rem;">TECH CHALLENGE</h4>
+              <p style="color: rgba(255,255,255,0.8); font-size: 0.88rem; margin: 0;">Test your Embedded Knowledge! MCQs, Aptitude, Low-Level Logic, and Real-World Scenarios.</p>
+            </div>
+
+            <!-- Track 2 -->
+            <div class="embednova-track-card">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+                <span class="track-number" style="color: #4ADE80; font-size: 1.8rem;">02</span>
+                <span style="font-family: var(--font-heading); font-size: 0.8rem; font-weight: 700; color: #fff; background: rgba(74, 222, 128, 0.2); padding: 0.2rem 0.6rem; border-radius: var(--radius-full);">Debug & Fix</span>
+              </div>
+              <h4 style="color: #FFFFFF; font-size: 1.2rem; margin-bottom: 0.35rem;">CIRCUIT WIZARD</h4>
+              <p style="color: rgba(255,255,255,0.8); font-size: 0.88rem; margin: 0;">Build. Debug. Perfect. Component selection, hardware fault diagnosis, and precision wiring.</p>
+            </div>
+
+            <!-- Track 3 -->
+            <div class="embednova-track-card">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+                <span class="track-number" style="color: #FB923C; font-size: 1.8rem;">03</span>
+                <span style="font-family: var(--font-heading); font-size: 0.8rem; font-weight: 700; color: #fff; background: rgba(251, 146, 60, 0.2); padding: 0.2rem 0.6rem; border-radius: var(--radius-full);">Open Innovation</span>
+              </div>
+              <h4 style="color: #FFFFFF; font-size: 1.2rem; margin-bottom: 0.35rem;">AUTOMATION ARENA</h4>
+              <p style="color: rgba(255,255,255,0.8); font-size: 0.88rem; margin: 0;">Automate the Future! Problem statement solutions, working prototypes, and jury presentation.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================================================
+       9. CAREER & INDUSTRY ECOSYSTEM
+       ======================================================================== -->
+  <section class="section section-bg-white" id="career">
+    <div class="container">
+      <div class="section-header reveal">
+        <div class="section-eyebrow">Industry & Opportunities</div>
+        <h2 class="section-title">Where EMBEDX Skills Can Lead</h2>
+        <p class="section-subtitle">
+          Equipping engineering students with competencies highly sought after across global semiconductors, automotive, industrial robotics, and smart infrastructure sectors.
+        </p>
+        <div class="circuit-line-decor">
+          <div class="circuit-node"></div>
+        </div>
+      </div>
+
+      <!-- Career Roles Grid -->
+      <div class="grid-4" style="gap: 1.25rem; margin-bottom: 3.5rem;">
+        <div class="card reveal reveal-delay-1" style="padding: 1.25rem;">
+          <i class="fa-solid fa-microchip text-blue" style="font-size: 1.5rem; margin-bottom: 0.75rem;"></i>
+          <h4 class="text-navy" style="font-size: 1.05rem; margin-bottom: 0.35rem;">Embedded Systems Engineer</h4>
+          <p style="font-size: 0.85rem; margin: 0;">Firmware development, board bring-up, and real-time processing architectures.</p>
+        </div>
+
+        <div class="card reveal reveal-delay-2" style="padding: 1.25rem;">
+          <i class="fa-solid fa-robot text-green" style="font-size: 1.5rem; margin-bottom: 0.75rem;"></i>
+          <h4 class="text-navy" style="font-size: 1.05rem; margin-bottom: 0.35rem;">Automation Engineer</h4>
+          <p style="font-size: 0.85rem; margin: 0;">Automated manufacturing, robotic workcells, and assembly line orchestration.</p>
+        </div>
+
+        <div class="card reveal reveal-delay-3" style="padding: 1.25rem;">
+          <i class="fa-solid fa-code-branch text-orange" style="font-size: 1.5rem; margin-bottom: 0.75rem;"></i>
+          <h4 class="text-navy" style="font-size: 1.05rem; margin-bottom: 0.35rem;">Firmware Developer</h4>
+          <p style="font-size: 0.85rem; margin: 0;">Low-level C/C++, device drivers, and real-time operating systems.</p>
+        </div>
+
+        <div class="card reveal reveal-delay-4" style="padding: 1.25rem;">
+          <i class="fa-solid fa-wifi text-blue" style="font-size: 1.5rem; margin-bottom: 0.75rem;"></i>
+          <h4 class="text-navy" style="font-size: 1.05rem; margin-bottom: 0.35rem;">IoT Solutions Engineer</h4>
+          <p style="font-size: 0.85rem; margin: 0;">Edge-to-cloud connectivity, telemetry pipelines, and smart infrastructure.</p>
+        </div>
+      </div>
+
+      <!-- Industry Ecosystem Banner -->
+      <div style="background: var(--bg-secondary); border: 1.5px solid var(--border-light); border-radius: var(--radius-lg); padding: 2.5rem; text-align: center; box-shadow: var(--shadow-sm);" class="reveal">
+        <h3 class="text-navy" style="font-size: 1.35rem; margin-bottom: 0.75rem;">
+          Companies and Technologies Relevant to the Domain
+        </h3>
+        <p style="font-size: 0.95rem; max-width: 800px; margin: 0 auto 1.5rem; color: var(--text-muted);">
+          Our curriculum and technical sprints prepare students for modern technology ecosystems spanning semiconductors, automotive electronics, and industrial automation.
+        </p>
+        <img 
+          src="assets/images/industry-ecosystem-strip.png" 
+          alt="Relevant Industry Ecosystem Logos" 
+          style="max-width: 100%; height: auto; margin: 0 auto; border-radius: var(--radius-md);" 
+        />
+        <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 1rem;">
+          * Logos represent relevant industrial and technological domains explored in club activities.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================================================
+       10. WHY JOIN EMBEDX
+       ======================================================================== -->
+  <section class="section section-bg-alt" id="why-join">
+    <div class="container">
+      <div class="section-header reveal">
+        <div class="section-eyebrow eyebrow-green">Empowering Students</div>
+        <h2 class="section-title">Why Join EMBEDX?</h2>
+        <p class="section-subtitle">
+          Join a passionate community dedicated to turning theory into working silicon, code, and electromechanical systems.
+        </p>
+        <div class="circuit-line-decor">
+          <div class="circuit-node"></div>
+        </div>
+      </div>
+
+      <div class="grid-3" style="gap: 1.75rem;">
+        <div class="card reveal reveal-delay-1">
+          <i class="fa-solid fa-graduation-cap text-green" style="font-size: 1.75rem; margin-bottom: 1rem;"></i>
+          <h3 class="text-navy" style="font-size: 1.2rem; margin-bottom: 0.5rem;">Enhance Technical Skills</h3>
+          <p style="font-size: 0.92rem;">Master industry-standard microcontrollers, low-level firmware, circuit debugging, and RTOS.</p>
+        </div>
+
+        <div class="card reveal reveal-delay-2">
+          <i class="fa-solid fa-laptop-code text-blue" style="font-size: 1.75rem; margin-bottom: 1rem;"></i>
+          <h3 class="text-navy" style="font-size: 1.2rem; margin-bottom: 0.5rem;">Work on Real-Time Projects</h3>
+          <p style="font-size: 0.92rem;">Build tangible autonomous mobile robots, healthcare systems, and smart city devices with provided hardware.</p>
+        </div>
+
+        <div class="card reveal reveal-delay-3">
+          <i class="fa-solid fa-trophy text-orange" style="font-size: 1.75rem; margin-bottom: 1rem;"></i>
+          <h3 class="text-navy" style="font-size: 1.2rem; margin-bottom: 0.5rem;">Participate in Competitions</h3>
+          <p style="font-size: 0.92rem;">Compete in national and state-level innovation challenges, hackathons, and symposiums.</p>
+        </div>
+
+        <div class="card reveal reveal-delay-1">
+          <i class="fa-solid fa-users text-blue" style="font-size: 1.75rem; margin-bottom: 1rem;"></i>
+          <h3 class="text-navy" style="font-size: 1.2rem; margin-bottom: 0.5rem;">Network With Communities</h3>
+          <p style="font-size: 0.92rem;">Collaborate with senior student mentors, IEEE student branch networks, and faculty advisors.</p>
+        </div>
+
+        <div class="card reveal reveal-delay-2">
+          <i class="fa-solid fa-briefcase text-green" style="font-size: 1.75rem; margin-bottom: 1rem;"></i>
+          <h3 class="text-navy" style="font-size: 1.2rem; margin-bottom: 0.5rem;">Build Your Portfolio</h3>
+          <p style="font-size: 0.92rem;">Showcase documented hardware schematics, firmware repositories, and working prototype videos.</p>
+        </div>
+
+        <div class="card reveal reveal-delay-3">
+          <i class="fa-solid fa-rocket text-orange" style="font-size: 1.75rem; margin-bottom: 1rem;"></i>
+          <h3 class="text-navy" style="font-size: 1.2rem; margin-bottom: 0.5rem;">Explore Emerging Tech</h3>
+          <p style="font-size: 0.92rem;">Dive into TinyML on microcontrollers, LoRaWAN wireless telemetries, and Industry 4.0 PLC systems.</p>
+        </div>
+      </div>
+
+      <!-- Join Banner CTA -->
+      <div style="background: linear-gradient(135deg, #0B2A6F, #146B3A); border-radius: var(--radius-lg); padding: clamp(2.5rem, 5vw, 3.5rem); color: #FFFFFF; text-align: center; margin-top: 4rem; box-shadow: var(--shadow-xl);" class="reveal">
+        <h2 style="color: #FFFFFF; font-size: clamp(1.8rem, 3vw, 2.4rem); margin-bottom: 0.75rem;">
+          Ideas Today, Innovations Tomorrow, Impact Forever.
+        </h2>
+        <p style="color: rgba(255, 255, 255, 0.9); font-size: 1.1rem; max-width: 650px; margin: 0 auto 2rem;">
+          Open to all engineering students eager to explore embedded systems, robotics, electronics, and smart automation.
+        </p>
+        <a href="join.html" class="btn btn-lg btn-orange">
+          <i class="fa-solid fa-bolt"></i> Apply to Join EMBEDX Today
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================================================
+       11. CONTACT & LOCATION PREVIEW
+       ======================================================================== -->
+  <section class="section section-bg-white" id="contact-preview">
+    <div class="container">
+      <div class="grid-2" style="align-items: center; gap: 3.5rem;">
+        <div class="reveal">
+          <div class="section-eyebrow eyebrow-blue">Get in Touch</div>
+          <h2 class="section-title">Connect With EMBEDX</h2>
+          <p style="font-size: 1.05rem; line-height: 1.8; margin-bottom: 1.75rem;">
+            Whether you have questions regarding club membership, upcoming EmbedNova rounds, project demonstrations, or technical collaborations, our team is here to assist.
+          </p>
+
+          <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+            <div style="display: flex; align-items: flex-start; gap: 1rem;">
+              <div style="width: 44px; height: 44px; border-radius: var(--radius-sm); background: rgba(11, 42, 111, 0.06); color: var(--primary-navy); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0;">
+                <i class="fa-solid fa-location-dot"></i>
+              </div>
+              <div>
+                <h4 style="font-size: 1.05rem; color: var(--primary-navy); margin-bottom: 0.2rem;">Location</h4>
+                <p style="font-size: 0.92rem; margin: 0;">
+                  Department of Electrical and Electronics Engineering<br />
+                  SRM TRP Engineering College, SRM Nagar, Near Samayapuram, Tiruchirappalli – 621 105.
+                </p>
+              </div>
+            </div>
+
+            <div style="display: flex; align-items: flex-start; gap: 1rem;">
+              <div style="width: 44px; height: 44px; border-radius: var(--radius-sm); background: rgba(20, 107, 58, 0.08); color: var(--engineering-green); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0;">
+                <i class="fa-solid fa-phone"></i>
+              </div>
+              <div>
+                <h4 style="font-size: 1.05rem; color: var(--primary-navy); margin-bottom: 0.2rem;">Department Telephone</h4>
+                <p style="font-size: 0.92rem; margin: 0;">0431-2908050</p>
+              </div>
+            </div>
+
+            <div style="display: flex; align-items: flex-start; gap: 1rem;">
+              <div style="width: 44px; height: 44px; border-radius: var(--radius-sm); background: rgba(45, 114, 217, 0.08); color: var(--accent-blue); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0;">
+                <i class="fa-solid fa-globe"></i>
+              </div>
+              <div>
+                <h4 style="font-size: 1.05rem; color: var(--primary-navy); margin-bottom: 0.2rem;">Official College Portal</h4>
+                <p style="font-size: 0.92rem; margin: 0;">www.trpengg.ac.in</p>
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top: 2rem;">
+            <a href="contact.html" class="btn btn-outline">
+              Send an Official Inquiry <i class="fa-solid fa-arrow-right"></i>
+            </a>
+          </div>
+        </div>
+
+        <!-- Official Branding & Poster Box -->
+        <div class="reveal reveal-delay-2">
+          <div style="background: #FFFFFF; border: 1.5px solid var(--border-light); border-radius: var(--radius-lg); padding: 2rem; box-shadow: var(--shadow-lg); text-align: center;">
+            <img src="assets/branding/srm-trp-logo-official.png" alt="SRM TRP Engineering College" style="max-height: 85px; margin: 0 auto 1.5rem; object-fit: contain;" />
+            <h4 class="text-navy" style="font-size: 1.2rem; margin-bottom: 0.5rem;">SRM TRP Engineering College</h4>
+            <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 1rem;">An Autonomous Institution &bull; NAAC A+ Accredited &bull; Affiliated to Anna University</p>
+            <div style="display: flex; justify-content: center; gap: 1rem;">
+              <img src="assets/branding/naac-a-plus-badge.png" alt="NAAC A+ Badge" style="height: 60px; width: auto;" />
+              <img src="assets/branding/ieee-student-branch.png" alt="IEEE Student Branch" style="height: 60px; width: auto;" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================================================
+       12. FOOTER
+       ======================================================================== -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <!-- Col 1: Branding -->
+        <div class="footer-brand">
+          <div class="footer-logo-row">
+            <img src="assets/branding/embedx-logo-emblem.png" alt="EMBEDX Logo" class="footer-logo-img" />
+            <div>
+              <div class="footer-club-name">EMBED<span>X</span></div>
+              <div style="font-size: 0.78rem; color: #fff; text-transform: uppercase;">Embedded Systems & Automation Club</div>
+            </div>
+          </div>
+          <p style="font-size: 0.9rem; line-height: 1.6; color: var(--text-light); margin-top: 0.5rem;">
+            Department of Electrical and Electronics Engineering (EEE)<br />
+            SRM TRP Engineering College (Autonomous)<br />
+            SRM Nagar, Samayapuram, Tiruchirappalli – 621 105.
+          </p>
+          <div class="footer-tagline">INNOVATE &bull; INTEGRATE &bull; INSPIRE</div>
+        </div>
+
+        <!-- Col 2: Navigation -->
+        <div>
+          <h4 class="footer-heading">Navigation</h4>
+          <ul class="footer-links">
+            <li><a href="index.html" class="footer-link"><i class="fa-solid fa-angle-right"></i> Home</a></li>
+            <li><a href="about.html" class="footer-link"><i class="fa-solid fa-angle-right"></i> About Us</a></li>
+            <li><a href="domains.html" class="footer-link"><i class="fa-solid fa-angle-right"></i> Technical Domains</a></li>
+            <li><a href="projects.html" class="footer-link"><i class="fa-solid fa-angle-right"></i> Projects Showcase</a></li>
+            <li><a href="events.html" class="footer-link"><i class="fa-solid fa-angle-right"></i> Events & EmbedNova</a></li>
+            <li><a href="achievers.html" class="footer-link"><i class="fa-solid fa-angle-right"></i> Achievers</a></li>
+          </ul>
+        </div>
+
+        <!-- Col 3: Resources & Community -->
+        <div>
+          <h4 class="footer-heading">Community</h4>
+          <ul class="footer-links">
+            <li><a href="team.html" class="footer-link"><i class="fa-solid fa-angle-right"></i> Meet the Team</a></li>
+            <li><a href="resources.html" class="footer-link"><i class="fa-solid fa-angle-right"></i> Learning Hub</a></li>
+            <li><a href="join.html" class="footer-link"><i class="fa-solid fa-angle-right"></i> Join EMBEDX</a></li>
+            <li><a href="contact.html" class="footer-link"><i class="fa-solid fa-angle-right"></i> Contact Department</a></li>
+            <li><a href="event-detail.html?id=embednova" class="footer-link"><i class="fa-solid fa-angle-right"></i> EMBEDNOVA Registration</a></li>
+          </ul>
+        </div>
+
+        <!-- Col 4: Official Connect -->
+        <div>
+          <h4 class="footer-heading">Connect With Us</h4>
+          <p style="font-size: 0.88rem; color: var(--text-light); margin-bottom: 0.75rem;">
+            Follow departmental technical initiatives, competition updates, and workshop announcements.
+          </p>
+          <div class="footer-socials">
+            <a href="https://www.instagram.com/trpengineeringcollege" target="_blank" rel="noopener" class="social-icon-btn" title="Instagram">
+              <i class="fa-brands fa-instagram"></i>
+            </a>
+            <a href="https://www.linkedin.com/school/srm-trp-engineering-college" target="_blank" rel="noopener" class="social-icon-btn" title="LinkedIn">
+              <i class="fa-brands fa-linkedin-in"></i>
+            </a>
+            <a href="https://www.facebook.com/SRMTRPEngg" target="_blank" rel="noopener" class="social-icon-btn" title="Facebook">
+              <i class="fa-brands fa-facebook-f"></i>
+            </a>
+            <a href="https://www.trpengg.ac.in" target="_blank" rel="noopener" class="social-icon-btn" title="College Portal">
+              <i class="fa-solid fa-globe"></i>
+            </a>
+          </div>
+          <div style="margin-top: 1.25rem; font-size: 0.85rem;">
+            <span style="color: #FFFFFF; font-weight: 600;">Tel:</span> 0431-2908050<br />
+            <span style="color: #FFFFFF; font-weight: 600;">Portal:</span> www.trpengg.ac.in
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer Bottom -->
+      <div class="footer-bottom">
+        <div>
+          &copy; 2026 <strong>EMBEDX – Embedded Systems and Automation Club</strong> &bull; Department of EEE.
+        </div>
+        <div>
+          <strong>SRM TRP Engineering College</strong> (An Autonomous Institution, Affiliated to Anna University)
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="js/data/projects.js"></script>
+  <script src="js/data/events.js"></script>
+  <script src="js/data/domains.js"></script>
+  <script src="js/circuit-canvas.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

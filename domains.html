@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Technical Domains | EMBEDX – Embedded Systems & Automation Club</title>
+  <meta name="description" content="Explore the 12 core technical domains of EMBEDX: Embedded Systems, RTOS, Microcontrollers, IoT, Robotics, PLC Automation, PCB Design, Control Systems, and TinyML." />
+  
+  <link rel="icon" type="image/png" href="assets/branding/embedx-logo-emblem.png" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/components.css" />
+  <link rel="stylesheet" href="css/animations.css" />
+  <link rel="stylesheet" href="css/responsive.css" />
+</head>
+<body>
+
+  <!-- Sticky Header -->
+  <header class="site-header" id="siteHeader">
+    <div class="container nav-container">
+      <a href="index.html" class="brand-lockup" title="EMBEDX — SRM TRP Engineering College">
+        <img src="assets/branding/srm-trp-logo-official.png" alt="SRM TRP Engineering College Logo" class="brand-college-logo" />
+        <div class="brand-divider"></div>
+        <div class="brand-club">
+          <img src="assets/branding/embedx-logo-emblem.png" alt="EMBEDX Club Emblem" class="brand-club-emblem" />
+          <div class="brand-club-text">
+            <span class="brand-club-title">EMBED<span>X</span></span>
+            <span class="brand-club-subtitle">EEE Department</span>
+          </div>
+        </div>
+      </a>
+
+      <nav aria-label="Main Navigation">
+        <ul class="nav-menu">
+          <li><a href="index.html" class="nav-link">Home</a></li>
+          <li><a href="about.html" class="nav-link">About</a></li>
+          <li><a href="domains.html" class="nav-link active">Domains</a></li>
+          <li><a href="projects.html" class="nav-link">Projects</a></li>
+          <li><a href="events.html" class="nav-link">Events</a></li>
+          <li><a href="achievers.html" class="nav-link">Achievers</a></li>
+          <li><a href="team.html" class="nav-link">Team</a></li>
+          <li><a href="resources.html" class="nav-link">Resources</a></li>
+          <li><a href="contact.html" class="nav-link">Contact</a></li>
+        </ul>
+      </nav>
+
+      <div class="nav-actions">
+        <a href="join.html" class="btn btn-sm btn-green btn-desktop">
+          <i class="fa-solid fa-bolt"></i> Join EMBEDX
+        </a>
+        <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation menu">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Mobile Drawer Menu -->
+  <div class="mobile-nav-backdrop" id="mobileNavBackdrop"></div>
+  <aside class="mobile-nav-drawer" id="mobileNavDrawer">
+    <div>
+      <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 2rem;">
+        <img src="assets/branding/embedx-logo-emblem.png" alt="EMBEDX" style="height: 38px; width: 38px;" />
+        <div>
+          <h3 class="text-navy" style="font-size: 1.2rem; margin: 0;">EMBED<span class="text-green">X</span></h3>
+          <p style="font-size: 0.75rem; margin: 0; color: var(--text-muted);">SRM TRP Engineering College</p>
+        </div>
+      </div>
+      <ul class="mobile-nav-menu">
+        <li><a href="index.html" class="mobile-nav-link">Home</a></li>
+        <li><a href="about.html" class="mobile-nav-link">About Us</a></li>
+        <li><a href="domains.html" class="mobile-nav-link active">Technical Domains</a></li>
+        <li><a href="projects.html" class="mobile-nav-link">Projects Showcase</a></li>
+        <li><a href="events.html" class="mobile-nav-link">Events & EmbedNova</a></li>
+        <li><a href="achievers.html" class="mobile-nav-link">Hall of Achievers</a></li>
+        <li><a href="team.html" class="mobile-nav-link">Our Team</a></li>
+        <li><a href="resources.html" class="mobile-nav-link">Learning Hub</a></li>
+        <li><a href="contact.html" class="mobile-nav-link">Contact & Location</a></li>
+      </ul>
+    </div>
+    <div style="margin-top: 2rem;">
+      <a href="join.html" class="btn btn-green" style="width: 100%;">
+        <i class="fa-solid fa-bolt"></i> Join EMBEDX Club
+      </a>
+    </div>
+  </aside>
+
+  <!-- Page Header -->
+  <section style="padding-top: calc(var(--header-height) + 3rem); padding-bottom: 3.5rem; background: linear-gradient(180deg, #FFFFFF 0%, var(--bg-secondary) 100%);">
+    <div class="container text-center">
+      <div class="section-eyebrow eyebrow-blue">Engineering Curricula & Wings</div>
+      <h1 class="text-navy" style="margin-bottom: 1rem;">What We Work On</h1>
+      <p class="section-subtitle" style="max-width: 800px; margin: 0 auto 2rem;">
+        Discover the 12 specialized engineering verticals where EMBEDX members build hardware, write optimized firmware, automate machinery, and pioneer connected systems.
+      </p>
+
+      <!-- Live Search Box -->
+      <div style="max-width: 500px; margin: 0 auto; position: relative;">
+        <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 1.25rem; top: 50%; transform: translateY(-50%); color: var(--text-muted);"></i>
+        <input 
+          type="text" 
+          id="domainSearchInput" 
+          class="form-control" 
+          placeholder="Search by technology (e.g. ARM, FreeRTOS, PLC, LoRa, TinyML)..." 
+          style="padding-left: 3rem; border-radius: var(--radius-full); box-shadow: var(--shadow-sm);"
+        />
+      </div>
+    </div>
+  </section>
+
+  <!-- 12 Technical Domains Grid -->
+  <section class="section section-bg-white" style="padding-top: 2.5rem;">
+    <div class="container">
+      <div class="grid-3" style="gap: 2rem;" id="domainsGrid">
+
+        <!-- Domain 1 -->
+        <div class="domain-card domain-card-item">
+          <div>
+            <div class="domain-card-header">
+              <div class="domain-icon"><i class="fa-solid fa-microchip"></i></div>
+              <span class="domain-badge">Silicon & Architecture</span>
+            </div>
+            <h3 class="domain-card-title text-navy">Embedded Systems</h3>
+            <p style="font-size: 0.92rem; line-height: 1.7; margin-bottom: 1rem;">
+              Design and deployment of specialized computing hardware and firmware engineered for deterministic, real-time operation in modern intelligent devices.
+            </p>
+            <div style="font-size: 0.85rem; margin-bottom: 1rem;">
+              <strong>Core Focus:</strong> Embedded Hardware Design, Real-Time System Architectures, Memory Optimization.
+            </div>
+          </div>
+          <div class="domain-tech-chips">
+            <span class="tech-chip">ARM Cortex</span>
+            <span class="tech-chip">STM32</span>
+            <span class="tech-chip">AVR</span>
+            <span class="tech-chip">Keil µVision</span>
+            <span class="tech-chip">Bare-Metal</span>
+          </div>
+        </div>
+
+        <!-- Domain 2 -->
+        <div class="domain-card domain-card-item">
+          <div>
+            <div class="domain-card-header">
+              <div class="domain-icon"><i class="fa-solid fa-code"></i></div>
+              <span class="domain-badge">Low-Level Systems</span>
+            </div>
+            <h3 class="domain-card-title text-navy">Embedded Software & RTOS</h3>
+            <p style="font-size: 0.92rem; line-height: 1.7; margin-bottom: 1rem;">
+              Low-level system programming, hardware abstraction layers (HAL), peripheral device drivers, and real-time operating system task scheduling.
+            </p>
+            <div style="font-size: 0.85rem; margin-bottom: 1rem;">
+              <strong>Core Focus:</strong> C/C++ Low-Level Systems, Device Drivers, RTOS Multi-Tasking & Semaphores, ISR Timing.
+            </div>
+          </div>
+          <div class="domain-tech-chips">
+            <span class="tech-chip">Embedded C</span>
+            <span class="tech-chip">FreeRTOS</span>
+            <span class="tech-chip">Device Drivers</span>
+            <span class="tech-chip">POSIX</span>
+            <span class="tech-chip">GDB</span>
+          </div>
+        </div>
+
+        <!-- Domain 3 -->
+        <div class="domain-card domain-card-item">
+          <div>
+            <div class="domain-card-header">
+              <div class="domain-icon"><i class="fa-solid fa-memory"></i></div>
+              <span class="domain-badge">Silicon Platforms</span>
+            </div>
+            <h3 class="domain-card-title text-navy">Microcontrollers & Processors</h3>
+            <p style="font-size: 0.92rem; line-height: 1.7; margin-bottom: 1rem;">
+              Hands-on mastery of 8-bit, 16-bit, and 32-bit computing platforms powering consumer, medical, automotive, and industrial electronics.
+            </p>
+            <div style="font-size: 0.85rem; margin-bottom: 1rem;">
+              <strong>Core Focus:</strong> 8051, AVR ATmega, ARM Cortex-M0/M3/M4, PIC16/18, Raspberry Pi, ESP32.
+            </div>
+          </div>
+          <div class="domain-tech-chips">
+            <span class="tech-chip">8051</span>
+            <span class="tech-chip">AVR</span>
+            <span class="tech-chip">ARM Cortex-M</span>
+            <span class="tech-chip">PIC</span>
+            <span class="tech-chip">ESP32</span>
+          </div>
+        </div>
+
+        <!-- Domain 4 -->
+        <div class="domain-card domain-card-item">
+          <div>
+            <div class="domain-card-header">
+              <div class="domain-icon"><i class="fa-solid fa-network-wired"></i></div>
+              <span class="domain-badge">Connected Nodes</span>
+            </div>
+            <h3 class="domain-card-title text-navy">IoT & Edge Computing</h3>
+            <p style="font-size: 0.92rem; line-height: 1.7; margin-bottom: 1rem;">
+              Interconnecting physical edge sensor nodes to cloud backends through lightweight telemetry protocols and dashboards.
+            </p>
+            <div style="font-size: 0.85rem; margin-bottom: 1rem;">
+              <strong>Core Focus:</strong> Cloud Telemetry (MQTT/HTTP), Edge Data Preprocessing, Sensor Pipelines.
+            </div>
+          </div>
+          <div class="domain-tech-chips">
+            <span class="tech-chip">MQTT</span>
+            <span class="tech-chip">CoAP</span>
+            <span class="tech-chip">Node-RED</span>
+            <span class="tech-chip">AWS IoT</span>
+            <span class="tech-chip">ThingSpeak</span>
+          </div>
+        </div>
+
+        <!-- Domain 5 -->
+        <div class="domain-card domain-card-item">
+          <div>
+            <div class="domain-card-header">
+              <div class="domain-icon"><i class="fa-solid fa-robot"></i></div>
+              <span class="domain-badge">Autonomous Motion</span>
+            </div>
+            <h3 class="domain-card-title text-navy">Robotics & Automation</h3>
+            <p style="font-size: 0.92rem; line-height: 1.7; margin-bottom: 1rem;">
+              Kinematics, precision motion control, differential mobile rovers, robotic manipulators, and automated actuation.
+            </p>
+            <div style="font-size: 0.85rem; margin-bottom: 1rem;">
+              <strong>Core Focus:</strong> Kinematics, Motor Drivers, PWM Control, Autonomous Path Planning & Obstacle Mapping.
+            </div>
+          </div>
+          <div class="domain-tech-chips">
+            <span class="tech-chip">Differential Drive</span>
+            <span class="tech-chip">PID Control</span>
+            <span class="tech-chip">Encoders</span>
+            <span class="tech-chip">Servos</span>
+          </div>
+        </div>
+
+        <!-- Domain 6 -->
+        <div class="domain-card domain-card-item">
+          <div>
+            <div class="domain-card-header">
+              <div class="domain-icon"><i class="fa-solid fa-satellite-dish"></i></div>
+              <span class="domain-badge">Transducers</span>
+            </div>
+            <h3 class="domain-card-title text-navy">Sensors & Actuators</h3>
+            <p style="font-size: 0.92rem; line-height: 1.7; margin-bottom: 1rem;">
+              Instrumentation, signal conditioning, analog-to-digital conversion, and driver circuits for electromechanical actuators.
+            </p>
+            <div style="font-size: 0.85rem; margin-bottom: 1rem;">
+              <strong>Core Focus:</strong> IMU Motion Sensing, Optical Probes, Ultrasonic Ranging, Solenoids & Relays.
+            </div>
+          </div>
+          <div class="domain-tech-chips">
+            <span class="tech-chip">MPU6050 IMU</span>
+            <span class="tech-chip">HC-SR04</span>
+            <span class="tech-chip">ADC Sampling</span>
+            <span class="tech-chip">Load Cells</span>
+          </div>
+        </div>
+
+        <!-- Domain 7 -->
+        <div class="domain-card domain-card-item">
+          <div>
+            <div class="domain-card-header">
+              <div class="domain-icon"><i class="fa-solid fa-sliders"></i></div>
+              <span class="domain-badge">System Dynamics</span>
+            </div>
+            <h3 class="domain-card-title text-navy">Control Systems</h3>
+            <p style="font-size: 0.92rem; line-height: 1.7; margin-bottom: 1rem;">
+              Mathematical modeling, closed-loop feedback design, PID tuning, and state-space control for stable dynamic responses.
+            </p>
+            <div style="font-size: 0.85rem; margin-bottom: 1rem;">
+              <strong>Core Focus:</strong> Closed-Loop Feedback, PID Tuning, State Observers, Bode & Stability Analysis.
+            </div>
+          </div>
+          <div class="domain-tech-chips">
+            <span class="tech-chip">MATLAB</span>
+            <span class="tech-chip">Simulink</span>
+            <span class="tech-chip">PID Tuning</span>
+            <span class="tech-chip">State-Space</span>
+          </div>
+        </div>
+
+        <!-- Domain 8 -->
+        <div class="domain-card domain-card-item">
+          <div>
+            <div class="domain-card-header">
+              <div class="domain-icon"><i class="fa-solid fa-industry"></i></div>
+              <span class="domain-badge">Industry 4.0</span>
+            </div>
+            <h3 class="domain-card-title text-navy">PLC & Industrial Automation</h3>
+            <p style="font-size: 0.92rem; line-height: 1.7; margin-bottom: 1rem;">
+              Industrial automation, Programmable Logic Controllers (PLC), SCADA supervision, and HMI for manufacturing lines.
+            </p>
+            <div style="font-size: 0.85rem; margin-bottom: 1rem;">
+              <strong>Core Focus:</strong> Ladder Logic (LD), SCADA & HMI Supervision, Relay Interlocks, Modbus TCP/RTU.
+            </div>
+          </div>
+          <div class="domain-tech-chips">
+            <span class="tech-chip">Siemens S7</span>
+            <span class="tech-chip">Allen-Bradley</span>
+            <span class="tech-chip">SCADA</span>
+            <span class="tech-chip">TIA Portal</span>
+          </div>
+        </div>
+
+        <!-- Domain 9 -->
+        <div class="domain-card domain-card-item">
+          <div>
+            <div class="domain-card-header">
+              <div class="domain-icon"><i class="fa-solid fa-layer-group"></i></div>
+              <span class="domain-badge">Hardware Prototyping</span>
+            </div>
+            <h3 class="domain-card-title text-navy">PCB Design & Prototyping</h3>
+            <p style="font-size: 0.92rem; line-height: 1.7; margin-bottom: 1rem;">
+              Schematic capture, multi-layer printed circuit board routing, component footprint creation, DRC, and Gerber generation.
+            </p>
+            <div style="font-size: 0.85rem; margin-bottom: 1rem;">
+              <strong>Core Focus:</strong> Schematic Capture, Trace Routing, Ground Planes, Signal Integrity, DFM.
+            </div>
+          </div>
+          <div class="domain-tech-chips">
+            <span class="tech-chip">Altium Designer</span>
+            <span class="tech-chip">KiCad</span>
+            <span class="tech-chip">Proteus</span>
+            <span class="tech-chip">Gerber CAD</span>
+          </div>
+        </div>
+
+        <!-- Domain 10 -->
+        <div class="domain-card domain-card-item">
+          <div>
+            <div class="domain-card-header">
+              <div class="domain-icon"><i class="fa-solid fa-wifi"></i></div>
+              <span class="domain-badge">Telemetry & RF</span>
+            </div>
+            <h3 class="domain-card-title text-navy">Wireless Communication</h3>
+            <p style="font-size: 0.92rem; line-height: 1.7; margin-bottom: 1rem;">
+              RF transceiver integration, short-range wireless meshes, and long-range low-power radio communication protocols.
+            </p>
+            <div style="font-size: 0.85rem; margin-bottom: 1rem;">
+              <strong>Core Focus:</strong> Bluetooth Low Energy (BLE), Wi-Fi 802.11, LoRa / LoRaWAN, NRF24L01+ RF Telemetry.
+            </div>
+          </div>
+          <div class="domain-tech-chips">
+            <span class="tech-chip">LoRaWAN</span>
+            <span class="tech-chip">BLE 5.0</span>
+            <span class="tech-chip">Wi-Fi</span>
+            <span class="tech-chip">NRF24L01</span>
+          </div>
+        </div>
+
+        <!-- Domain 11 -->
+        <div class="domain-card domain-card-item">
+          <div>
+            <div class="domain-card-header">
+              <div class="domain-icon"><i class="fa-solid fa-chart-line"></i></div>
+              <span class="domain-badge">Instrumentation</span>
+            </div>
+            <h3 class="domain-card-title text-navy">Data Acquisition & Analytics</h3>
+            <p style="font-size: 0.92rem; line-height: 1.7; margin-bottom: 1rem;">
+              High-speed measurement, automated test bench instruments, signal processing, and engineering telemetry logging.
+            </p>
+            <div style="font-size: 0.85rem; margin-bottom: 1rem;">
+              <strong>Core Focus:</strong> Multi-Channel DAQ, Digital Signal Processing (FFT), Virtual Instruments.
+            </div>
+          </div>
+          <div class="domain-tech-chips">
+            <span class="tech-chip">LabVIEW</span>
+            <span class="tech-chip">MATLAB</span>
+            <span class="tech-chip">VISA/GPIB</span>
+            <span class="tech-chip">Signal Processing</span>
+          </div>
+        </div>
+
+        <!-- Domain 12 -->
+        <div class="domain-card domain-card-item">
+          <div>
+            <div class="domain-card-header">
+              <div class="domain-icon"><i class="fa-solid fa-brain"></i></div>
+              <span class="domain-badge">Embedded AI</span>
+            </div>
+            <h3 class="domain-card-title text-navy">AI at the Edge (TinyML)</h3>
+            <p style="font-size: 0.92rem; line-height: 1.7; margin-bottom: 1rem;">
+              Quantized machine learning models deployed directly on microcontrollers for on-device voice, anomaly detection, and vision.
+            </p>
+            <div style="font-size: 0.85rem; margin-bottom: 1rem;">
+              <strong>Core Focus:</strong> TinyML Quantization, On-Device Anomaly Detection, Embedded Vision, Neural Acceleration.
+            </div>
+          </div>
+          <div class="domain-tech-chips">
+            <span class="tech-chip">TensorFlow Lite</span>
+            <span class="tech-chip">Edge Impulse</span>
+            <span class="tech-chip">CMSIS-NN</span>
+            <span class="tech-chip">OpenMV</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Tools & Platforms Ecosystem Section -->
+  <section class="section section-bg-alt">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-eyebrow eyebrow-orange">Toolchains & Software</div>
+        <h2 class="section-title">Tools & Platforms We Utilize</h2>
+        <p class="section-subtitle">
+          Industry-standard software suites, IDEs, simulation packages, and hardware platforms used in EMBEDX project sprints.
+        </p>
+        <div class="circuit-line-decor"><div class="circuit-node"></div></div>
+      </div>
+
+      <div class="grid-4" style="gap: 1.25rem;">
+        <div class="card" style="padding: 1.25rem;">
+          <h4 class="text-navy" style="font-size: 1.1rem; margin-bottom: 0.35rem;">Keil µVision</h4>
+          <p style="font-size: 0.85rem; margin: 0;">Industry-standard ARM & 8051 compiler and simulator.</p>
+        </div>
+
+        <div class="card" style="padding: 1.25rem;">
+          <h4 class="text-navy" style="font-size: 1.1rem; margin-bottom: 0.35rem;">STM32CubeIDE</h4>
+          <p style="font-size: 0.85rem; margin: 0;">Comprehensive C/C++ development platform for STM32 MCUs.</p>
+        </div>
+
+        <div class="card" style="padding: 1.25rem;">
+          <h4 class="text-navy" style="font-size: 1.1rem; margin-bottom: 0.35rem;">Arduino IDE</h4>
+          <p style="font-size: 0.85rem; margin: 0;">Rapid prototyping and multi-board firmware flashing.</p>
+        </div>
+
+        <div class="card" style="padding: 1.25rem;">
+          <h4 class="text-navy" style="font-size: 1.1rem; margin-bottom: 0.35rem;">Raspberry Pi & Linux</h4>
+          <p style="font-size: 0.85rem; margin: 0;">Embedded Linux, Python automation, and edge telemetry.</p>
+        </div>
+
+        <div class="card" style="padding: 1.25rem;">
+          <h4 class="text-navy" style="font-size: 1.1rem; margin-bottom: 0.35rem;">MATLAB / Simulink</h4>
+          <p style="font-size: 0.85rem; margin: 0;">Mathematical modeling, dynamic simulation, and PID tuning.</p>
+        </div>
+
+        <div class="card" style="padding: 1.25rem;">
+          <h4 class="text-navy" style="font-size: 1.1rem; margin-bottom: 0.35rem;">LabVIEW</h4>
+          <p style="font-size: 0.85rem; margin: 0;">Virtual instrumentation and automated data acquisition.</p>
+        </div>
+
+        <div class="card" style="padding: 1.25rem;">
+          <h4 class="text-navy" style="font-size: 1.1rem; margin-bottom: 0.35rem;">Proteus & Multisim</h4>
+          <p style="font-size: 0.85rem; margin: 0;">SPICE electronic circuit simulation and MCU co-simulation.</p>
+        </div>
+
+        <div class="card" style="padding: 1.25rem;">
+          <h4 class="text-navy" style="font-size: 1.1rem; margin-bottom: 0.35rem;">Altium & KiCad</h4>
+          <p style="font-size: 0.85rem; margin: 0;">Professional schematic capture and multi-layer PCB layout.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <div class="footer-logo-row">
+            <img src="assets/branding/embedx-logo-emblem.png" alt="EMBEDX Logo" class="footer-logo-img" />
+            <div>
+              <div class="footer-club-name">EMBED<span>X</span></div>
+              <div style="font-size: 0.78rem; color: #fff; text-transform: uppercase;">Embedded Systems & Automation Club</div>
+            </div>
+          </div>
+          <p style="font-size: 0.9rem; line-height: 1.6; color: var(--text-light); margin-top: 0.5rem;">
+            Department of Electrical and Electronics Engineering (EEE)<br />
+            SRM TRP Engineering College (Autonomous)<br />
+            SRM Nagar, Samayapuram, Tiruchirappalli – 621 105.
+          </p>
+          <div class="footer-tagline">INNOVATE &bull; INTEGRATE &bull; INSPIRE</div>
+        </div>
+
+        <div>
+          <h4 class="footer-heading">Navigation</h4>
+          <ul class="footer-links">
+            <li><a href="index.html" class="footer-link"><i class="fa-solid fa-angle-right"></i> Home</a></li>
+            <li><a href="about.html" class="footer-link"><i class="fa-solid fa-angle-right"></i> About Us</a></li>
+            <li><a href="domains.html" class="footer-link"><i class="fa-solid fa-angle-right"></i> Technical Domains</a></li>
+            <li><a href="projects.html" class="footer-link"><i class="fa-solid fa-angle-right"></i> Projects Showcase</a></li>
+            <li><a href="events.html" class="footer-link"><i class="fa-solid fa-angle-right"></i> Events & EmbedNova</a></li>
+            <li><a href="achievers.html" class="footer-link"><i class="fa-solid fa-angle-right"></i> Achievers</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 class="footer-heading">Community</h4>
+          <ul class="footer-links">
+            <li><a href="team.html" class="footer-link"><i class="fa-solid fa-angle-right"></i> Meet the Team</a></li>
+            <li><a href="resources.html" class="footer-link"><i class="fa-solid fa-angle-right"></i> Learning Hub</a></li>
+            <li><a href="join.html" class="footer-link"><i class="fa-solid fa-angle-right"></i> Join EMBEDX</a></li>
+            <li><a href="contact.html" class="footer-link"><i class="fa-solid fa-angle-right"></i> Contact Department</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 class="footer-heading">Connect With Us</h4>
+          <div class="footer-socials">
+            <a href="https://www.instagram.com/trpengineeringcollege" target="_blank" rel="noopener" class="social-icon-btn"><i class="fa-brands fa-instagram"></i></a>
+            <a href="https://www.linkedin.com/school/srm-trp-engineering-college" target="_blank" rel="noopener" class="social-icon-btn"><i class="fa-brands fa-linkedin-in"></i></a>
+            <a href="https://www.facebook.com/SRMTRPEngg" target="_blank" rel="noopener" class="social-icon-btn"><i class="fa-brands fa-facebook-f"></i></a>
+            <a href="https://www.trpengg.ac.in" target="_blank" rel="noopener" class="social-icon-btn"><i class="fa-solid fa-globe"></i></a>
+          </div>
+          <div style="margin-top: 1.25rem; font-size: 0.85rem;">
+            <span style="color: #FFFFFF; font-weight: 600;">Tel:</span> 0431-2908050<br />
+            <span style="color: #FFFFFF; font-weight: 600;">Portal:</span> www.trpengg.ac.in
+          </div>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <div>&copy; 2026 <strong>EMBEDX – Embedded Systems and Automation Club</strong> &bull; Department of EEE.</div>
+        <div><strong>SRM TRP Engineering College</strong> (An Autonomous Institution, Affiliated to Anna University)</div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/data/domains.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

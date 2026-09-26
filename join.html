@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Join EMBEDX | Recruitment & Application</title>
+  <meta name="description" content="Apply to join EMBEDX – Embedded Systems and Automation Club, Department of Electrical and Electronics Engineering, SRM TRP Engineering College." />
+ac
+  <link rel="icon" type="image/png" href="assets/branding/embedx-logo-emblem.png" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/components.css" />
+  <link rel="stylesheet" href="css/animations.css" />
+  <link rel="stylesheet" href="css/responsive.css" />
+</head>
+<body>
+
+  <!-- Sticky Header -->
+  <header class="site-header" id="siteHeader">
+    <div class="container nav-container">
+      <a href="index.html" class="brand-lockup" title="EMBEDX — SRM TRP Engineering College">
+        <img src="assets/branding/srm-trp-logo-official.png" alt="SRM TRP Engineering College Logo" class="brand-college-logo" />
+        <div class="brand-divider"></div>
+        <div class="brand-club">
+          <img src="assets/branding/embedx-logo-emblem.png" alt="EMBEDX Club Emblem" class="brand-club-emblem" />
+          <div class="brand-club-text">
+            <span class="brand-club-title">EMBED<span>X</span></span>
+            <span class="brand-club-subtitle">EEE Department</span>
+          </div>
+        </div>
+      </a>
+
+      <nav aria-label="Main Navigation">
+        <ul class="nav-menu">
+          <li><a href="index.html" class="nav-link">Home</a></li>
+          <li><a href="about.html" class="nav-link">About</a></li>
+          <li><a href="domains.html" class="nav-link">Domains</a></li>
+          <li><a href="projects.html" class="nav-link">Projects</a></li>
+          <li><a href="events.html" class="nav-link">Events</a></li>
+          <li><a href="achievers.html" class="nav-link">Achievers</a></li>
+          <li><a href="team.html" class="nav-link">Team</a></li>
+          <li><a href="resources.html" class="nav-link">Resources</a></li>
+          <li><a href="contact.html" class="nav-link">Contact</a></li>
+        </ul>
+      </nav>
+
+      <div class="nav-actions">
+        <a href="join.html" class="btn btn-sm btn-green btn-desktop">
+          <i class="fa-solid fa-bolt"></i> Join EMBEDX
+        </a>
+        <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation menu">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Mobile Drawer Menu -->
+  <div class="mobile-nav-backdrop" id="mobileNavBackdrop"></div>
+  <aside class="mobile-nav-drawer" id="mobileNavDrawer">
+    <div>
+      <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 2rem;">
+        <img src="assets/branding/embedx-logo-emblem.png" alt="EMBEDX" style="height: 38px; width: 38px;" />
+        <div>
+          <h3 class="text-navy" style="font-size: 1.2rem; margin: 0;">EMBED<span class="text-green">X</span></h3>
+          <p style="font-size: 0.75rem; margin: 0; color: var(--text-muted);">SRM TRP Engineering College</p>
+        </div>
+      </div>
+
+      <ul class="mobile-nav-menu">
+        <li><a href="index.html" class="mobile-nav-link">Home</a></li>
+        <li><a href="about.html" class="mobile-nav-link">About Us</a></li>
+        <li><a href="domains.html" class="mobile-nav-link">Technical Domains</a></li>
+        <li><a href="projects.html" class="mobile-nav-link">Projects Showcase</a></li>
+        <li><a href="events.html" class="mobile-nav-link">Events & EmbedNova</a></li>
+        <li><a href="achievers.html" class="mobile-nav-link">Hall of Achievers</a></li>
+        <li><a href="team.html" class="mobile-nav-link">Our Team</a></li>
+        <li><a href="resources.html" class="mobile-nav-link">Learning Hub</a></li>
+        <li><a href="contact.html" class="mobile-nav-link">Contact & Location</a></li>
+      </ul>
+    </div>
+
+    <div style="margin-top: 2rem;">
+      <a href="join.html" class="btn btn-green" style="width: 100%;">
+        <i class="fa-solid fa-bolt"></i> Join EMBEDX Club
+      </a>
+    </div>
+  </aside>
+
+  <!-- Header Banner -->
+  <section style="padding-top: calc(var(--header-height) + 3rem); padding-bottom: 3.5rem; background: linear-gradient(180deg, #FFFFFF 0%, var(--bg-secondary) 100%);">
+    <div class="container text-center">
+      <div class="section-eyebrow eyebrow-green">Membership & Recruitment</div>
+      <h1 class="text-navy" style="margin-bottom: 0.75rem;">BECOME PART OF EMBEDX</h1>
+
+      <p style="font-family: var(--font-heading); font-size: 1.2rem; font-weight: 700; color: var(--primary-navy); letter-spacing: 0.08em; margin-bottom: 1rem;">
+        Learn. Build. Experiment. Compete. Innovate.
+      </p>
+
+      <p class="section-subtitle" style="max-width: 750px; margin: 0 auto;">
+        Join a vibrant practical technology community where students build real embedded systems, robotic mechanisms, and smart automation solutions.
+      </p>
+
+      <div class="circuit-line-decor">
+        <div class="circuit-node"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Application Form Section -->
+  <section class="section section-bg-white" style="padding-top: 2rem;">
+    <div class="container">
+      <div class="grid-2" style="align-items: start; gap: 3.5rem;">
+
+        <!-- Left Column: Who Can Join & Benefits -->
+        <div>
+
+          <div style="background: var(--bg-secondary); border: 1.5px solid var(--border-light); border-radius: var(--radius-lg); padding: 2.25rem; margin-bottom: 2.5rem; box-shadow: var(--shadow-sm);">
+            <div class="section-eyebrow eyebrow-blue" style="margin-bottom: 0.75rem;">Eligibility</div>
+            <h3 class="text-navy" style="font-size: 1.4rem; margin-bottom: 1rem;">Who Can Join EMBEDX?</h3>
+
+            <p style="font-size: 0.95rem; line-height: 1.7; margin-bottom: 1.25rem;">
+              Membership is open to enthusiastic engineering students across all years and departments interested in:
+            </p>
+
+            <ul style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.6rem; font-size: 0.92rem;">
+              <li style="display: flex; align-items: center; gap: 0.6rem;"><i class="fa-solid fa-circle-check text-green"></i> <span>Embedded Systems & Firmware</span></li>
+              <li style="display: flex; align-items: center; gap: 0.6rem;"><i class="fa-solid fa-circle-check text-green"></i> <span>Electronics & Circuit Prototyping</span></li>
+              <li style="display: flex; align-items: center; gap: 0.6rem;"><i class="fa-solid fa-circle-check text-green"></i> <span>C / C++ / Arduino / Python Programming</span></li>
+              <li style="display: flex; align-items: center; gap: 0.6rem;"><i class="fa-solid fa-circle-check text-green"></i> <span>IoT, Edge Computing & Cloud Telemetry</span></li>
+              <li style="display: flex; align-items: center; gap: 0.6rem;"><i class="fa-solid fa-circle-check text-green"></i> <span>Robotics, Mechatronics & Motion Control</span></li>
+              <li style="display: flex; align-items: center; gap: 0.6rem;"><i class="fa-solid fa-circle-check text-green"></i> <span>PLC & Industrial Automation</span></li>
+              <li style="display: flex; align-items: center; gap: 0.6rem;"><i class="fa-solid fa-circle-check text-green"></i> <span>Control Systems & Sensor Integration</span></li>
+            </ul>
+          </div>
+
+          <div style="background: #FFFFFF; border: 1.5px solid var(--border-light); border-radius: var(--radius-lg); padding: 2.25rem; box-shadow: var(--shadow-sm);">
+            <div class="section-eyebrow eyebrow-orange" style="margin-bottom: 0.75rem;">Selection Process</div>
+            <h3 class="text-navy" style="font-size: 1.4rem; margin-bottom: 1rem;">How It Works</h3>
+
+            <div style="display: flex; flex-direction: column; gap: 1rem;">
+
+              <div style="display: flex; gap: 1rem; align-items: flex-start;">
+                <span class="track-number" style="font-size: 1.5rem; color: var(--primary-navy);">01</span>
+                <div>
+                  <h4 style="font-size: 1.05rem; color: var(--primary-navy); margin-bottom: 0.2rem;">Online Application</h4>
+                  <p style="font-size: 0.88rem; margin: 0;">Submit the registration form with your background and domain interests.</p>
+                </div>
+              </div>
+
+              <div style="display: flex; gap: 1rem; align-items: flex-start;">
+                <span class="track-number" style="font-size: 1.5rem; color: var(--engineering-green);">02</span>
+                <div>
+                  <h4 style="font-size: 1.05rem; color: var(--primary-navy); margin-bottom: 0.2rem;">Orientation & Domain Sprint</h4>
+                  <p style="font-size: 0.88rem; margin: 0;">Attend the introductory club session and explore domain hardware.</p>
+                </div>
+              </div>
+
+              <div style="display: flex; gap: 1rem; align-items: flex-start;">
+                <span class="track-number" style="font-size: 1.5rem; color: var(--accent-orange);">03</span>
+                <div>
+                  <h4 style="font-size: 1.05rem; color: var(--primary-navy); margin-bottom: 0.2rem;">Project Team Induction</h4>
+                  <p style="font-size: 0.88rem; margin: 0;">Get assigned to active project pods with senior peer mentorship.</p>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Interactive Application Form -->
+        <div>
+          <div style="background: #FFFFFF; border: 2px solid var(--border-light); border-radius: var(--radius-lg); padding: clamp(1.75rem, 4vw, 2.75rem); box-shadow: var(--shadow-xl);">
+
+            <h2 class="text-navy" style="font-size: 1.6rem; margin-bottom: 0.5rem;">Club Application Form</h2>
+
+            <p style="font-size: 0.92rem; color: var(--text-muted); margin-bottom: 2rem;">
+              Fill in your details below. Your draft is automatically saved locally.
+            </p>
+
+            <!-- FORMSPREE FORM -->
+            <!-- Replace YOUR_FORMSPREE_ID with your Formspree form ID -->
+            <form
+              id="joinEmbedxForm"
+              action="/api/join"
+              method="POST"
+              novalidate
+            >
+
+              <!-- Formspree Subject -->
+              <input type="hidden" name="_subject" value="New EMBEDX Club Application" />
+
+              <!-- Full Name -->
+              <div class="form-group">
+                <label class="form-label" for="fullName">Full Name <span class="required">*</span></label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="fullName"
+                  name="full_name"
+                  placeholder="Enter your full name"
+                />
+              </div>
+
+              <!-- Department & Year -->
+              <div class="grid-2" style="gap: 1rem;">
+
+                <div class="form-group">
+                  <label class="form-label" for="department">Department <span class="required">*</span></label>
+
+                  <select
+                    class="form-control"
+                    id="department"
+                    name="department"
+                  >
+                    <option value="">Select Department</option>
+                    <option value="EEE">Electrical & Electronics Engineering (EEE)</option>
+                    <option value="ECE">Electronics & Communication Engineering (ECE)</option>
+                    <option value="CSE">Computer Science & Engineering (CSE)</option>
+                    <option value="IT">Information Technology (IT)</option>
+                    <option value="MECH">Mechanical Engineering</option>
+                    <option value="AIDS">Artificial Intelligence & Data Science</option>
+                    <option value="OTHER">Other Department</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="year">Year of Study <span class="required">*</span></label>
+
+                  <select
+                    class="form-control"
+                    id="year"
+                    name="year"
+                  >
+                    <option value="">Select Year</option>
+                    <option value="I Year">I Year</option>
+                    <option value="II Year">II Year</option>
+                    <option value="III Year">III Year</option>
+                    <option value="IV Year">IV Year</option>
+                  </select>
+                </div>
+
+              </div>
+
+              <!-- Email & Phone -->
+              <div class="grid-2" style="gap: 1rem;">
+
+                <div class="form-group">
+                  <label class="form-label" for="email">Email Address <span class="required">*</span></label>
+
+                  <input
+                    type="email"
+                    class="form-control"
+                    id="email"
+                    name="email"
+                    placeholder="student@trp.srmtrichy.edu.in"
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="phone">Phone Number <span class="required">*</span></label>
+
+                  <input
+                    type="tel"
+                    class="form-control"
+                    id="phone"
+                    name="phone"
+                    placeholder="10-digit mobile number"
+                  />
+                </div>
+
+              </div>
+
+              <!-- Areas of Interest -->
+              <div class="form-group">
+                <label class="form-label">Areas of Technical Interest <span class="required">*</span></label>
+
+                <div class="interest-tag-group">
+
+                  <input
+                    type="checkbox"
+                    id="int_emb"
+                    name="interests"
+                    value="Embedded Systems"
+                    class="interest-tag-checkbox"
+                  />
+                  <label for="int_emb" class="interest-tag-label">
+                    <i class="fa-solid fa-microchip"></i> Embedded Systems
+                  </label>
+
+                  <input
+                    type="checkbox"
+                    id="int_rtos"
+                    name="interests"
+                    value="RTOS & Firmware"
+                    class="interest-tag-checkbox"
+                  />
+                  <label for="int_rtos" class="interest-tag-label">
+                    <i class="fa-solid fa-code"></i> RTOS & Firmware
+                  </label>
+
+                  <input
+                    type="checkbox"
+                    id="int_rob"
+                    name="interests"
+                    value="Robotics"
+                    class="interest-tag-checkbox"
+                  />
+                  <label for="int_rob" class="interest-tag-label">
+                    <i class="fa-solid fa-robot"></i> Robotics & Motion
+                  </label>
+
+                  <input
+                    type="checkbox"
+                    id="int_iot"
+                    name="interests"
+                    value="IoT & Edge"
+                    class="interest-tag-checkbox"
+                  />
+                  <label for="int_iot" class="interest-tag-label">
+                    <i class="fa-solid fa-wifi"></i> IoT & Cloud
+                  </label>
+
+                  <input
+                    type="checkbox"
+                    id="int_pcb"
+                    name="interests"
+                    value="PCB Design"
+                    class="interest-tag-checkbox"
+                  />
+                  <label for="int_pcb" class="interest-tag-label">
+                    <i class="fa-solid fa-layer-group"></i> PCB Design
+                  </label>
+
+                  <input
+                    type="checkbox"
+                    id="int_plc"
+                    name="interests"
+                    value="PLC Automation"
+                    class="interest-tag-checkbox"
+                  />
+                  <label for="int_plc" class="interest-tag-label">
+                    <i class="fa-solid fa-industry"></i> PLC & SCADA
+                  </label>
+
+                  <input
+                    type="checkbox"
+                    id="int_ai"
+                    name="interests"
+                    value="Edge AI / TinyML"
+                    class="interest-tag-checkbox"
+                  />
+                  <label for="int_ai" class="interest-tag-label">
+                    <i class="fa-solid fa-brain"></i> Edge AI / TinyML
+                  </label>
+
+                </div>
+              </div>
+
+              <!-- Technical Skills -->
+              <div class="form-group">
+                <label class="form-label" for="skills">Technical Skills & Known Tools (Optional)</label>
+
+                <input
+                  type="text"
+                  class="form-control"
+                  id="skills"
+                  name="technical_skills"
+                  placeholder="e.g. C, Python, Arduino, MATLAB, KiCad"
+                />
+              </div>
+
+              <!-- Why Join -->
+              <div class="form-group">
+                <label class="form-label" for="motivation">
+                  Why do you want to join EMBEDX? <span class="required">*</span>
+                </label>
+
+                <textarea
+                  class="form-control"
+                  id="motivation"
+                  name="motivation"
+                  rows="3"
+                  placeholder="Tell us what you hope to build, learn, or contribute..."
+                ></textarea>
+              </div>
+
+              <!-- Portfolio Link -->
+              <div class="form-group">
+                <label class="form-label" for="portfolioUrl">
+                  GitHub / LinkedIn / Portfolio Link (Optional)
+                </label>
+
+                <input
+                  type="url"
+                  class="form-control"
+                  id="portfolioUrl"
+                  name="portfolio"
+                  placeholder="https://github.com/yourprofile"
+                />
+              </div>
+
+              <!-- Consent Checkbox -->
+              <div class="form-group" style="margin-top: 0.5rem;">
+                <label style="display: flex; align-items: flex-start; gap: 0.6rem; font-size: 0.88rem; cursor: pointer; color: var(--text-dark);">
+
+                  <input
+                    type="checkbox"
+                    id="consent"
+                    name="consent"
+                    value="Agreed"
+                    style="margin-top: 0.2rem;"
+                  />
+
+                  <span>
+                    I agree to actively participate in club technical workshops, laboratory sessions, and project sprints.
+                  </span>
+
+                </label>
+              </div>
+
+              <div style="margin-top: 2rem;">
+                <button type="submit" class="btn btn-green" style="width: 100%;">
+                  <i class="fa-solid fa-paper-plane"></i> JOIN EMBEDX
+                </button>
+              </div>
+
+            </form>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+
+        <div class="footer-brand">
+          <div class="footer-logo-row">
+            <img src="assets/branding/embedx-logo-emblem.png" alt="EMBEDX Logo" class="footer-logo-img" />
+
+            <div>
+              <div class="footer-club-name">EMBED<span>X</span></div>
+              <div style="font-size: 0.78rem; color: #fff; text-transform: uppercase;">
+                Embedded Systems & Automation Club
+              </div>
+            </div>
+          </div>
+
+          <p style="font-size: 0.9rem; line-height: 1.6; color: var(--text-light); margin-top: 0.5rem;">
+            Department of Electrical and Electronics Engineering (EEE)<br />
+            SRM TRP Engineering College (Autonomous)<br />
+            SRM Nagar, Samayapuram, Tiruchirappalli – 621 105.
+          </p>
+
+          <div class="footer-tagline">INNOVATE &bull; INTEGRATE &bull; INSPIRE</div>
+        </div>
+
+        <div>
+          <h4 class="footer-heading">Navigation</h4>
+
+          <ul class="footer-links">
+            <li><a href="index.html" class="footer-link"><i class="fa-solid fa-angle-right"></i> Home</a></li>
+            <li><a href="about.html" class="footer-link"><i class="fa-solid fa-angle-right"></i> About Us</a></li>
+            <li><a href="domains.html" class="footer-link"><i class="fa-solid fa-angle-right"></i> Technical Domains</a></li>
+            <li><a href="projects.html" class="footer-link"><i class="fa-solid fa-angle-right"></i> Projects Showcase</a></li>
+            <li><a href="events.html" class="footer-link"><i class="fa-solid fa-angle-right"></i> Events & EmbedNova</a></li>
+            <li><a href="achievers.html" class="footer-link"><i class="fa-solid fa-angle-right"></i> Achievers</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 class="footer-heading">Community</h4>
+
+          <ul class="footer-links">
+            <li><a href="team.html" class="footer-link"><i class="fa-solid fa-angle-right"></i> Meet the Team</a></li>
+            <li><a href="resources.html" class="footer-link"><i class="fa-solid fa-angle-right"></i> Learning Hub</a></li>
+            <li><a href="join.html" class="footer-link"><i class="fa-solid fa-angle-right"></i> Join EMBEDX</a></li>
+            <li><a href="contact.html" class="footer-link"><i class="fa-solid fa-angle-right"></i> Contact Department</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 class="footer-heading">Connect With Us</h4>
+
+          <div class="footer-socials">
+            <a href="https://www.instagram.com/trpengineeringcollege" target="_blank" rel="noopener" class="social-icon-btn">
+              <i class="fa-brands fa-instagram"></i>
+            </a>
+
+            <a href="https://www.linkedin.com/school/srm-trp-engineering-college" target="_blank" rel="noopener" class="social-icon-btn">
+              <i class="fa-brands fa-linkedin-in"></i>
+            </a>
+
+            <a href="https://www.facebook.com/SRMTRPEngg" target="_blank" rel="noopener" class="social-icon-btn">
+              <i class="fa-brands fa-facebook-f"></i>
+            </a>
+
+            <a href="https://www.trpengg.ac.in" target="_blank" rel="noopener" class="social-icon-btn">
+              <i class="fa-solid fa-globe"></i>
+            </a>
+          </div>
+
+          <div style="margin-top: 1.25rem; font-size: 0.85rem;">
+            <span style="color: #FFFFFF; font-weight: 600;">Tel:</span> 0431-2908050<br />
+            <span style="color: #FFFFFF; font-weight: 600;">Portal:</span> trp.srmtrichy.edu.in
+          </div>
+        </div>
+
+      </div>
+
+      <div class="footer-bottom">
+        <div>
+          &copy; 2026 <strong>EMBEDX – Embedded Systems and Automation Club</strong> &bull; Department of EEE.
+        </div>
+
+        <div>
+          <strong>SRM TRP Engineering College</strong> (An Autonomous Institution, Affiliated to Anna University)
+        </div>
+      </div>
+
+    </div>
+  </footer>
+
+  <script src="js/forms.js"></script>
+  <script src="js/app.js"></script>
+
+</body>
+</html>
