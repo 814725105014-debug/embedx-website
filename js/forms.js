@@ -56,18 +56,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
         });
 
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 15000);
+
         const response = await fetch('/api/join', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json'
           },
-          body: JSON.stringify(data)
+          body: JSON.stringify(data),
+          signal: controller.signal
         });
 
-        const result = await response.json();
+        clearTimeout(timeout);
 
-        if (!response.ok || !result.success) {
+        const responseText = await response.text();
+
+        let result;
+        try {
+          result = JSON.parse(responseText);
+        } catch {
+          throw new Error('Invalid response from server.');
+        }
+
+        if (!response.ok || result.success !== true) {
           throw new Error(
             result.message || 'Form submission failed.'
           );
@@ -135,18 +148,31 @@ document.addEventListener('DOMContentLoaded', () => {
           message: document.getElementById('contactMessage').value.trim()
         };
 
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 15000);
+
         const response = await fetch('/api/inquiry', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json'
           },
-          body: JSON.stringify(data)
+          body: JSON.stringify(data),
+          signal: controller.signal
         });
 
-        const result = await response.json();
+        clearTimeout(timeout);
 
-        if (!response.ok || !result.success) {
+        const responseText = await response.text();
+
+        let result;
+        try {
+          result = JSON.parse(responseText);
+        } catch {
+          throw new Error('Invalid response from server.');
+        }
+
+        if (!response.ok || result.success !== true) {
           throw new Error(
             result.message || 'Message submission failed.'
           );
