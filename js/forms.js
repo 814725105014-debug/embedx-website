@@ -186,9 +186,52 @@ joinForm.addEventListener('input', () => {
         }
 
         showSubmissionSuccess(
-          'Message Received!',
-          'Thank you for contacting EMBEDX. Your message has been forwarded to the Department of Electrical and Electronics Engineering faculty and student coordinators.'
-        );
+  'Application Submitted Successfully!',
+  `
+  <p>
+    Thank you for applying to
+    <strong>EMBEDX – Embedded Systems & Automation Club</strong>,
+    Department of EEE.
+  </p>
+
+  <p>
+    Your application has been successfully submitted.
+    Our Technical Coordination Committee will review your submission
+    and contact you regarding the upcoming
+    <strong>orientation and domain selection rounds</strong>.
+  </p>
+
+  <p>
+    📧 <strong>Please check your email inbox and Spam/Junk folder</strong>
+    for further details and communication from EMBEDX.
+  </p>
+
+  <p>
+    📱 You may also join the official
+    <strong>EMBEDX WhatsApp group</strong>
+    to receive important announcements and updates.
+  </p>
+
+  <p style="margin-top: 18px;">
+    <a
+      href="https://chat.whatsapp.com/C0lGhoQ6D9MK79OXroCPuF"
+      target="_blank"
+      rel="noopener noreferrer"
+      style="
+        display: inline-block;
+        padding: 11px 18px;
+        background: #25D366;
+        color: #ffffff;
+        text-decoration: none;
+        border-radius: 8px;
+        font-weight: 600;
+      "
+    >
+      Join EMBEDX WhatsApp Group
+    </a>
+  </p>
+  `
+);
 
         contactForm.reset();
 
