@@ -9,13 +9,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (joinForm) {
 
-    // Restore draft if present
-    loadFormDraft(joinForm, 'embedx_join_draft');
+    // Restore draft only if the form was not already submitted
+if (sessionStorage.getItem('embedx_join_submitted') !== '1') {
+  loadFormDraft(joinForm, 'embedx_join_draft');
+} else {
+ localStorage.removeItem('embedx_join_draft');
+sessionStorage.setItem('embedx_join_submitted', '1');
+joinForm.reset();
+}
 
-    // Auto-save on input
-    joinForm.addEventListener('input', () => {
-      saveFormDraft(joinForm, 'embedx_join_draft');
-    });
+// Auto-save on input
+joinForm.addEventListener('input', () => {
+  sessionStorage.removeItem('embedx_join_submitted');
+  saveFormDraft(joinForm, 'embedx_join_draft');
+});
 
     joinForm.addEventListener('submit', async (e) => {
       e.preventDefault();
