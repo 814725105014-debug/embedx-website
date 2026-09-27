@@ -920,8 +920,8 @@
 }
 
 .team-avatar-wrapper {
-  width: 100px;
-  height: 100px;
+  width: 85px;
+  height: 85px;
   border-radius: 50%;
   margin: 0 auto 1.25rem;
   background: rgba(11, 42, 111, 0.05);
@@ -933,8 +933,8 @@
 }
 
 .team-avatar {
-  width: 80%;
-  height: 80%;
+  width: 85%;
+  height: 85%;
   object-fit: contain;
 }
 
