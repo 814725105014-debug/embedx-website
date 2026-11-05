@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Projects — EMBEDX Admin</title>
+  <meta name="robots" content="noindex" />
+  <link rel="icon" type="image/png" href="/assets/images/favicon-64.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" />
+  <meta name="theme-color" content="#08060c" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://firebasestorage.googleapis.com https://www.google-analytics.com; connect-src 'self' https://www.gstatic.com https://www.google-analytics.com https://analytics.google.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://firebasestorage.googleapis.com https://www.googleapis.com; object-src 'none'; base-uri 'self'; form-action 'self'" />
+  <link rel="stylesheet" href="/css/style.css?v=20261105" />
+  <script src="/js/theme.js?v=20261105"></script>
+</head>
+<body data-page="admin" data-admin-page="projects" class="admin-body">
+<a class="skip-link" href="#adminMain">Skip to content</a>
+
+<!-- LOGIN -->
+<main id="loginView" class="admin-login" hidden style="display:none">
+  <form class="card glass" id="loginForm" style="width:min(420px,92vw);padding:var(--sp-4)">
+    <img src="/assets/images/embedx-emblem.webp" alt="EMBEDX emblem" style="width:64px;margin:0 auto 1rem" />
+    <h2 class="center">Admin Portal</h2>
+    <p class="muted center" style="font-size:.88rem">Publish events, announcements, gallery photos, projects and team updates.</p>
+    <div class="field"><label for="li-email">Email</label><input id="li-email" type="email" autocomplete="username" required /></div>
+    <div class="field"><label for="li-pass">Password</label><input id="li-pass" type="password" autocomplete="current-password" required /></div>
+    <p class="error-msg" id="loginError" role="alert"></p>
+    <button class="btn btn-primary" type="submit" style="width:100%">Sign in</button>
+    <p class="muted center" style="font-size:.76rem;margin:.9rem 0 0">Roles are managed by the owner under <b>Admins &amp; roles</b>.</p>
+  </form>
+</main>
+
+<!-- PORTAL SHELL -->
+<div id="adminShell" hidden style="display:none">
+  <header class="admin-top" id="adminTop"></header>
+  <div class="admin-layout">
+    <nav class="admin-nav" id="adminNav" aria-label="Admin sections"></nav>
+    <main class="admin-main" id="adminMain">
+      <div class="admin-head">
+        <div>
+          <h1 style="margin:0 0 .2rem">Projects</h1>
+          <p class="muted" style="font-size:.9rem;margin:0">Featured projects appear on the home page grid.</p>
+          <div id="roleNote" style="margin-top:.5rem"></div>
+        </div>
+        <button class="btn btn-primary" id="addItem" hidden>+ New</button>
+      </div>
+      <div id="statsStrip" class="admin-stats" style="margin:1rem 0"></div>
+      <div id="pageRegion"></div>
+    </main>
+  </div>
+</div>
+
+<!-- ENTITY FORM MODAL -->
+<div class="modal-backdrop" id="formModal" role="dialog" aria-modal="true" aria-labelledby="formModalTitle">
+  <div class="modal" style="width:min(720px,100%)">
+    <button class="icon-btn modal-close" data-modal-close aria-label="Close form"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+    <h2 id="formModalTitle">New item</h2>
+    <form id="entityForm" novalidate><div class="form-grid" id="entityFields"></div>
+      <div style="display:flex;gap:.7rem;justify-content:flex-end;margin-top:1.2rem">
+        <button type="button" class="btn btn-ghost" data-modal-close>Cancel</button>
+        <button type="submit" class="btn btn-primary">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+<!-- IMAGE EDITOR MODAL -->
+<div class="modal-backdrop" id="editorModal" role="dialog" aria-modal="true" aria-labelledby="editorTitle">
+  <div class="modal" style="width:min(760px,100%)">
+    <button class="icon-btn modal-close" data-modal-close aria-label="Close editor"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+    <h2 id="editorTitle">Edit photo</h2>
+    <div class="editor-grid">
+      <canvas id="editorCanvas" style="max-width:100%;border-radius:var(--r-sm);background:var(--bg-3)"></canvas>
+      <div class="editor-tools">
+        <p class="muted" style="font-size:.85rem">Rotate, pick a crop aspect and export size. The result is uploaded as optimized WebP.</p>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+          <button type="button" class="btn btn-ghost btn-sm" id="rotL">&#10554; Rotate</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="rotR">&#10555; Rotate</button>
+        </div>
+        <div class="field" style="margin-top:.8rem"><label for="aspectSel">Crop aspect</label>
+          <select id="aspectSel"><option value="0">Original</option><option value="1">Square 1:1</option><option value="1.3333">4:3</option><option value="1.7778">16:9</option><option value="0.75">3:4 portrait</option></select></div>
+        <div class="field"><label for="widthSel">Max width</label>
+          <select id="widthSel"><option>800</option><option selected>1200</option><option>1600</option></select></div>
+        <button type="button" class="btn btn-primary" id="editorApply" style="width:100%;margin-top:.6rem">Use this image</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast-region" role="status" aria-live="polite"></div>
+<script type="module" src="/js/admin-app.js?v=20261105"></script>
+</body>
+</html>

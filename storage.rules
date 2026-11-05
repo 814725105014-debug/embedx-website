@@ -1,18 +1,28 @@
 rules_version = '2';
 
-// EMBEDX Storage rules — images only, admin upload/replace, public read.
+// EMBEDX Storage rules — images only; uploads for owner + staff roles that edit visual sections.
 service firebase.storage {
   match /b/{bucket}/o {
+    function signedIn() { return request.auth != null; }
     function isOwner() {
-      return request.auth != null
-             && request.auth.token.email == '814725105014@trp.srmtrichy.edu.in';
+      return signedIn()
+             && (request.auth.token.email == '814725105014@trp.srmtrichy.edu.in'
+                 || request.auth.token.admin == true);
     }
-    function isAdmin() {
-      return (request.auth != null && request.auth.token.admin == true) || isOwner();
+    function hasRole() {
+      return signedIn()
+             && exists(/databases/$(firestore)/documents/admin_roles/$(request.auth.token.email));
+    }
+    function myRole() {
+      return get(/databases/$(firestore)/documents/admin_roles/$(request.auth.token.email)).data.role;
+    }
+    function canUpload() {
+      return isOwner()
+        || (hasRole() && myRole() in ['president', 'social_media', 'event_coordinator', 'technical']);
     }
     match /images/{allPaths=**} {
       allow read: if true;
-      allow write: if isAdmin()
+      allow write: if canUpload()
         && request.resource.size < 5 * 1024 * 1024
         && request.resource.contentType.matches('image/.*');
     }
