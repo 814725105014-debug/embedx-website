@@ -17,13 +17,14 @@
  * with stable IDs (set/merge), so re-running updates rather than duplicates.
  */
 const path = require("path");
+const { pathToFileURL } = require("url"); // Windows: ESM import needs file:// URLs
 
 async function loadSiteData() {
   const base = path.join(__dirname, "..", "public", "js", "data");
   const [projects, events, team] = await Promise.all([
-    import(path.join(base, "projects.js")).then((m) => m.projects),
-    import(path.join(base, "events.js")).then((m) => m.events),
-    import(path.join(base, "team.js")).then((m) => m.team)
+    import(pathToFileURL(path.join(base, "projects.js")).href).then((m) => m.projects),
+    import(pathToFileURL(path.join(base, "events.js")).href).then((m) => m.events),
+    import(pathToFileURL(path.join(base, "team.js")).href).then((m) => m.team)
   ]);
   return { projects, events, team };
 }
