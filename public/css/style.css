@@ -253,8 +253,8 @@ button { font: inherit; cursor: pointer; }
   .nav-links { display: none; }
   .nav-burger { display: inline-flex; }
 }
-@media (max-width: 560px) {
-  .nav-join { display: none; }
+@media (max-width: 720px) {
+  .nav-join { display: none; } /* Join stays available inside the mobile menu */
 }
 
 /* ---------- 5. Hero ---------- */
@@ -510,3 +510,38 @@ button { font: inherit; cursor: pointer; }
 .img-picker img { width: 120px; height: 84px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); }
 .editor-grid { display: grid; grid-template-columns: 1.4fr .8fr; gap: 1.2rem; align-items: start; }
 @media (max-width: 700px) { .editor-grid { grid-template-columns: 1fr; } .admin-row { flex-wrap: wrap; } }
+
+/* ---------- 15. Responsive hardening (360 / 768 / 1280 — no overlapping controls) ---------- */
+.btn { white-space: nowrap; }
+.modal h2 { padding-right: 3rem; }           /* keep titles clear of the close button */
+.toast-region { max-width: min(340px, calc(100vw - 1.6rem)); }
+@media (max-width: 560px) {
+  #whoami { display: none; }                 /* admin bar: email chip would crowd buttons */
+  .admin-row {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-areas: "img main" "actions actions";
+    gap: .6rem 1rem;
+  }
+  .admin-row > img, .admin-row > .admin-noimg { grid-area: img; }
+  .admin-row-main { grid-area: main; }
+  .admin-row-actions { grid-area: actions; justify-content: flex-end; }
+  .footer-bottom { flex-direction: column; align-items: flex-start; gap: .3rem; }
+  .toast-region { left: 50%; right: auto; transform: translateX(-50%); bottom: .8rem; }
+}
+@media (max-width: 480px) {
+  .brand-sub { display: none; }
+  .brand-name { font-size: 1.05rem; }
+  .timeline { grid-template-columns: 1fr; }
+  .hero-stats { gap: .6rem; }
+  .stat { padding: .8rem .4rem; }
+  .admin-head { flex-direction: column; align-items: stretch; }
+  .admin-head #addItem { width: 100%; }
+  .modal { padding: var(--sp-3); }
+  .gallery img { height: 130px; }
+  .hero-cta .btn { width: 100%; }
+  .card-img img { height: 160px; }
+}
+@media (max-width: 480px) {
+  .nav-inner { flex-wrap: wrap; height: auto; min-height: var(--nav-h); padding: .5rem 0; row-gap: .4rem; }
+}
