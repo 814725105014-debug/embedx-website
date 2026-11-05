@@ -638,15 +638,21 @@ async function loadAdmins() {
   }));
 }
 
-/* ---------------- wiring ---------------- */
-$("#entityForm").addEventListener("submit", saveForm);
+/* ---------------- wiring (modals exist only on CRUD pages — guard every lookup) ---------------- */
+$("#entityForm")?.addEventListener("submit", saveForm);
 document.querySelectorAll(".modal-backdrop").forEach((bd) => {
   bd.addEventListener("click", (e) => { if (e.target === bd) closeModals(); });
   bd.querySelectorAll("[data-modal-close]").forEach((x) => x.addEventListener("click", closeModals));
 });
-$("#rotL").addEventListener("click", () => { editorState.rot = (editorState.rot + 270) % 360; drawEditor(); });
-$("#rotR").addEventListener("click", () => { editorState.rot = (editorState.rot + 90) % 360; drawEditor(); });
-$("#aspectSel").addEventListener("change", drawEditor);
-$("#widthSel").addEventListener("change", drawEditor);
-$("#editorApply").addEventListener("click", applyEditor);
-boot();
+$("#rotL")?.addEventListener("click", () => { editorState.rot = (editorState.rot + 270) % 360; drawEditor(); });
+$("#rotR")?.addEventListener("click", () => { editorState.rot = (editorState.rot + 90) % 360; drawEditor(); });
+$("#aspectSel")?.addEventListener("change", drawEditor);
+$("#widthSel")?.addEventListener("change", drawEditor);
+$("#editorApply")?.addEventListener("click", applyEditor);
+boot().catch((err) => {
+  console.error(err);
+  const lv = document.getElementById("loginView");
+  if (lv) { lv.hidden = false; lv.style.display = ""; }
+  const le = document.getElementById("loginError");
+  if (le) le.textContent = "Portal failed to start: " + err.message;
+});
