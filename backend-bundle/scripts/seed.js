@@ -8,14 +8,15 @@
  *   node seed.js
  */
 const path = require("path");
+const { pathToFileURL } = require("url"); // Windows: ESM import needs file:// URLs
 async function loadSiteData() {
   const base = path.join(__dirname, "..", "data");
   const [projects, events, team, resources, achievements] = await Promise.all([
-    import(path.join(base, "projects.js")).then((m) => m.projects),
-    import(path.join(base, "events.js")).then((m) => m.events),
-    import(path.join(base, "team.js")).then((m) => m.team),
-    import(path.join(base, "resources.js")).then((m) => m.resources),
-    import(path.join(base, "achievements.js")).then((m) => m.achievements)
+    import(pathToFileURL(path.join(base, "projects.js")).href).then((m) => m.projects),
+    import(pathToFileURL(path.join(base, "events.js")).href).then((m) => m.events),
+    import(pathToFileURL(path.join(base, "team.js")).href).then((m) => m.team),
+    import(pathToFileURL(path.join(base, "resources.js")).href).then((m) => m.resources),
+    import(pathToFileURL(path.join(base, "achievements.js")).href).then((m) => m.achievements)
   ]);
   return { projects, events, team, resources, achievements };
 }

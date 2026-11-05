@@ -80,6 +80,7 @@
 
 /* ---------- 2. Base ---------- */
 *, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; } /* hidden attribute must win over component display rules (e.g. .admin-login grid) */
 html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
 body {
   margin: 0;

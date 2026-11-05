@@ -162,11 +162,13 @@ async function boot() {
   const { auth } = await sdk();
   authMod.onAuthStateChanged(auth, async (user) => {
     if (!user) { $("#loginView").hidden = false; $("#dashView").hidden = true; return; }
-    const token = await user.getIdTokenResult();
+    let token = await user.getIdTokenResult();
+    if (!token.claims.admin) token = await user.getIdTokenResult(true); // force refresh: the claim may have been granted after this session's token was cached
     if (!token.claims.admin) {
+      const email = user.email || "this account";
       await authMod.signOut(auth);
       $("#loginView").hidden = false;
-      $("#loginError").textContent = "Signed-in account lacks the admin claim. Ask an owner to run scripts/grant-admin.js for this email, then retry.";
+      $("#loginError").textContent = `Signed in as ${email}, but it doesn't have admin access yet. Ask an owner to run scripts/grant-admin.js for this email, then sign in again.`;
       return;
     }
     $("#whoami").textContent = user.email;
@@ -178,10 +180,14 @@ async function boot() {
   $("#loginForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     $("#loginError").textContent = "";
+    const btn = $("#loginForm button[type=submit]");
+    const label = btn.textContent;
+    btn.disabled = true; btn.textContent = "Signing in…";
     try {
       await authMod.signInWithEmailAndPassword(auth, $("#li-email").value.trim(), $("#li-pass").value);
     } catch (err) {
       $("#loginError").textContent = err.code === "auth/invalid-credential" ? "Invalid email or password." : err.message;
+      btn.disabled = false; btn.textContent = label;
     }
   });
   $("#signOut").addEventListener("click", () => authMod.signOut(auth));
