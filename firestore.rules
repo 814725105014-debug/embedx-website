@@ -2,13 +2,14 @@ rules_version = '2';
 
 // EMBEDX Firestore security rules.
 //  • Public read: events, projects, team, gallery, announcements, resources, achievements.
-//  • Admin write: Firebase Auth + (custom claim admin=true OR bootstrap allowlisted email).
+//  • Portal write: Firebase Auth + role from `admin_roles/{email}` (or legacy admin claim / owner email).
+//  • Roles: owner (all), president, hod (read-only), event_coordinator, social_media, technical.
 //  • Create-only with strict validation: members_applications, contact_messages.
 //  • Everything else denied.
 //
-// Bootstrap admin (owner account, allowlisted so the portal works from day one):
+// Bootstrap owner (allowlisted so the portal works from day one):
 //   814725105014@trp.srmtrichy.edu.in
-// Additional admins: scripts/grant-admin.js <email>  (sets the admin custom claim)
+// Extra logins: portal "Admins & roles" page, scripts/create-admin.js, or the create-admin GitHub Action.
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -22,42 +23,57 @@ service cloud.firestore {
       return field is string && field.size() >= 5 && field.size() <= 120
              && field.matches('^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$');
     }
+    function signedIn() { return request.auth != null; }
     function isOwner() {
-      return request.auth != null
-             && request.auth.token.email == '814725105014@trp.srmtrichy.edu.in';
+      return signedIn()
+             && (request.auth.token.email == '814725105014@trp.srmtrichy.edu.in'
+                 || request.auth.token.admin == true);
     }
-    function isAdmin() {
-      return (request.auth != null && request.auth.token.admin == true) || isOwner();
+    function rolePath() { return /databases/$(database)/documents/admin_roles/$(request.auth.token.email); }
+    function hasRole() { return signedIn() && exists(rolePath()); }
+    function myRole() { return get(rolePath()).data.role; }
+    function isStaff() { return isOwner() || hasRole(); }
+
+    // per-section write permissions (must mirror WRITE map in public/js/admin-app.js)
+    function roleCan(sec) {
+      return hasRole() && (
+        (sec == 'announcements' && myRole() in ['president', 'social_media']) ||
+        (sec == 'events'        && myRole() in ['president', 'event_coordinator']) ||
+        (sec == 'projects'      && myRole() in ['technical']) ||
+        (sec == 'team'          && myRole() in ['president']) ||
+        (sec == 'gallery'       && myRole() in ['social_media']) ||
+        (sec == 'resources'     && myRole() in ['technical']) ||
+        (sec == 'achievements'  && myRole() in ['president', 'technical']) ||
+        (sec == 'tasks'         && myRole() in ['president'])
+      );
+    }
+    function canWrite(sec) { return isOwner() || roleCan(sec); }
+
+    // ---- content collections: public read, role-scoped write ----
+    match /events/{id}        { allow read: if true; allow create, update, delete: if canWrite('events'); }
+    match /projects/{id}      { allow read: if true; allow create, update, delete: if canWrite('projects'); }
+    match /team/{id}          { allow read: if true; allow create, update, delete: if canWrite('team'); }
+    match /gallery/{id}       { allow read: if true; allow create, update, delete: if canWrite('gallery'); }
+    match /announcements/{id} { allow read: if true; allow create, update, delete: if canWrite('announcements'); }
+    match /resources/{id}     { allow read: if true; allow create, update, delete: if canWrite('resources'); }
+    match /achievements/{id}  { allow read: if true; allow create, update, delete: if canWrite('achievements'); }
+
+    // ---- portal roles: staff can read the directory, only owner manages it ----
+    match /admin_roles/{email} {
+      allow read: if isStaff();
+      allow create, update, delete: if isOwner();
     }
 
-    // ---- content collections: public read, admin write ----
-    match /events/{eventId} {
-      allow read: if true;
-      allow create, update, delete: if isAdmin();
-    }
-    match /projects/{projectId} {
-      allow read: if true;
-      allow create, update, delete: if isAdmin();
-    }
-    match /team/{memberId} {
-      allow read: if true;
-      allow create, update, delete: if isAdmin();
-    }
-    match /gallery/{photoId} {
-      allow read: if true;
-      allow create, update, delete: if isAdmin();
-    }
-    match /announcements/{announcementId} {
-      allow read: if true;
-      allow create, update, delete: if isAdmin();
-    }
-    match /resources/{resourceId} {
-      allow read: if true;
-      allow create, update, delete: if isAdmin();
-    }
-    match /achievements/{achievementId} {
-      allow read: if true;
-      allow create, update, delete: if isAdmin();
+    // ---- tasks: staff read; owner/president manage; assignees may flip their own status ----
+    match /tasks/{id} {
+      allow read: if isStaff();
+      allow create, delete: if canWrite('tasks');
+      allow update: if canWrite('tasks')
+        || (signedIn()
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+            && request.resource.data.status in ['open', 'in_progress', 'done']
+            && (request.auth.token.email == resource.data.assigneeEmail
+                || (hasRole() && resource.data.assigneeRole == myRole())));
     }
 
     // ---- club membership applications: create-only ----

@@ -44,3 +44,21 @@ then deploy rules automatically.
 
 Rules are versioned in Console → Firestore → Rules; or redeploy an older commit:
 `git checkout <commit> -- firestore.rules && firebase deploy --only firestore:rules`.
+
+## Portal roles (multi-page admin)
+
+Roles live in Firestore `admin_roles/{email}` = `{ role, name, addedBy, addedAt }` and are enforced
+by `firestore.rules` (server-side) and mirrored in `public/js/admin-app.js` (UI).
+
+| role | can write |
+|---|---|
+| owner (814725105014@trp.srmtrichy.edu.in, built-in) | everything incl. Admins & roles |
+| president | announcements, team, achievements, tasks |
+| hod | read-only oversight |
+| event_coordinator | events |
+| social_media | gallery, announcements |
+| technical | projects, resources, achievements |
+
+Create a login + role in one step:
+`node create-admin.js email@x "TempPass123" event_coordinator "Display Name"`
+(or the "Create admin login" GitHub Action; or Console → Auth → Add user + portal Admins & roles page).

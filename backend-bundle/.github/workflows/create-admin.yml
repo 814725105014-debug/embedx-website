@@ -1,0 +1,53 @@
+name: Create admin login
+
+# Creates a Firebase Auth login + portal role without ever sharing the service-account key.
+# GitHub → Actions → "Create admin login" → Run workflow → fill email, temporary password, role.
+on:
+  workflow_dispatch:
+    inputs:
+      email:
+        description: "Admin email (e.g. name@trp.srmtrichy.edu.in)"
+        required: true
+      password:
+        description: "Temporary password (8+ chars; they change it later)"
+        required: true
+      role:
+        description: "Portal role"
+        type: choice
+        required: true
+        default: event_coordinator
+        options:
+          - president
+          - hod
+          - event_coordinator
+          - social_media
+          - technical
+      name:
+        description: "Display name (optional)"
+        required: false
+
+jobs:
+  create:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Locate scripts dir (backend repo or website bundle)
+        run: |
+          if [ -d backend-bundle/scripts ]; then echo "SCRIPTS_DIR=backend-bundle/scripts" >> $GITHUB_ENV;
+          else echo "SCRIPTS_DIR=scripts" >> $GITHUB_ENV; fi
+      - name: Install firebase-admin
+        working-directory: ${{ env.SCRIPTS_DIR }}
+        run: npm install --no-audit --no-fund
+      - name: Create login + role
+        working-directory: ${{ env.SCRIPTS_DIR }}
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_EMBEDX_CLUB_EEE }}
+          FIREBASE_PROJECT_ID: embedx-club-eee
+        run: |
+          echo "$GOOGLE_APPLICATION_CREDENTIALS_JSON" > /tmp/sa.json
+          export GOOGLE_APPLICATION_CREDENTIALS=/tmp/sa.json
+          node create-admin.js "${{ inputs.email }}" "${{ inputs.password }}" "${{ inputs.role }}" "${{ inputs.name }}"
+          rm -f /tmp/sa.json

@@ -46,3 +46,7 @@ Allow: /
 #User-agent: Webzio-Extended
 #User-agent: YouBot
 #Disallow: /
+
+# Admin portal is private — keep crawlers out.
+User-agent: *
+Disallow: /admin
