@@ -772,7 +772,14 @@ async function renderAdmins() {
         Passwords are stored hashed by Firebase — <b>nobody can view them</b>, not even you. If someone forgets theirs: row button <b>“Send reset email”</b> below, the <b>“Forgot password?”</b> link on the login page, or (Git Bash, <code>embedx-backend/scripts</code>): <code>node reset-password.js email@x NewTemp123</code>.
       </p>
     </div>
-    <h2 style="margin:0 0 .6rem">Current admins</h2>
+    <div class="admin-directory-head">
+      <div><h2 style="margin:0">Current admins</h2><p class="muted" style="margin:.2rem 0 0">Manage roles, password resets, access and section permissions.</p></div>
+      <div class="admin-directory-tools">
+        <label class="sr-only" for="adminSearch">Search admins</label><input id="adminSearch" type="search" placeholder="Search by name or email" autocomplete="off" />
+        <label class="sr-only" for="adminRoleFilter">Filter by role</label><select id="adminRoleFilter"><option value="">All roles</option>${Object.entries(ROLES).filter(([r]) => r !== "owner").map(([r, m]) => `<option value="${r}">${m.label}</option>`).join("")}</select>
+      </div>
+    </div>
+    <p id="adminCount" class="muted admin-count" aria-live="polite"></p>
     <div id="adminList" class="admin-list"><div class="skeleton" style="min-height:120px"></div></div>`;
   const applyPreset = () => {
     const preset = LEGACY_PERMS[$("#aa-role").value] || [];
@@ -822,25 +829,44 @@ async function loadAdmins() {
     rows = snap.docs.map((d) => ({ email: d.id, ...d.data() }));
   } catch (err) { region.innerHTML = `<p class="muted">${esc(err.message)}</p>`; return; }
   region.innerHTML = `
-    <div class="admin-row card"><div class="admin-row-main"><strong>${esc(OWNER_EMAIL)}</strong><span class="muted">Owner — full control (built-in, cannot be revoked)</span></div><span class="chip chip-accent">owner</span></div>
+    <section class="admin-user-card admin-owner-card card" data-owner="true" aria-label="Portal owner">
+      <div class="admin-user-identity"><span class="admin-avatar" aria-hidden="true">O</span><div class="admin-user-copy"><strong title="${esc(OWNER_EMAIL)}">${esc(OWNER_EMAIL)}</strong><span class="muted">Full control · built-in account · cannot be revoked</span></div></div>
+      <span class="chip chip-accent admin-owner-badge">Owner</span>
+    </section>
     ${rows.map((a) => `
-    <div class="admin-row card">
-      <div class="admin-row-main">
-        <strong>${esc(a.email)}</strong>
-        <span class="muted">${esc(a.name || "")}${a.addedAt ? ` • added ${(a.addedAt || "").slice(0, 10)}` : ""}</span>
+    <section class="admin-user-card card" data-search="${esc(`${a.email} ${a.name || ""}`.toLowerCase())}" data-role="${esc(a.role || "")}">
+      <div class="admin-user-identity">
+        <span class="admin-avatar" aria-hidden="true">${esc((a.name || a.email).trim().charAt(0).toUpperCase())}</span>
+        <div class="admin-user-copy"><strong title="${esc(a.email)}">${esc(a.email)}</strong><span class="muted">${esc(a.name || "Name not set")}${a.addedAt ? ` · Added ${(a.addedAt || "").slice(0, 10)}` : ""}</span></div>
+        ${a.mustChangePassword ? `<span class="chip admin-password-due" title="Must change temporary password at next login">🔑 Change password due</span>` : ""}
       </div>
-      ${a.mustChangePassword ? `<span class="chip" title="Must change temporary password at next login">🔑 change due</span>` : ""}
-      <select data-rolefor="${esc(a.email)}" class="btn btn-ghost btn-sm">
-        ${Object.entries(ROLES).filter(([r]) => r !== "owner").map(([r, m]) => `<option value="${r}" ${a.role === r ? "selected" : ""}>${m.label}</option>`).join("")}
-      </select>
-      <button class="btn btn-ghost btn-sm" data-reset="${esc(a.email)}">Send reset email</button>
-      <button class="btn btn-ghost btn-sm" data-revoke="${esc(a.email)}" style="color:var(--err)">Revoke</button>
+      <div class="admin-user-actions">
+        <label class="admin-role-control"><span>Role</span><select data-rolefor="${esc(a.email)}">
+          ${Object.entries(ROLES).filter(([r]) => r !== "owner").map(([r, m]) => `<option value="${r}" ${a.role === r ? "selected" : ""}>${m.label}</option>`).join("")}
+        </select></label>
+        <button class="btn btn-ghost btn-sm" data-reset="${esc(a.email)}">Send reset email</button>
+        <button class="btn btn-danger btn-sm" data-revoke="${esc(a.email)}">Revoke access</button>
+      </div>
       <details class="perm-edit">
-        <summary>Permissions — what they can see &amp; edit</summary>
-        <div class="perm-grid">${SECTIONS.map((s) => `<label><input type="checkbox" data-p="${s}" ${((Array.isArray(a.perms) ? a.perms : LEGACY_PERMS[a.role]) || []).includes(s) ? "checked" : ""} /> ${s}</label>`).join("")}</div>
-        <button class="btn btn-ghost btn-sm" data-saveperms="${esc(a.email)}">Save permissions</button>
+        <summary><span>Section permissions</span><span class="muted">Choose what this admin can view and edit</span></summary>
+        <div class="perm-edit-content"><div class="perm-grid">${SECTIONS.map((s) => `<label><input type="checkbox" data-p="${s}" ${((Array.isArray(a.perms) ? a.perms : LEGACY_PERMS[a.role]) || []).includes(s) ? "checked" : ""} /> ${s}</label>`).join("")}</div>
+        <button class="btn btn-primary btn-sm" data-saveperms="${esc(a.email)}">Save permissions</button></div>
       </details>
-    </div>`).join("")}`;
+    </section>`).join("")}`;
+  const applyAdminFilters = () => {
+    const query = $("#adminSearch").value.trim().toLowerCase();
+    const selectedRole = $("#adminRoleFilter").value;
+    let visible = 0;
+    region.querySelectorAll(".admin-user-card:not([data-owner])").forEach((card) => {
+      const show = card.dataset.search.includes(query) && (!selectedRole || card.dataset.role === selectedRole);
+      card.hidden = !show;
+      if (show) visible++;
+    });
+    $("#adminCount").textContent = `${visible} admin${visible === 1 ? "" : "s"}${query || selectedRole ? " match your filters" : ""}`;
+  };
+  $("#adminSearch").addEventListener("input", applyAdminFilters);
+  $("#adminRoleFilter").addEventListener("change", applyAdminFilters);
+  applyAdminFilters();
   region.querySelectorAll("[data-saveperms]").forEach((b) => b.addEventListener("click", async () => {
     const chosen = [...b.parentElement.querySelectorAll("input[data-p]:checked")].map((c) => c.dataset.p);
     const { db } = await sdk();
@@ -850,6 +876,8 @@ async function loadAdmins() {
   region.querySelectorAll("[data-rolefor]").forEach((s) => s.addEventListener("change", async () => {
     const { db } = await sdk();
     await dbMod.updateDoc(dbMod.doc(db, "admin_roles", s.dataset.rolefor), { role: s.value });
+    s.closest(".admin-user-card").dataset.role = s.value;
+    applyAdminFilters();
     toast("Role updated ✔", "ok");
   }));
   region.querySelectorAll("[data-reset]").forEach((b) => b.addEventListener("click", async () => {
