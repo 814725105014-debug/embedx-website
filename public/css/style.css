@@ -606,3 +606,9 @@ details.perm-edit summary { cursor: pointer; color: var(--cyan); font-size: .85r
   .cmd-box { flex-direction: column; align-items: stretch; }
   .admin-layout { padding: 1rem .8rem 3.5rem; }
 }
+
+/* ---------- 19. Form modal: scrollable field area, pinned action bar ---------- */
+#entityForm { display: flex; flex-direction: column; }
+#entityFields { max-height: 56dvh; overflow-y: auto; padding-right: .3rem; }
+#entityForm > div:last-child { position: sticky; bottom: 0; background: var(--bg-2); padding: .8rem 0 0; margin-top: 1.2rem; }
+@media (max-width: 700px) { #entityFields { max-height: 50dvh; } }

@@ -454,34 +454,72 @@ function renderList(sec) {
   }));
 }
 
-/* ---------------- form ---------------- */
+/* ---------------- form (DOM-built: values can never break markup) ---------------- */
+function buildField(f, v) {
+  const wrap = document.createElement("div");
+  const id = `f-${f.k}`;
+  const full = ["textarea", "check", "image"].includes(f.t);
+  wrap.className = "field" + (full ? " full" : "");
+  if (f.t === "check") {
+    const label = document.createElement("label");
+    label.className = "check-row"; label.htmlFor = id;
+    const input = document.createElement("input");
+    input.id = id; input.name = f.k; input.type = "checkbox"; input.checked = !!v;
+    label.append(input, " " + f.label);
+    wrap.appendChild(label);
+    return wrap;
+  }
+  const label = document.createElement("label");
+  label.htmlFor = id;
+  label.textContent = f.label + (f.req ? " *" : "");
+  wrap.appendChild(label);
+  let input;
+  if (f.t === "textarea") {
+    input = document.createElement("textarea"); input.value = v ?? "";
+  } else if (f.t === "select") {
+    input = document.createElement("select");
+    (f.opts || []).forEach((o) => { const op = document.createElement("option"); op.textContent = o; if (o === v) op.selected = true; input.appendChild(op); });
+  } else if (f.t === "image") {
+    input = document.createElement("input"); input.type = "hidden"; input.value = v ?? "";
+    const picker = document.createElement("div"); picker.className = "img-picker";
+    const prev = document.createElement("img"); prev.id = `prev-${f.k}`; prev.alt = "Current image preview";
+    if (v) prev.src = asset(v); else prev.style.display = "none";
+    const row = document.createElement("div");
+    row.style.cssText = "display:flex;gap:.5rem;flex-wrap:wrap;align-items:center";
+    const fileLabel = document.createElement("label");
+    fileLabel.className = "btn btn-ghost btn-sm"; fileLabel.htmlFor = `file-${f.k}`;
+    fileLabel.textContent = "Upload / replace photo";
+    const file = document.createElement("input");
+    file.id = `file-${f.k}`; file.type = "file"; file.accept = "image/*";
+    file.style.display = "none"; file.dataset.imgfield = f.k;
+    row.append(fileLabel, file);
+    if (v) {
+      const editBtn = document.createElement("button");
+      editBtn.type = "button"; editBtn.className = "btn btn-ghost btn-sm";
+      editBtn.dataset.editimg = f.k; editBtn.textContent = "Edit current photo";
+      row.appendChild(editBtn);
+    }
+    picker.append(prev, row);
+    wrap.append(picker);
+  } else {
+    input = document.createElement("input");
+    input.type = f.t === "num" ? "number" : "text";
+    input.value = v ?? "";
+  }
+  input.id = id; input.name = f.k;
+  wrap.appendChild(input);
+  return wrap;
+}
+
 function openForm(id = null) {
   const sec = PAGE;
   const schema = SCHEMAS[sec];
   editingId = id;
   const data = id ? items.find((x) => x.id === id) : { ...schema.defaults };
   $("#formModalTitle").textContent = (id ? "Edit " : "New ") + schema.label;
-  $("#entityFields").innerHTML = schema.fields.map((f) => {
-    const v = data?.[f.k] ?? "";
-    if (f.t === "textarea") return `<div class="field full"><label for="f-${f.k}">${f.label}${f.req ? ' <span class="req">*</span>' : ""}</label><textarea id="f-${f.k}" name="${f.k}">${esc(v)}</textarea></div>`;
-    if (f.t === "select") return `<div class="field"><label for="f-${f.k}">${f.label}</label><select id="f-${f.k}" name="${f.k}">${f.opts.map((o) => `<option ${o === v ? "selected" : ""}>${o}</option>`).join("")}</select></div>`;
-    if (f.t === "check") return `<div class="field full"><label class="check-row" for="f-${f.k}"><input id="f-${f.k}" name="${f.k}" type="checkbox" ${v ? "checked" : ""} /> ${f.label}</label></div>`;
-    if (f.t === "num") return `<div class="field"><label for="f-${f.k}">${f.label}</label><input id="f-${f.k}" name="${f.k}" type="number" value="${esc(v)}" /></div>`;
-    if (f.t === "image") return `
-      <div class="field full">
-        <label for="f-${f.k}">${f.label}${f.req ? ' <span class="req">*</span>' : ""}</label>
-        <div class="img-picker">
-          <img id="prev-${f.k}" src="${v ? esc(asset(v)) : ""}" alt="Current image preview" style="${v ? "" : "display:none"}" />
-          <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
-            <input id="f-${f.k}" name="${f.k}" type="hidden" value="${esc(v)}" />
-            <label class="btn btn-ghost btn-sm" for="file-${f.k}">Upload / replace photo</label>
-            <input id="file-${f.k}" type="file" accept="image/*" style="display:none" data-imgfield="${f.k}" />
-            ${v ? `<button type="button" class="btn btn-ghost btn-sm" data-editimg="${f.k}">Edit current photo</button>` : ""}
-          </div>
-        </div>
-      </div>`;
-    return `<div class="field"><label for="f-${f.k}">${f.label}${f.req ? ' <span class="req">*</span>' : ""}</label><input id="f-${f.k}" name="${f.k}" value="${esc(v)}" /></div>`;
-  }).join("");
+  const host = $("#entityFields");
+  host.innerHTML = "";
+  schema.fields.forEach((f) => host.appendChild(buildField(f, data?.[f.k] ?? (f.t === "check" ? false : ""))));
 
   $("#entityFields").querySelectorAll("input[type=file][data-imgfield]").forEach((inp) => {
     inp.addEventListener("change", () => {
@@ -543,7 +581,10 @@ async function saveForm(e) {
     loadStats();
   } catch (err) {
     console.error(err);
-    toast(`Save failed: ${esc(err.message)}`, "err");
+    const hint = err.code === "permission-denied"
+      ? " — your role doesn't include this section, or the Firebase rules need redeploying (firebase deploy --only firestore:rules,firestore:indexes,storage)"
+      : "";
+    toast(`Save failed [${esc(err.code || "error")}]: ${esc(err.message)}${hint}`, "err");
   }
 }
 
