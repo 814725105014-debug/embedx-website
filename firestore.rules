@@ -34,20 +34,19 @@ service cloud.firestore {
     function myRole() { return get(rolePath()).data.role; }
     function isStaff() { return isOwner() || hasRole(); }
 
-    // per-section write permissions (must mirror WRITE map in public/js/admin-app.js)
-    function roleCan(sec) {
-      return hasRole() && (
-        (sec == 'announcements' && myRole() in ['president', 'social_media']) ||
-        (sec == 'events'        && myRole() in ['president', 'event_coordinator']) ||
-        (sec == 'projects'      && myRole() in ['technical']) ||
-        (sec == 'team'          && myRole() in ['president']) ||
-        (sec == 'gallery'       && myRole() in ['social_media']) ||
-        (sec == 'resources'     && myRole() in ['technical']) ||
-        (sec == 'achievements'  && myRole() in ['president', 'technical']) ||
-        (sec == 'tasks'         && myRole() in ['president'])
-      );
+    // per-admin custom permissions: owner ticks sections in the portal (admin_roles/{email}.perms).
+    // Docs created before custom perms fall back to their role preset.
+    function legacyPerms(r) {
+      return r == 'president'         ? ['announcements', 'team', 'achievements', 'tasks']
+        :    r == 'event_coordinator' ? ['events']
+        :    r == 'social_media'      ? ['gallery', 'announcements']
+        :    r == 'technical'         ? ['projects', 'resources', 'achievements']
+        :    [];
     }
-    function canWrite(sec) { return isOwner() || roleCan(sec); }
+    function permsOf() {
+      return get(rolePath()).data.perms != null ? get(rolePath()).data.perms : legacyPerms(get(rolePath()).data.role);
+    }
+    function canWrite(sec) { return isOwner() || (hasRole() && sec in permsOf()); }
 
     // ---- content collections: public read, role-scoped write ----
     match /events/{id}        { allow read: if true; allow create, update, delete: if canWrite('events'); }

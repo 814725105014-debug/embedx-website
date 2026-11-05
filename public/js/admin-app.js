@@ -30,6 +30,16 @@ const WRITE = {
   tasks:         ["owner", "president"],
   admins:        ["owner"]
 };
+// per-admin custom permissions: the owner ticks exactly these per person.
+const SECTIONS = ["announcements", "events", "projects", "team", "gallery", "resources", "achievements", "tasks"];
+// fallback for role docs created before custom perms existed (mirrors firestore.rules legacyPerms)
+const LEGACY_PERMS = {
+  president: ["announcements", "team", "achievements", "tasks"],
+  event_coordinator: ["events"],
+  social_media: ["gallery", "announcements"],
+  technical: ["projects", "resources", "achievements"],
+  hod: []
+};
 const NAV = [
   ["overview", "Overview", "/admin/"],
   ["announcements", "Announcements", "/admin/announcements"],
@@ -44,7 +54,7 @@ const NAV = [
 ];
 
 let authMod = null, dbMod = null, stMod = null, app = null;
-let role = null, me = "";
+let role = null, me = "", perms = [];
 let items = [], editingId = null, pendingImageField = null, editorState = null;
 
 async function sdk() {
@@ -56,7 +66,7 @@ async function sdk() {
   return { auth: authMod.getAuth(app), db: dbMod.getFirestore(app), storage: stMod.getStorage(app) };
 }
 const $ = (s) => document.querySelector(s);
-const can = (sec) => (WRITE[sec] || []).includes(role);
+const can = (sec) => role === "owner" || perms.includes(sec);
 
 /* ---------------- schemas ---------------- */
 const SCHEMAS = {
@@ -211,17 +221,22 @@ function showView(which) {
 /* ---------------- auth boot ---------------- */
 async function resolveRole(user) {
   const email = (user.email || "").toLowerCase();
-  if (email === OWNER_EMAIL) return { role: "owner", mustChange: false };
+  if (email === OWNER_EMAIL) return { role: "owner", mustChange: false, perms: SECTIONS };
   try {
     const { db } = await sdk();
     const snap = await dbMod.getDoc(dbMod.doc(db, "admin_roles", email));
     if (snap.exists() && snap.data().role && ROLES[snap.data().role]) {
-      return { role: snap.data().role, mustChange: snap.data().mustChangePassword === true };
+      const d = snap.data();
+      return {
+        role: d.role,
+        mustChange: d.mustChangePassword === true,
+        perms: Array.isArray(d.perms) ? d.perms.filter((p) => SECTIONS.includes(p)) : (LEGACY_PERMS[d.role] || [])
+      };
     }
   } catch { /* no role doc or read denied → fall through */ }
   for (const force of [false, true]) {
     const t = await user.getIdTokenResult(force).catch(() => null);
-    if (t && t.claims.admin) return { role: "owner", mustChange: false };
+    if (t && t.claims.admin) return { role: "owner", mustChange: false, perms: SECTIONS };
   }
   return null;
 }
@@ -244,6 +259,7 @@ async function boot() {
     }
     me = (user.email || "").toLowerCase();
     role = rr.role;
+    perms = rr.perms || [];
     if (rr.mustChange) { showView("change"); return; }
     showView("in");
     renderShell();
@@ -307,8 +323,9 @@ function renderShell() {
       </div>
     </div>`;
   $("#signOut").addEventListener("click", async () => { const { auth } = await sdk(); authMod.signOut(auth); location.href = "/admin/"; });
-  $("#adminNav").innerHTML = NAV.filter(([id]) => id !== "admins" || role === "owner").map(([id, label, href]) =>
-    `<a href="${href}" class="${id === PAGE ? "active" : ""}">${esc(label)}</a>`).join("");
+  $("#adminNav").innerHTML = NAV
+    .filter(([id]) => id === "overview" || id === "tasks" || (id === "admins" ? role === "owner" : can(id)))
+    .map(([id, label, href]) => `<a href="${href}" class="${id === PAGE ? "active" : ""}">${esc(label)}</a>`).join("");
 }
 
 function noteReadOnly() {
@@ -344,8 +361,9 @@ async function renderOverview() {
     ${mine.length ? mine.map(taskRow).join("") : `<p class="muted">Nothing assigned to you right now. ${role === "owner" || role === "president" ? "Assign work from the <a href='/admin/tasks'>Tasks</a> page." : ""}</p>`}
     <h2 style="margin:1.8rem 0 .6rem">Your access</h2>
     <div class="admin-list">
-      ${NAV.filter(([id]) => id !== "overview" && (id !== "admins" || role === "owner")).map(([id, label]) =>
-        `<div class="admin-row card"><div class="admin-row-main"><strong>${esc(label)}</strong><span class="muted">${can(id) ? "read + write" : "read only"}</span></div></div>`).join("")}
+      ${NAV.filter(([id]) => id !== "overview" && id !== "tasks" && (id !== "admins" || role === "owner") && can(id)).map(([id, label]) =>
+        `<div class="admin-row card"><div class="admin-row-main"><strong>${esc(label)}</strong><span class="muted">read + write</span></div></div>`).join("")}
+      <div class="admin-row card"><div class="admin-row-main"><strong>Tasks</strong><span class="muted">${can("tasks") ? "assign + edit" : "your assigned tasks"}</span></div></div>
     </div>`;
 }
 
@@ -371,9 +389,12 @@ const taskRow = (t) => `
 async function renderCollection(sec) {
   const schema = SCHEMAS[sec];
   if (!schema) { $("#pageRegion").innerHTML = `<p class="muted">Unknown section.</p>`; return; }
-  noteReadOnly();
+  if (!can(sec)) {
+    $("#pageRegion").innerHTML = `<div class="card" style="padding:var(--sp-4)"><h2 style="margin:0 0 .4rem">No access</h2><p class="muted" style="margin:0">Your owner hasn't granted you this section. Ask them to tick it for you under <b>Admins &amp; roles → Permissions</b>.</p></div>`;
+    return;
+  }
   const add = $("#addItem");
-  if (add) { add.hidden = !can(sec); add.onclick = () => openForm(null); }
+  if (add) { add.hidden = false; add.onclick = () => openForm(null); }
   await loadList(sec);
   loadStats();
 }
@@ -433,34 +454,72 @@ function renderList(sec) {
   }));
 }
 
-/* ---------------- form ---------------- */
+/* ---------------- form (DOM-built: values can never break markup) ---------------- */
+function buildField(f, v) {
+  const wrap = document.createElement("div");
+  const id = `f-${f.k}`;
+  const full = ["textarea", "check", "image"].includes(f.t);
+  wrap.className = "field" + (full ? " full" : "");
+  if (f.t === "check") {
+    const label = document.createElement("label");
+    label.className = "check-row"; label.htmlFor = id;
+    const input = document.createElement("input");
+    input.id = id; input.name = f.k; input.type = "checkbox"; input.checked = !!v;
+    label.append(input, " " + f.label);
+    wrap.appendChild(label);
+    return wrap;
+  }
+  const label = document.createElement("label");
+  label.htmlFor = id;
+  label.textContent = f.label + (f.req ? " *" : "");
+  wrap.appendChild(label);
+  let input;
+  if (f.t === "textarea") {
+    input = document.createElement("textarea"); input.value = v ?? "";
+  } else if (f.t === "select") {
+    input = document.createElement("select");
+    (f.opts || []).forEach((o) => { const op = document.createElement("option"); op.textContent = o; if (o === v) op.selected = true; input.appendChild(op); });
+  } else if (f.t === "image") {
+    input = document.createElement("input"); input.type = "hidden"; input.value = v ?? "";
+    const picker = document.createElement("div"); picker.className = "img-picker";
+    const prev = document.createElement("img"); prev.id = `prev-${f.k}`; prev.alt = "Current image preview";
+    if (v) prev.src = asset(v); else prev.style.display = "none";
+    const row = document.createElement("div");
+    row.style.cssText = "display:flex;gap:.5rem;flex-wrap:wrap;align-items:center";
+    const fileLabel = document.createElement("label");
+    fileLabel.className = "btn btn-ghost btn-sm"; fileLabel.htmlFor = `file-${f.k}`;
+    fileLabel.textContent = "Upload / replace photo";
+    const file = document.createElement("input");
+    file.id = `file-${f.k}`; file.type = "file"; file.accept = "image/*";
+    file.style.display = "none"; file.dataset.imgfield = f.k;
+    row.append(fileLabel, file);
+    if (v) {
+      const editBtn = document.createElement("button");
+      editBtn.type = "button"; editBtn.className = "btn btn-ghost btn-sm";
+      editBtn.dataset.editimg = f.k; editBtn.textContent = "Edit current photo";
+      row.appendChild(editBtn);
+    }
+    picker.append(prev, row);
+    wrap.append(picker);
+  } else {
+    input = document.createElement("input");
+    input.type = f.t === "num" ? "number" : "text";
+    input.value = v ?? "";
+  }
+  input.id = id; input.name = f.k;
+  wrap.appendChild(input);
+  return wrap;
+}
+
 function openForm(id = null) {
   const sec = PAGE;
   const schema = SCHEMAS[sec];
   editingId = id;
   const data = id ? items.find((x) => x.id === id) : { ...schema.defaults };
   $("#formModalTitle").textContent = (id ? "Edit " : "New ") + schema.label;
-  $("#entityFields").innerHTML = schema.fields.map((f) => {
-    const v = data?.[f.k] ?? "";
-    if (f.t === "textarea") return `<div class="field full"><label for="f-${f.k}">${f.label}${f.req ? ' <span class="req">*</span>' : ""}</label><textarea id="f-${f.k}" name="${f.k}">${esc(v)}</textarea></div>`;
-    if (f.t === "select") return `<div class="field"><label for="f-${f.k}">${f.label}</label><select id="f-${f.k}" name="${f.k}">${f.opts.map((o) => `<option ${o === v ? "selected" : ""}>${o}</option>`).join("")}</select></div>`;
-    if (f.t === "check") return `<div class="field full"><label class="check-row" for="f-${f.k}"><input id="f-${f.k}" name="${f.k}" type="checkbox" ${v ? "checked" : ""} /> ${f.label}</label></div>`;
-    if (f.t === "num") return `<div class="field"><label for="f-${f.k}">${f.label}</label><input id="f-${f.k}" name="${f.k}" type="number" value="${esc(v)}" /></div>`;
-    if (f.t === "image") return `
-      <div class="field full">
-        <label for="f-${f.k}">${f.label}${f.req ? ' <span class="req">*</span>' : ""}</label>
-        <div class="img-picker">
-          <img id="prev-${f.k}" src="${v ? esc(asset(v)) : ""}" alt="Current image preview" style="${v ? "" : "display:none"}" />
-          <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
-            <input id="f-${f.k}" name="${f.k}" type="hidden" value="${esc(v)}" />
-            <label class="btn btn-ghost btn-sm" for="file-${f.k}">Upload / replace photo</label>
-            <input id="file-${f.k}" type="file" accept="image/*" style="display:none" data-imgfield="${f.k}" />
-            ${v ? `<button type="button" class="btn btn-ghost btn-sm" data-editimg="${f.k}">Edit current photo</button>` : ""}
-          </div>
-        </div>
-      </div>`;
-    return `<div class="field"><label for="f-${f.k}">${f.label}${f.req ? ' <span class="req">*</span>' : ""}</label><input id="f-${f.k}" name="${f.k}" value="${esc(v)}" /></div>`;
-  }).join("");
+  const host = $("#entityFields");
+  host.innerHTML = "";
+  schema.fields.forEach((f) => host.appendChild(buildField(f, data?.[f.k] ?? (f.t === "check" ? false : ""))));
 
   $("#entityFields").querySelectorAll("input[type=file][data-imgfield]").forEach((inp) => {
     inp.addEventListener("change", () => {
@@ -522,7 +581,10 @@ async function saveForm(e) {
     loadStats();
   } catch (err) {
     console.error(err);
-    toast(`Save failed: ${esc(err.message)}`, "err");
+    const hint = err.code === "permission-denied"
+      ? " — your role doesn't include this section, or the Firebase rules need redeploying (firebase deploy --only firestore:rules,firestore:indexes,storage)"
+      : "";
+    toast(`Save failed [${esc(err.code || "error")}]: ${esc(err.message)}${hint}`, "err");
   }
 }
 
@@ -600,8 +662,9 @@ async function renderAdmins() {
       <form id="addAdminForm" class="form-grid">
         <div class="field"><label for="aa-email">Email *</label><input id="aa-email" type="email" required placeholder="name@trp.srmtrichy.edu.in" /></div>
         <div class="field"><label for="aa-name">Display name</label><input id="aa-name" placeholder="e.g. Keerthivasan A" /></div>
-        <div class="field"><label for="aa-role">Role</label><select id="aa-role">${Object.entries(ROLES).filter(([r]) => r !== "owner").map(([r, m]) => `<option value="${r}">${m.label} — ${m.blurb}</option>`).join("")}</select></div>
+        <div class="field"><label for="aa-role">Role preset</label><select id="aa-role">${Object.entries(ROLES).filter(([r]) => r !== "owner").map(([r, m]) => `<option value="${r}">${m.label} — ${m.blurb}</option>`).join("")}</select></div>
         <div class="field"><label for="aa-pass">Temporary password *</label><input id="aa-pass" type="text" minlength="8" required placeholder="8+ chars, share privately" /></div>
+        <div class="field full"><label>Can see &amp; edit — tick their sections</label><div class="perm-grid" id="aa-perms">${SECTIONS.map((s) => `<label><input type="checkbox" value="${s}" /> ${s}</label>`).join("")}</div></div>
         <div class="field full"><button class="btn btn-primary" type="submit">Add admin</button></div>
       </form>
       <p class="muted" style="font-size:.82rem;margin:.9rem 0 0">
@@ -610,12 +673,19 @@ async function renderAdmins() {
     </div>
     <h2 style="margin:0 0 .6rem">Current admins</h2>
     <div id="adminList" class="admin-list"><div class="skeleton" style="min-height:120px"></div></div>`;
+  const applyPreset = () => {
+    const preset = LEGACY_PERMS[$("#aa-role").value] || [];
+    document.querySelectorAll("#aa-perms input").forEach((c) => { c.checked = preset.includes(c.value); });
+  };
+  $("#aa-role").addEventListener("change", applyPreset);
+  applyPreset();
   $("#addAdminForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     const email = $("#aa-email").value.trim().toLowerCase();
     const name = $("#aa-name").value.trim();
     const r = $("#aa-role").value;
     const pass = $("#aa-pass").value;
+    const chosen = [...document.querySelectorAll("#aa-perms input:checked")].map((c) => c.value);
     if (!email.includes("@")) { toast("Enter a valid email.", "err"); return; }
     if (pass.length < 8) { toast("Temporary password needs 8+ characters.", "err"); return; }
     // 1) create the Auth login from the browser (public sign-up endpoint; portal access still gated by admin_roles)
@@ -633,7 +703,7 @@ async function renderAdmins() {
     // 2) save the role (+ force password change for brand-new logins)
     const { db } = await sdk();
     try {
-      await dbMod.setDoc(dbMod.doc(db, "admin_roles", email), { role: r, name, addedBy: me, addedAt: new Date().toISOString(), mustChangePassword: created }, { merge: true });
+      await dbMod.setDoc(dbMod.doc(db, "admin_roles", email), { role: r, name, addedBy: me, addedAt: new Date().toISOString(), mustChangePassword: created, perms: chosen }, { merge: true });
       toast(created ? `Done ✔ ${email} can sign in now and will be asked to change the temporary password.` : `Login already existed for ${email} — role saved. Use “Send reset email” if they forgot their password.`, "ok");
       $("#addAdminForm").reset();
       loadAdmins();
@@ -664,7 +734,18 @@ async function loadAdmins() {
       </select>
       <button class="btn btn-ghost btn-sm" data-reset="${esc(a.email)}">Send reset email</button>
       <button class="btn btn-ghost btn-sm" data-revoke="${esc(a.email)}" style="color:var(--err)">Revoke</button>
+      <details class="perm-edit">
+        <summary>Permissions — what they can see &amp; edit</summary>
+        <div class="perm-grid">${SECTIONS.map((s) => `<label><input type="checkbox" data-p="${s}" ${((Array.isArray(a.perms) ? a.perms : LEGACY_PERMS[a.role]) || []).includes(s) ? "checked" : ""} /> ${s}</label>`).join("")}</div>
+        <button class="btn btn-ghost btn-sm" data-saveperms="${esc(a.email)}">Save permissions</button>
+      </details>
     </div>`).join("")}`;
+  region.querySelectorAll("[data-saveperms]").forEach((b) => b.addEventListener("click", async () => {
+    const chosen = [...b.parentElement.querySelectorAll("input[data-p]:checked")].map((c) => c.dataset.p);
+    const { db } = await sdk();
+    await dbMod.updateDoc(dbMod.doc(db, "admin_roles", b.dataset.saveperms), { perms: chosen });
+    toast(`Permissions saved for ${b.dataset.saveperms} ✔ (applies on their next sign-in)`, "ok");
+  }));
   region.querySelectorAll("[data-rolefor]").forEach((s) => s.addEventListener("change", async () => {
     const { db } = await sdk();
     await dbMod.updateDoc(dbMod.doc(db, "admin_roles", s.dataset.rolefor), { role: s.value });
