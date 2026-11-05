@@ -15,6 +15,6 @@ export const isConfigured = Boolean(firebaseConfig.apiKey && firebaseConfig.proj
 // Google Apps Script web app, then paste its /exec URL and the TOKEN you chose here.
 // Leave url empty to skip emailing (tasks still work).
 export const taskMail = {
-  url: "",
-  token: ""
+  url: "https://script.google.com/macros/s/AKfycbwtjgkFIK5QJi50cgnC1ZbTwuyfBS2y7KPc9aCSNlMHzziFbfs3DNQMHcPzn7KMwEDppg/exec",
+  token: "embedx-task-mail-2026-x7p9"
 };
