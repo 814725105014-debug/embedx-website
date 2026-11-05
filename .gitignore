@@ -1,1 +1,24 @@
+# --- Firebase / tooling ---
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+*.log
+node_modules/
+scripts/node_modules/
+.env
+.env.*
+
+# --- NEVER commit credentials ---
+service-account*.json
+*serviceAccount*.json
+**/service-account*.json
+
+# --- Cloudflare (legacy host config) ---
 .wrangler/
+
+# --- OS / editor noise ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

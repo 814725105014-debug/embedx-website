@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Event Details | EMBEDX Events | SRM TRP Engineering College</title>
+  <meta name="description" content="Full event specifications: overview, tracks, topics, formats, rules, skills developed, FAQs and official registration for EMBEDX events." />
+  <meta property="og:title" content="Event Details | EMBEDX" />
+  <meta property="og:description" content="Tracks, rules, FAQs and registration for EMBEDNOVA and EMBEDX workshops." />
+  <meta property="og:image" content="/assets/images/poster-embednova.webp" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="icon" type="image/png" href="/assets/images/favicon-64.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" />
+  <link rel="canonical" href="https://gen-lang-client-0330226585.web.app/pages/event-detail" />
+  <meta name="theme-color" content="#08060c" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://firebasestorage.googleapis.com; connect-src 'self' https://www.gstatic.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://firebasestorage.googleapis.com https://www.googleapis.com; object-src 'none'; base-uri 'self'; form-action 'self'" />
+  <link rel="stylesheet" href="/css/style.css" />
+  <script src="/js/theme.js"></script>
+  <script type="module" src="/js/main.js"></script>
+</head>
+<body data-page="event-detail">
+<a class="skip-link" href="#main">Skip to content</a>
+<main id="main">
+  <section class="section" style="padding-top:calc(var(--nav-h) + 2rem)">
+    <div class="wrap" id="eventDetailContainer"></div>
+  </section>
+</main>
+
+<!-- EMBEDNOVA registration modal -->
+<div class="modal-backdrop" id="registerModal" role="dialog" aria-modal="true" aria-labelledby="registerTitle">
+  <div class="modal">
+    <button class="icon-btn modal-close" data-modal-close aria-label="Close registration form">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+    </button>
+    <h2 id="registerTitle">EMBEDNOVA Official Registration</h2>
+    <p class="muted" style="font-size:.9rem">SRM TRP Engineering College • Department of EEE</p>
+    <form id="registerForm" novalidate>
+      <div class="form-grid">
+        <div class="field"><label for="rg-name">Team Lead / Participant Name <span class="req">*</span></label><input id="rg-name" name="name" autocomplete="name" required /><span class="error-msg"></span></div>
+        <div class="field"><label for="rg-inst">Institution / College Name <span class="req">*</span></label><input id="rg-inst" name="institution" autocomplete="organization" required /><span class="error-msg"></span></div>
+        <div class="field"><label for="rg-dept">Department &amp; Year <span class="req">*</span></label><input id="rg-dept" name="dept_year" placeholder="e.g. EEE, III Year" required /><span class="error-msg"></span></div>
+        <div class="field"><label for="rg-email">Email Address <span class="req">*</span></label><input id="rg-email" name="email" type="email" autocomplete="email" required /><span class="error-msg"></span></div>
+        <div class="field full"><label for="rg-mobile">Mobile / WhatsApp Number <span class="req">*</span></label><input id="rg-mobile" name="mobile" type="tel" autocomplete="tel" required /><span class="error-msg"></span></div>
+        <fieldset class="field full" style="border:1px solid var(--border);border-radius:var(--r-sm);padding:1rem">
+          <legend style="font-size:.85rem;font-weight:600;padding:0 .4rem">Select Challenge Track(s) <span class="req">*</span></legend>
+          <label class="check-row"><input type="checkbox" name="tracks" value="01 — TECH CHALLENGE" /> 01 — TECH CHALLENGE (MCQs, Aptitude &amp; Low-Level Logic)</label>
+          <label class="check-row"><input type="checkbox" name="tracks" value="02 — CIRCUIT WIZARD" /> 02 — CIRCUIT WIZARD (Build. Debug. Perfect.)</label>
+          <label class="check-row"><input type="checkbox" name="tracks" value="03 — AUTOMATION ARENA" /> 03 — AUTOMATION ARENA (Problem Statements &amp; Working Prototypes)</label>
+          <span class="error-msg"></span>
+        </fieldset>
+        <div class="hp-field" aria-hidden="true"><label for="rg-hp">Leave this field empty</label><input id="rg-hp" name="company_url" tabindex="-1" autocomplete="off" /></div>
+        <div class="full"><button class="btn btn-primary" type="submit">Submit Registration</button></div>
+      </div>
+    </form>
+  </div>
+</div>
+</body>
+</html>
