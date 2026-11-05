@@ -694,3 +694,37 @@ details.perm-edit summary { padding: .55rem 0; min-height: 44px; display: flex; 
   .perm-edit-content > .btn { width:100%; min-height:44px; }
   .admin-user-card .perm-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
 }
+
+/* ---------- 22. Official EMBEDX identity lockup ---------- */
+.brand { flex:0 0 auto; gap:.62rem; align-items:center; }
+.brand img { width:40px; height:40px; flex:0 0 40px; object-fit:cover; border:1px solid rgba(255,255,255,.22); background:#fff; }
+.brand-copy { min-width:0; display:flex; flex-direction:column; justify-content:center; align-items:flex-start; gap:.12rem; line-height:1.05; }
+.brand-name { font-size:1.12rem; letter-spacing:.045em; white-space:nowrap; }
+.brand-sub { display:block; margin:0; color:var(--text-muted); font-size:.57rem; font-weight:700; letter-spacing:.105em; line-height:1.2; text-transform:uppercase; white-space:nowrap; }
+.brand-institution { display:block; color:var(--text-faint); font-size:.5rem; font-weight:500; letter-spacing:.035em; line-height:1.2; white-space:nowrap; }
+.admin-brand img { width:38px; height:38px; flex-basis:38px; }
+.footer-brand-lockup { display:flex; align-items:center; gap:.75rem; margin:0 0 .8rem; }
+.footer-brand-lockup img { display:block; width:48px; height:48px; flex:0 0 48px; margin:0; object-fit:cover; border-radius:50%; background:#fff; }
+.footer-brand-lockup div { display:grid; gap:.15rem; }
+.footer-brand-lockup strong { color:var(--text); font-family:var(--font-head); font-size:1.12rem; letter-spacing:.06em; line-height:1.1; }
+.footer-brand-lockup span { color:var(--text-muted); font-size:.78rem; line-height:1.35; }
+.footer-institution { font-size:.86rem !important; line-height:1.7; }
+.admin-login .card > img[alt="EMBEDX emblem"] { width:52px !important; height:52px; object-fit:cover; border-radius:50%; }
+@media (max-width:560px) {
+  .brand img { width:36px; height:36px; flex-basis:36px; }
+  .brand-name { font-size:1.02rem; }
+  .brand-sub { display:block; font-size:.53rem; letter-spacing:.08em; }
+  .brand-institution { display:none; }
+  .nav-inner { flex-wrap:nowrap; gap:.45rem; }
+  .nav-actions { flex:0 0 auto; gap:.32rem; margin-left:auto; }
+  .nav-actions .icon-btn { width:36px; height:36px; }
+  .brand-copy { overflow:hidden; }
+}
+@media (max-width:360px) {
+  .brand { gap:.42rem; }
+  .brand img { width:32px; height:32px; flex-basis:32px; }
+  .brand-name { font-size:.96rem; }
+  .brand-sub { font-size:.49rem; letter-spacing:.045em; }
+  .nav-actions { gap:.22rem; }
+  .nav-actions .icon-btn { width:34px; height:34px; }
+}

@@ -35,10 +35,13 @@ function injectChrome() {
   header.className = "nav";
   header.innerHTML = `
     <div class="wrap nav-inner">
-      <a class="brand" href="/" aria-label="EMBEDX home">
-        <img src="/assets/images/embedx-emblem.webp" alt="EMBEDX club emblem" width="42" height="42" />
-        <span><span class="brand-name">EMBED<span>X</span></span>
-        <span class="brand-sub">EEE • SRM TRP</span></span>
+      <a class="brand" href="/" aria-label="EMBEDX — Department of EEE, SRM TRP Engineering College">
+        <img src="/assets/images/embedx-emblem.webp" alt="" width="40" height="40" />
+        <span class="brand-copy">
+          <span class="brand-name">EMBED<span>X</span></span>
+          <span class="brand-sub">Department of EEE</span>
+          <span class="brand-institution">SRM TRP Engineering College</span>
+        </span>
       </a>
       <nav class="nav-links" aria-label="Primary">${links}</nav>
       <div class="nav-actions">
@@ -63,8 +66,11 @@ function injectChrome() {
     <div class="wrap">
       <div class="footer-grid">
         <div class="footer-brand">
-          <img src="/assets/images/embedx-logo.webp" alt="EMBEDX — Embedded Systems and Automation logo" width="92" loading="lazy" />
-          <p class="muted" style="font-size:.9rem">Embedded Systems &amp; Automation Club<br />Department of Electrical and Electronics Engineering (EEE)<br />SRM TRP Engineering College (Autonomous)<br />SRM Nagar, Samayapuram, Tiruchirappalli – 621 105.</p>
+          <div class="footer-brand-lockup">
+            <img src="/assets/images/embedx-emblem.webp" alt="" width="48" height="48" loading="lazy" />
+            <div><strong>EMBEDX</strong><span>Embedded Systems &amp; Automation Club</span></div>
+          </div>
+          <p class="muted footer-institution">Department of Electrical and Electronics Engineering (EEE)<br />SRM TRP Engineering College (Autonomous)<br />SRM Nagar, Samayapuram, Tiruchirappalli – 621 105.</p>
           <p class="chip chip-accent" style="margin-top:.4rem">INNOVATE • INTEGRATE • INSPIRE</p>
         </div>
         <div>
