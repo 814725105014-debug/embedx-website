@@ -1,11 +1,12 @@
-// EMBEDX — Firebase configuration (project: gen-lang-client-0330226585).
+// EMBEDX — Firebase configuration (project: embedx-club-eee).
 export const firebaseConfig = {
-  apiKey: "AIzaSyCZVh3MEjNgV47GEcHwd2pNbO7z-P_F1KA",
-  authDomain: "gen-lang-client-0330226585.firebaseapp.com",
-  projectId: "gen-lang-client-0330226585",
-  storageBucket: "gen-lang-client-0330226585.firebasestorage.app",
-  messagingSenderId: "503567724815",
-  appId: "1:503567724815:web:cc7b19941a75de785dce7a"
+  apiKey: "AIzaSyBwNaduceEdAcJX0uCRv2nLNVZca2OWSgA",
+  authDomain: "embedx-club-eee.firebaseapp.com",
+  projectId: "embedx-club-eee",
+  storageBucket: "embedx-club-eee.firebasestorage.app",
+  messagingSenderId: "366131139755",
+  appId: "1:366131139755:web:c2e4176e31f72c0af853ee",
+  measurementId: "G-Q9M6515T3M"
 };
 
 export const isConfigured = Boolean(firebaseConfig.apiKey && firebaseConfig.projectId);

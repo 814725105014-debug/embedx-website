@@ -54,10 +54,14 @@ config is present**.
 
 ## 3. Connect Firebase (one-time setup)
 
+> Already wired for the club project **`embedx-club-eee`** (config, `.firebaserc`,
+> sitemap, robots, CI). The steps below are only needed when cloning this setup
+> for a different project.
+
 1. Create a Firebase project (Spark/free plan is enough) → add a **Web app**.
 2. Paste the `firebaseConfig` object into **`public/js/config.js`**.
 3. Put your project id in **`.firebaserc`** (`projects.default`) — or run `firebase use --add`.
-4. Replace `REPLACE_WITH_FIREBASE_PROJECT_ID` in `public/sitemap.xml` and `public/robots.txt`.
+4. Replace the project-id placeholder in `public/sitemap.xml` and `public/robots.txt`.
 5. Enable **Cloud Firestore** (production mode) in the console.
 
 Until step 2 is done the site runs in *static fallback mode*: every section renders
