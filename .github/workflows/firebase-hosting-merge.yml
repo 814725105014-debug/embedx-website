@@ -1,0 +1,22 @@
+# Deploy to Firebase Hosting (live channel) on merge to main.
+# Generated to mirror `firebase init hosting:github`.
+# TODO(before first run): replace REPLACE_WITH_FIREBASE_PROJECT_ID in both places below,
+# or simply re-run `firebase init hosting:github` locally which rewrites this file
+# and creates the FIREBASE_SERVICE_ACCOUNT_... secret automatically.
+name: Deploy Live to Firebase Hosting
+on:
+  push:
+    branches:
+      - main
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy to Firebase Hosting (live)
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: "${{ secrets.GITHUB_TOKEN }}"
+          firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT_REPLACE_WITH_FIREBASE_PROJECT_ID }}"
+          channelId: live
+          projectId: REPLACE_WITH_FIREBASE_PROJECT_ID
