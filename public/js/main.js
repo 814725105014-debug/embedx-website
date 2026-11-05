@@ -3,8 +3,8 @@ import "./layout.js";
 import "./forms.js";
 import { initAll } from "./ui.js";
 import { icon } from "./icons.js";
-import { esc, asset, skeletons, projectCard, eventCard, teamCard, domainCard, resourceCard, achievementCard } from "./render.js";
-import { getProjects, getEvents, getTeam } from "./store.js";
+import { esc, asset, skeletons, projectCard, eventCard, teamCard, domainCard, resourceCard, achievementCard, announcementCard, galleryButton } from "./render.js";
+import { getProjects, getEvents, getTeam, getGallery, getAnnouncements } from "./store.js";
 import { domains, tools, careers } from "./data/domains.js";
 import { resources, resourceCategories } from "./data/resources.js";
 import { achievements } from "./data/achievements.js";
@@ -26,6 +26,26 @@ function filterBar(el, labels, onPick) {
 
 /* ---------- home ---------- */
 async function home() {
+  // notice board (announcements) — pinned first
+  const an = $("#announcementsGrid");
+  if (an) {
+    const list = await getAnnouncements();
+    if (list.length) {
+      an.closest("section").hidden = false;
+      an.innerHTML = list
+        .sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0))
+        .slice(0, 3)
+        .map(announcementCard).join("");
+    }
+  }
+  // gallery — Firestore first, static fallback
+  const gg = $("#galleryGrid");
+  if (gg) {
+    gg.innerHTML = Array.from({ length: 8 }, () => '<div class="skeleton" style="min-height:170px"></div>').join("");
+    const shots = await getGallery();
+    gg.innerHTML = shots.map(galleryButton).join("");
+    initAll();
+  }
   const pg = $("#projectsGrid");
   const eg = $("#eventsGrid");
   const ag = $("#achieversGrid");

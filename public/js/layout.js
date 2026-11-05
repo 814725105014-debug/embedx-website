@@ -86,7 +86,7 @@ function injectChrome() {
       </div>
       <div class="footer-bottom">
         <span>© 2026 EMBEDX – Embedded Systems and Automation Club • Department of EEE.</span>
-        <span>SRM TRP Engineering College (An Autonomous Institution, Affiliated to Anna University)</span>
+        <span>SRM TRP Engineering College (An Autonomous Institution, Affiliated to Anna University) · <a href="/admin/" style="display:inline">Admin Portal</a></span>
       </div>
     </div>`;
   document.body.append(footer);

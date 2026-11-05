@@ -56,6 +56,17 @@
     </div>
   </section>
 
+  <!-- NOTICE BOARD (hidden unless announcements exist) -->
+  <section class="section" id="notices" style="padding-top:1.6rem;padding-bottom:0" hidden>
+    <div class="wrap">
+      <div class="section-head" data-reveal>
+        <p class="eyebrow">Notice Board</p>
+        <h2>Latest <span class="grad-text">Announcements</span></h2>
+      </div>
+      <div class="grid grid-3" id="announcementsGrid"></div>
+    </div>
+  </section>
+
   <!-- ABOUT SNAPSHOT -->
   <section class="section" id="about">
     <div class="wrap">
@@ -191,16 +202,7 @@
         <h2>Gallery</h2>
         <p>Posters, prototypes and event moments from the EMBEDX workshop floor.</p>
       </div>
-      <div class="gallery">
-        <button data-lightbox="/assets/images/poster-embednova.webp" data-caption="EMBEDNOVA official event poster" aria-label="Enlarge EMBEDNOVA poster"><img src="/assets/images/poster-embednova.webp" alt="EMBEDNOVA event poster" loading="lazy" /></button>
-        <button data-lightbox="/assets/images/poster-club.webp" data-caption="EMBEDX club poster" aria-label="Enlarge club poster"><img src="/assets/images/poster-club.webp" alt="EMBEDX club poster" loading="lazy" /></button>
-        <button data-lightbox="/assets/images/poster-embedded-domain.webp" data-caption="Embedded systems domain poster" aria-label="Enlarge domain poster"><img src="/assets/images/poster-embedded-domain.webp" alt="Embedded domain poster" loading="lazy" /></button>
-        <button data-lightbox="/assets/images/robotic-arm-banner.webp" data-caption="Robotic arm — automation lab" aria-label="Enlarge robotic arm image"><img src="/assets/images/robotic-arm-banner.webp" alt="Robotic arm banner" loading="lazy" /></button>
-        <button data-lightbox="/assets/images/project-amr.webp" data-caption="Autonomous Mobile Robot" aria-label="Enlarge rover image"><img src="/assets/images/project-amr.webp" alt="Autonomous mobile robot" loading="lazy" /></button>
-        <button data-lightbox="/assets/images/embednova-rover.webp" data-caption="EmbedNova demonstration rover" aria-label="Enlarge rover photo"><img src="/assets/images/embednova-rover.webp" alt="EmbedNova rover" loading="lazy" /></button>
-        <button data-lightbox="/assets/images/event-tech-challenge.webp" data-caption="Tech Challenge track" aria-label="Enlarge tech challenge image"><img src="/assets/images/event-tech-challenge.webp" alt="Tech challenge" loading="lazy" /></button>
-        <button data-lightbox="/assets/images/microchip-circuit.webp" data-caption="Microcontroller on a circuit board" aria-label="Enlarge microchip image"><img src="/assets/images/microchip-circuit.webp" alt="Microchip circuit" loading="lazy" /></button>
-      </div>
+      <div class="gallery" id="galleryGrid"></div>
     </div>
   </section>
 

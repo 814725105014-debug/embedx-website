@@ -95,3 +95,22 @@ export function achievementCard(a) {
     <a class="card-link" href="/pages/project-detail.html?id=${encodeURIComponent(a.projectId)}">Read Project Specs ${icon("arrow-right")}</a>
   </article>`;
 }
+
+export function announcementCard(a) {
+  const date = (a.createdAt || "").slice(0, 10);
+  return `
+  <article class="card tilt" data-reveal>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:.6rem;flex-wrap:wrap">
+      <span class="chip chip-accent">${esc(a.kind || "notice")}</span>
+      ${a.pinned ? '<span class="badge-status">Pinned</span>' : ""}
+    </div>
+    <h3 style="margin-top:.7rem">${esc(a.title)}</h3>
+    <p class="muted" style="font-size:.92rem;white-space:pre-line">${esc(a.body)}</p>
+    ${date ? `<p class="meta" style="color:var(--text-faint);font-size:.78rem;margin:.4rem 0 0">${icon("clock")} ${date}</p>` : ""}
+  </article>`;
+}
+
+export function galleryButton(g) {
+  const src = g.imageUrl && (g.imageUrl.startsWith("http") || g.imageUrl.startsWith("/")) ? g.imageUrl : "/" + g.imageUrl;
+  return `<button data-lightbox="${esc(src)}" data-caption="${esc(g.caption || "")}" aria-label="Enlarge: ${esc(g.caption || "club photo")}"><img src="${esc(src)}" alt="${esc(g.caption || "EMBEDX club photo")}" loading="lazy" /></button>`;
+}
