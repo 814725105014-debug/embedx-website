@@ -8,7 +8,12 @@ async function getApp() {
   if (!appPromise) {
     appPromise = (async () => {
       const { initializeApp, getApps, getApp: existing } = await import(`${SDK}/firebase-app.js`);
-      return getApps().length ? existing() : initializeApp(firebaseConfig);
+      const app = getApps().length ? existing() : initializeApp(firebaseConfig);
+      // GA4 only on real deployments (not localhost / sandbox previews)
+      if (!/(localhost|127\.0\.0\.1|e2b\.app|preview\.)/.test(location.hostname) && firebaseConfig.measurementId) {
+        import(`${SDK}/firebase-analytics.js`).then((m) => m.getAnalytics(app)).catch(() => {});
+      }
+      return app;
     })();
   }
   return appPromise;

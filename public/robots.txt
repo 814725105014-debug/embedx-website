@@ -3,4 +3,4 @@ User-agent: *
 Allow: /
 
 # TODO: after first deploy, replace the project-id placeholder with your live domain.
-Sitemap: https://gen-lang-client-0330226585.web.app/sitemap.xml
+Sitemap: https://embedx-club-eee.web.app/sitemap.xml
