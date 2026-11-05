@@ -6,8 +6,28 @@ import { toast } from "./ui.js";
 import { esc, asset } from "./render.js";
 
 const SDK = "https://www.gstatic.com/firebasejs/10.12.5";
-const PAGE = document.body.dataset.adminPage || "overview";
+let PAGE = document.body.dataset.adminPage || "overview";
 const OWNER_EMAIL = "814725105014@trp.srmtrichy.edu.in";
+
+// page metadata — drives instant client-side navigation (SPA with real URLs)
+const PAGES = {
+  overview:      { h1: "Overview",       hint: "Live counts, your open tasks and access at a glance.", crud: false },
+  announcements: { h1: "Announcements",  hint: "Published instantly to the home-page notice board (pinned first).", crud: true },
+  events:        { h1: "Events",         hint: "Create and update upcoming events, posters and details.", crud: true },
+  projects:      { h1: "Projects",       hint: "Featured projects appear on the home page grid.", crud: true },
+  team:          { h1: "Team",           hint: "Executive council & faculty — swap photos and edit details any time.", crud: true },
+  gallery:       { h1: "Gallery",        hint: "Upload, replace or edit photos for the home-page gallery.", crud: true },
+  resources:     { h1: "Resources",      hint: "Learning Hub guides with category filters.", crud: true },
+  achievements:  { h1: "Achievers",      hint: "Hall of Achievers cards.", crud: true },
+  tasks:         { h1: "Tasks",          hint: "Assign work to a person or a role; assignees mark tasks done.", crud: true },
+  admins:        { h1: "Admins & roles", hint: "Add coordinators, HOD and president in one click; reset or revoke any time.", crud: false }
+};
+const pageFromPath = (pathname) => {
+  const m = pathname.replace(/\/+$/, "").match(/^\/admin(?:\/(?:index\.html)?|\/([a-z]+)(?:\.html)?)?$/);
+  if (!m) return null;
+  const p = m[1] || "overview";
+  return PAGES[p] ? p : null;
+};
 
 /* ---------------- roles & permissions ---------------- */
 const ROLES = {
@@ -56,6 +76,7 @@ const NAV = [
 let authMod = null, dbMod = null, stMod = null, app = null;
 let role = null, me = "", perms = [];
 let items = [], editingId = null, pendingImageField = null, editorState = null;
+let statsCache = null;
 
 async function sdk() {
   const { initializeApp, getApps, getApp } = await import(`${SDK}/firebase-app.js`);
@@ -263,6 +284,7 @@ async function boot() {
     if (rr.mustChange) { showView("change"); return; }
     showView("in");
     renderShell();
+    renderMain();
     route();
   });
 
@@ -339,6 +361,35 @@ function route() {
   return renderCollection(PAGE);
 }
 
+/* ---------------- instant client-side navigation ---------------- */
+function renderMain() {
+  const meta = PAGES[PAGE] || PAGES.overview;
+  $("#adminMain").innerHTML = `
+    <div class="admin-head">
+      <div>
+        <h1 style="margin:0 0 .2rem">${esc(meta.h1)}</h1>
+        <p class="muted" style="font-size:.9rem;margin:0">${esc(meta.hint)}</p>
+        <div id="roleNote" style="margin-top:.5rem"></div>
+      </div>
+      ${meta.crud ? '<button class="btn btn-primary" id="addItem" hidden>+ New</button>' : ""}
+    </div>
+    ${meta.crud ? '<div id="statsStrip" class="admin-stats" style="margin:1rem 0"></div>' : ""}
+    <div id="pageRegion"></div>`;
+  document.title = `${meta.h1} — EMBEDX Admin`;
+}
+
+function navigate(page, push = true) {
+  if (!PAGES[page]) page = "overview";
+  PAGE = page;
+  document.body.dataset.adminPage = page;
+  if (push) history.pushState({ page }, "", page === "overview" ? "/admin/" : `/admin/${page}`);
+  closeModals();
+  renderShell();
+  renderMain();
+  route();
+  window.scrollTo({ top: 0 });
+}
+
 /* ---------------- overview ---------------- */
 async function renderOverview() {
   const region = $("#pageRegion");
@@ -389,7 +440,7 @@ const taskRow = (t) => `
 async function renderCollection(sec) {
   const schema = SCHEMAS[sec];
   if (!schema) { $("#pageRegion").innerHTML = `<p class="muted">Unknown section.</p>`; return; }
-  if (!can(sec)) {
+  if (!can(sec) && sec !== "tasks") {
     $("#pageRegion").innerHTML = `<div class="card" style="padding:var(--sp-4)"><h2 style="margin:0 0 .4rem">No access</h2><p class="muted" style="margin:0">Your owner hasn't granted you this section. Ask them to tick it for you under <b>Admins &amp; roles → Permissions</b>.</p></div>`;
     return;
   }
@@ -418,13 +469,15 @@ async function loadList(sec) {
 
 async function loadStats() {
   const strip = $("#statsStrip");
-  if (!strip || !isConfigured) return;
-  try {
-    const { db } = await sdk();
-    const names = ["announcements", "events", "projects", "team", "gallery", "resources", "achievements"];
-    const counts = await Promise.all(names.map(async (n) => [n, (await dbMod.getDocs(dbMod.collection(db, n))).size]));
-    strip.innerHTML = counts.map(([n, c]) => `<a class="chip ${c ? "chip-accent" : ""}" style="text-decoration:none" href="/admin/${n}">${n}: ${c}</a>`).join("");
-  } catch { /* best-effort */ }
+  if (!strip) return;
+  if (!statsCache && isConfigured) {
+    try {
+      const { db } = await sdk();
+      const names = ["announcements", "events", "projects", "team", "gallery", "resources", "achievements"];
+      statsCache = await Promise.all(names.map(async (n) => [n, (await dbMod.getDocs(dbMod.collection(db, n))).size]));
+    } catch { return; }
+  }
+  if (statsCache) strip.innerHTML = statsCache.map(([n, c]) => `<a class="chip ${c ? "chip-accent" : ""}" style="text-decoration:none" href="/admin/${n}">${n}: ${c}</a>`).join("");
 }
 
 function renderList(sec) {
@@ -577,6 +630,7 @@ async function saveForm(e) {
       toast("Published ✔", "ok");
     }
     closeModals();
+    statsCache = null;
     loadList(sec);
     loadStats();
   } catch (err) {
@@ -596,6 +650,7 @@ async function removeItem(id) {
   try {
     await dbMod.deleteDoc(dbMod.doc(db, sec, id));
     toast("Deleted.", "ok");
+    statsCache = null;
     loadList(sec);
     loadStats();
   } catch (err) { toast(`Delete failed: ${esc(err.message)}`, "err"); }
@@ -766,6 +821,57 @@ async function loadAdmins() {
     loadAdmins();
   }));
 }
+
+/* ---------------- shared modals (injected on pages that don't ship them) ---------------- */
+const MODALS_HTML = `
+<div class="modal-backdrop" id="formModal" role="dialog" aria-modal="true" aria-labelledby="formModalTitle">
+  <div class="modal" style="width:min(720px,100%)">
+    <button class="icon-btn modal-close" data-modal-close aria-label="Close form"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+    <h2 id="formModalTitle">New item</h2>
+    <form id="entityForm" novalidate><div class="form-grid" id="entityFields"></div>
+      <div style="display:flex;gap:.7rem;justify-content:flex-end;margin-top:1.2rem">
+        <button type="button" class="btn btn-ghost" data-modal-close>Cancel</button>
+        <button type="submit" class="btn btn-primary">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+<div class="modal-backdrop" id="editorModal" role="dialog" aria-modal="true" aria-labelledby="editorTitle">
+  <div class="modal" style="width:min(760px,100%)">
+    <button class="icon-btn modal-close" data-modal-close aria-label="Close editor"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+    <h2 id="editorTitle">Edit photo</h2>
+    <div class="editor-grid">
+      <canvas id="editorCanvas" style="max-width:100%;border-radius:var(--r-sm);background:var(--bg-3)"></canvas>
+      <div class="editor-tools">
+        <p class="muted" style="font-size:.85rem">Rotate, pick a crop aspect and export size. The result is uploaded as optimized WebP.</p>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+          <button type="button" class="btn btn-ghost btn-sm" id="rotL">&#10554; Rotate</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="rotR">&#10555; Rotate</button>
+        </div>
+        <div class="field" style="margin-top:.8rem"><label for="aspectSel">Crop aspect</label>
+          <select id="aspectSel"><option value="0">Original</option><option value="1">Square 1:1</option><option value="1.3333">4:3</option><option value="1.7778">16:9</option><option value="0.75">3:4 portrait</option></select></div>
+        <div class="field"><label for="widthSel">Max width</label>
+          <select id="widthSel"><option>800</option><option selected>1200</option><option>1600</option></select></div>
+        <button type="button" class="btn btn-primary" id="editorApply" style="width:100%;margin-top:.6rem">Use this image</button>
+      </div>
+    </div>
+  </div>
+</div>`;
+if (!document.getElementById("formModal")) document.body.insertAdjacentHTML("beforeend", MODALS_HTML);
+
+/* ---------------- SPA navigation: sidebar/cards/chips switch instantly ---------------- */
+document.addEventListener("click", (e) => {
+  if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+  const a = e.target.closest('a[href^="/admin"]');
+  if (!a) return;
+  const page = pageFromPath(new URL(a.href, location.origin).pathname);
+  if (!page) return;
+  e.preventDefault();
+  navigate(page);
+});
+window.addEventListener("popstate", (e) => {
+  navigate((e.state && e.state.page) || pageFromPath(location.pathname) || "overview", false);
+});
 
 /* ---------------- wiring (modals exist only on CRUD pages — guard every lookup) ---------------- */
 $("#entityForm")?.addEventListener("submit", saveForm);
