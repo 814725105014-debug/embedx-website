@@ -10,3 +10,11 @@ export const firebaseConfig = {
 };
 
 export const isConfigured = Boolean(firebaseConfig.apiKey && firebaseConfig.projectId);
+
+// Task assignment emails (optional): deploy backend-bundle/appsscript/task-mail.gs as a
+// Google Apps Script web app, then paste its /exec URL and the TOKEN you chose here.
+// Leave url empty to skip emailing (tasks still work).
+export const taskMail = {
+  url: "",
+  token: ""
+};

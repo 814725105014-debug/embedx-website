@@ -1,7 +1,7 @@
 // EMBEDX — Admin portal: multi-page, role-based CMS.
 // One page per section (/admin/, /admin/events, /admin/admins, …) sharing this module.
 // Real security lives in firestore.rules / storage.rules (roles from `admin_roles` collection).
-import { firebaseConfig, isConfigured } from "./config.js";
+import { firebaseConfig, isConfigured, taskMail } from "./config.js";
 import { toast } from "./ui.js";
 import { esc, asset } from "./render.js";
 
@@ -626,8 +626,14 @@ async function saveForm(e) {
     } else {
       if (sec === "announcements" || sec === "tasks") data.createdAt = new Date().toISOString();
       if (sec === "tasks") data.createdBy = me;
-      await dbMod.addDoc(dbMod.collection(db, sec), data);
-      toast("Published ✔", "ok");
+      const ref = await dbMod.addDoc(dbMod.collection(db, sec), data);
+      if (sec === "tasks") {
+        const mailed = await notifyTaskAssignee(data);
+        await dbMod.updateDoc(ref, { notified: mailed, notifiedAt: new Date().toISOString() }).catch(() => {});
+        toast(mailed ? "Published ✔ — assignee emailed automatically" : "Published ✔ (no email: Task Mail not configured or no assignee email)", "ok");
+      } else {
+        toast("Published ✔", "ok");
+      }
     }
     closeModals();
     statsCache = null;
@@ -654,6 +660,46 @@ async function removeItem(id) {
     loadList(sec);
     loadStats();
   } catch (err) { toast(`Delete failed: ${esc(err.message)}`, "err"); }
+}
+
+/* ---------------- task assignment email (Apps Script web app hook) ---------------- */
+async function notifyTaskAssignee(t) {
+  if (!taskMail || !taskMail.url) return false;
+  let emails = [];
+  if (t.assigneeEmail) emails = [t.assigneeEmail];
+  else if (t.assigneeRole) {
+    try {
+      const { db } = await sdk();
+      const snap = await dbMod.getDocs(dbMod.collection(db, "admin_roles"));
+      emails = snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((a) => a.role === t.assigneeRole && a.id !== OWNER_EMAIL).map((a) => a.id);
+    } catch { return false; }
+  }
+  emails = [...new Set(emails.filter((e) => e && e.includes("@")))];
+  if (!emails.length) return false;
+  const body = [
+    `<p><b>${esc(t.title)}</b> has been assigned${t.assigneeRole && !t.assigneeEmail ? ` to the ${esc(ROLES[t.assigneeRole]?.label || t.assigneeRole)}` : " to you"} by ${esc(me)}.</p>`,
+    t.detail ? `<p>${esc(t.detail)}</p>` : "",
+    t.due ? `<p>Due: <b>${esc(t.due)}</b></p>` : "",
+    `<p>Open your portal to act on it: <a href="https://embedx-club-eee.web.app/admin/tasks">embedx-club-eee.web.app/admin/tasks</a></p>`,
+    `<p style="color:#888;font-size:12px">EMBEDX Admin Portal — automated task notification</p>`
+  ].join("");
+  try {
+    await fetch(taskMail.url, {
+      method: "POST",
+      mode: "no-cors", // Apps Script web apps don't send CORS headers; fire-and-forget
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({
+        token: taskMail.token,
+        to: emails,
+        subject: `[EMBEDX Task] ${t.title}${t.due ? ` (due ${t.due})` : ""}`,
+        html: body
+      })
+    });
+    return true;
+  } catch (err) {
+    console.error("task mail failed", err);
+    return false;
+  }
 }
 
 /* ---------------- image editor + upload ---------------- */
