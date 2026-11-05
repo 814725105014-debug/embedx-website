@@ -1,0 +1,13 @@
+service-account*.json
+*serviceAccount*.json
+.env
+.env.*
+node_modules/
+scripts/node_modules/
+.firebase/
+firebase-debug.log
+firestore-debug.log
+*.log
+.DS_Store
+.idea/
+.vscode/
