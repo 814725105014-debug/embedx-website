@@ -1,0 +1,11 @@
+{
+  "name": "embedx-seed",
+  "private": true,
+  "description": "One-time Firestore seed tooling for the EMBEDX website. Not deployed.",
+  "scripts": {
+    "seed": "node seed.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.7.0"
+  }
+}
