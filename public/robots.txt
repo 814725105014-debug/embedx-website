@@ -1,0 +1,6 @@
+# EMBEDX — robots.txt
+User-agent: *
+Allow: /
+
+# TODO: after first deploy, replace the project-id placeholder with your live domain.
+Sitemap: https://REPLACE_WITH_FIREBASE_PROJECT_ID.web.app/sitemap.xml

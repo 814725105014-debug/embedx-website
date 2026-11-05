@@ -1,0 +1,208 @@
+// EMBEDX — Projects data (static fallback / seed source). ES module.
+export const projects = [
+  {
+    id: "autonomous-mobile-robot",
+    title: "Autonomous Mobile Robot",
+    category: "Robotics",
+    status: "Achieved / Active",
+    featured: true,
+    order: 1,
+    highlight: "Represented in National Level Innovation 2026",
+    imageUrl: "assets/images/project-amr.webp",
+    githubUrl: "",
+    demoUrl: "",
+    tags: ["Embedded C", "AVR MCU", "PID Control", "L298N"],
+    shortDesc: "An intelligent autonomous rover with differential drive, multi-sensor environmental mapping, and real-time obstacle navigation.",
+    cardDesc: "Differential drive mobile rover with ultrasonic & IR sensor obstacle avoidance, closed-loop PID speed regulation, and sub-50ms reactive navigation.",
+    problemStatement: "Navigating complex indoor and industrial environments safely without human teleoperation requires robust real-time sensing, obstacle avoidance algorithms, and low-latency motor control.",
+    proposedSolution: "Engineered a differential drive mobile robot platform utilizing ultrasonic and infrared sensor arrays, closed-loop PWM motor driver feedback, and microcontroller-based path planning algorithms.",
+    workingPrinciple: "Sensors continuously stream distance telemetry to the core controller. The onboard firmware computes spatial clearance and dynamically recalculates motor RPMs to achieve optimal path traversal and collision avoidance.",
+    hardware: [
+      "Microcontroller Unit (Atmega328P / ARM Cortex-M)",
+      "L298N High-Torque Dual H-Bridge Motor Driver",
+      "Ultrasonic HC-SR04 Transducers",
+      "Infrared Obstacle Detection Array",
+      "High-RPM Geared DC Motors with Optical Encoders",
+      "Custom Acrylic/Aluminium Chassis Frame",
+      "Lithium-Polymer 12V High-Drain Battery Pack"
+    ],
+    software: [
+      "Embedded C / C++",
+      "AVR / Arduino Toolchain",
+      "Sensor Telemetry Filtering Algorithms",
+      "Closed-Loop PID Motion Control"
+    ],
+    technologies: ["Embedded C", "Robotics", "PID Control", "Sensor Fusion", "Hardware Interfacing"],
+    team: "EMBEDX Robotics Division",
+    outcomes: [
+      "Successfully competed at the National Level Innovation 2026",
+      "Achieved sub-50ms reaction time for obstacle avoidance",
+      "Demonstrated 99.2% path adherence on predefined test courses"
+    ],
+    gallery: ["assets/images/project-amr.webp", "assets/images/poster-club.webp"]
+  },
+  {
+    id: "smart-dustbin",
+    title: "Smart Dustbin (Waste Segregation)",
+    category: "Smart Systems",
+    status: "Achieved / Active",
+    featured: true,
+    order: 2,
+    highlight: "Represented in Niral Thiruvizha 2026",
+    imageUrl: "assets/images/project-dustbin.webp",
+    githubUrl: "",
+    demoUrl: "",
+    tags: ["Sensors", "Servos", "Ultrasonic", "Smart City"],
+    shortDesc: "Automated waste management and segregation prototype designed for smart campuses and urban municipal hygiene.",
+    cardDesc: "Touchless municipal waste management prototype featuring automated lid actuation, multi-compartment segregation logic, and depth fill telemetry.",
+    problemStatement: "Conventional manual waste sorting is labor-intensive, unhygienic, and inefficient, leading to poor recyclable recovery and overflowing bins in institutional campuses.",
+    proposedSolution: "Developed an automated smart disposal system equipped with contactless opening, multi-type material sensing, fill-level telemetry, and automated lid actuation.",
+    workingPrinciple: "Proximity sensors detect approaching users to trigger contactless servo lid actuation. Material classification sensors distinguish wet/dry disposal categories, directing items to designated chambers while ultrasonic depth sensors monitor container volume.",
+    hardware: [
+      "Microcontroller Controller Board",
+      "Ultrasonic Bin Depth Sensor",
+      "PIR / Optical Approach Sensor",
+      "High-Torque Metal Gear Servos",
+      "Inductive / Capacitive Moisture Probes",
+      "Solar / Li-ion Battery Power Module"
+    ],
+    software: [
+      "Embedded C Firmware",
+      "State-Machine Actuation Logic",
+      "Threshold Calibration Algorithm"
+    ],
+    technologies: ["Embedded Systems", "Smart City Tech", "Automation", "Sensors & Actuators"],
+    team: "EMBEDX Smart Systems Division",
+    outcomes: [
+      "Featured and recognized at Niral Thiruvizha 2026",
+      "Eliminated physical contact for 100% hygienic waste deposit",
+      "Provided real-time capacity monitoring preventing bin overflow"
+    ],
+    gallery: ["assets/images/project-dustbin.webp", "assets/images/poster-club.webp"]
+  },
+  {
+    id: "gesture-recognition",
+    title: "Gesture Recognition Robotic System",
+    category: "Robotics",
+    status: "Active Prototype",
+    featured: true,
+    order: 3,
+    highlight: "Intelligent Human-Machine Interface",
+    imageUrl: "assets/images/project-gesture.webp",
+    githubUrl: "",
+    demoUrl: "",
+    tags: ["MPU6050", "NRF24L01+", "2.4GHz RF", "Embedded C"],
+    shortDesc: "Wearable IMU sensor glove translating 6-axis spatial hand deflections into sub-20ms wireless commands driving an agile mobile platform.",
+    cardDesc: "Wearable IMU sensor glove translating 6-axis spatial hand deflections into sub-20ms wireless commands driving an agile mobile platform.",
+    problemStatement: "Conventional robotics teleoperation interfaces (joysticks, tethered consoles) are unintuitive and unsuitable for sterile, hazardous, or hands-busy environments.",
+    proposedSolution: "Built a wearable gesture glove with a 6-axis IMU streaming filtered orientation data over 2.4GHz RF to a differential-drive robot, mapping discrete hand maneuvers to motion commands.",
+    workingPrinciple: "The MPU6050 IMU samples acceleration and gyroscopic data. A complementary filter fuses signals to suppress drift, classifies six discrete gestures onboard, and transmits compact command frames via an NRF24L01+ transceiver to the rover's motor controller.",
+    hardware: [
+      "MPU6050 6-Axis IMU Sensor",
+      "NRF24L01+ 2.4GHz RF Transceiver Pair (Transmitter & Receiver)",
+      "Dual Motor H-Bridge Driver",
+      "Rechargeable LiPo Power Source"
+    ],
+    software: [
+      "Embedded C / Arduino Framework",
+      "Complementary Filter for IMU Drift Correction",
+      "RF24 Low-Latency Data Protocol"
+    ],
+    technologies: ["Wireless RF", "IMU Sensors", "Embedded C", "Robotics", "Human-Machine Interface"],
+    team: "EMBEDX Mechatronics Division",
+    outcomes: [
+      "Achieved sub-20ms wireless control latency",
+      "High gesture accuracy across 6 discrete spatial maneuvers",
+      "Demonstrated teleoperation capability up to 30 meters line-of-sight"
+    ],
+    gallery: ["assets/images/project-gesture.webp", "assets/images/poster-club.webp"]
+  },
+  {
+    id: "medibot",
+    title: "MEDIBOT (Medicine Reminder & Dispenser)",
+    category: "Healthcare",
+    status: "Active Prototype",
+    featured: true,
+    order: 4,
+    highlight: "Smart Healthcare Assistance",
+    imageUrl: "assets/images/project-medibot.webp",
+    githubUrl: "",
+    demoUrl: "",
+    tags: ["DS3231 RTC", "Stepper Motor", "IR Optical", "Embedded C++"],
+    shortDesc: "An intelligent healthcare assistance robot providing automated scheduled medication alerts, multi-slot dispensing, and patient compliance monitoring.",
+    cardDesc: "Automated healthcare medication dispenser with DS3231 RTC scheduling, motorized carousel indexing, and optical beam-break verification.",
+    problemStatement: "Elderly patients and individuals with chronic conditions frequently miss critical medication times or take incorrect dosages due to complex prescription schedules.",
+    proposedSolution: "Engineered MEDIBOT, an automated dispenser featuring real-time clock (RTC) scheduling, compartmentalized motorized carousel dispensing, multi-sensory audiovisual alerts, and confirmation logging.",
+    workingPrinciple: "An onboard DS3231 high-precision RTC maintains scheduled prescription timestamps. When dosage time is reached, the MCU activates buzzer/LED alerts, rotates the carousel stepper to the target medicine compartment, and verifies pill extraction via IR beam-break sensing.",
+    hardware: [
+      "High-Precision DS3231 RTC Module with Battery Backup",
+      "Microcontroller Control Board",
+      "Precision Stepper Motor & Driver for Compartment Indexing",
+      "Optical IR Beam Break Sensor for Dispense Verification",
+      "16x2 I2C Character Display / OLED User Interface",
+      "High-Decibel Piezo Buzzer and Multi-Color Alert LEDs",
+      "Custom 3D-Printed / Acrylic Compartment Casing"
+    ],
+    software: [
+      "Embedded C / C++",
+      "I2C Communication Stack for RTC and Display",
+      "State-Machine Scheduler & Alarm Manager"
+    ],
+    technologies: ["Embedded Systems", "Healthcare IoT", "RTC Scheduling", "Actuators", "Sensors"],
+    team: "EMBEDX Healthcare Tech Division",
+    outcomes: [
+      "Automated foolproof dispensing for multi-dosage daily regimens",
+      "Integrated audio-visual reminders with zero clock drift",
+      "Dispensing verification prevents double-dosing"
+    ],
+    gallery: ["assets/images/project-medibot.webp", "assets/images/poster-club.webp"]
+  },
+  {
+    id: "smart-energy-meter",
+    title: "IoT Smart Energy & Grid Monitor",
+    category: "IoT & Energy",
+    status: "In Development",
+    featured: false,
+    order: 5,
+    highlight: "Smart Energy Management & Analytics",
+    imageUrl: "assets/images/raspberry-pi-board.webp",
+    githubUrl: "",
+    demoUrl: "",
+    tags: ["ESP32", "MQTT", "CT Sensors", "FreeRTOS"],
+    shortDesc: "Connected edge telemetry node measuring voltage, current, power factor, and power consumption with cloud analytics.",
+    cardDesc: "Connected edge telemetry node measuring voltage, current, power factor, and power consumption with cloud analytics.",
+    problemStatement: "Lack of sub-metering and real-time load analytics in institutional laboratories leads to energy wastage and unnoticed harmonic distortions.",
+    proposedSolution: "Building an isolated AC current/voltage sensing node sending encrypted telemetry to a central dashboard with predictive load analytics.",
+    workingPrinciple: "Non-invasive CT sensors and ZMPT101B voltage transformers sample AC waveforms. The MCU calculates RMS power and uploads telemetry via Wi-Fi/MQTT.",
+    hardware: ["ESP32 Dual-Core MCU", "SCT-013 Non-Invasive CT Current Sensor", "ZMPT101B Voltage Sensor Module", "OLED Status Display"],
+    software: ["FreeRTOS on ESP32", "MQTT Protocol", "ThingSpeak / InfluxDB"],
+    technologies: ["IoT", "Cloud Telemetry", "Power Electronics", "FreeRTOS"],
+    team: "EMBEDX Energy & IoT Wing",
+    outcomes: ["Real-time power profiling", "Alerts on abnormal power surges", "Cloud data visualization"],
+    gallery: ["assets/images/raspberry-pi-board.webp"]
+  },
+  {
+    id: "industrial-plc-sorting",
+    title: "PLC & SCADA Automated Conveyor Sorting Cell",
+    category: "Automation",
+    status: "Prototype Blueprint",
+    featured: false,
+    order: 6,
+    highlight: "Industrial 4.0 Mechatronics Cell",
+    imageUrl: "assets/images/industrial-automation.webp",
+    githubUrl: "",
+    demoUrl: "",
+    tags: ["Ladder Logic", "SCADA", "Pneumatics", "Modbus"],
+    shortDesc: "Industrial manufacturing simulation featuring multi-sensor material classification, pneumatic divert gates, and SCADA monitoring.",
+    cardDesc: "Industrial manufacturing simulation featuring multi-sensor material classification, pneumatic divert gates, and SCADA monitoring.",
+    problemStatement: "High-speed assembly lines require fault-tolerant, deterministic industrial automation with remote HMI supervision.",
+    proposedSolution: "Designing an industrial sorting cell controlled via PLC Ladder Logic and integrated with SCADA telemetry.",
+    workingPrinciple: "Conveyor optical sensors detect item arrival. Inductive sensors differentiate ferrous vs non-ferrous parts, triggering high-speed pneumatic divert rams.",
+    hardware: ["Micro PLC Controller", "Inductive & Capacitive Proximity Sensors", "24V Solenoid Pneumatic Valves", "DC Geared Conveyor Drive"],
+    software: ["Ladder Logic (TIA Portal / OpenPLC)", "SCADA / HMI Dashboard (Node-RED)"],
+    technologies: ["PLC Programming", "SCADA & HMI", "Industrial Automation", "Pneumatics"],
+    team: "EMBEDX Automation Wing",
+    outcomes: ["Deterministic sub-second sort cycling", "Full SCADA visualization of production KPIs"],
+    gallery: ["assets/images/industrial-automation.webp"]
+  }
+];
