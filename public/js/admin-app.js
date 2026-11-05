@@ -202,25 +202,26 @@ const HINTS = {
 
 /* ---------------- view switching (immune to cached CSS) ---------------- */
 function showView(which) {
-  const login = $("#loginView"), shell = $("#adminShell");
-  if (!login || !shell) return;
-  const out = which === "out";
-  login.hidden = !out; login.style.display = out ? "" : "none";
-  shell.hidden = out; shell.style.display = out ? "none" : "";
+  const set = (el, on) => { if (el) { el.hidden = !on; el.style.display = on ? "" : "none"; } };
+  set($("#loginView"), which === "out");
+  set($("#changeView"), which === "change");
+  set($("#adminShell"), which === "in");
 }
 
 /* ---------------- auth boot ---------------- */
 async function resolveRole(user) {
   const email = (user.email || "").toLowerCase();
-  if (email === OWNER_EMAIL) return "owner";
+  if (email === OWNER_EMAIL) return { role: "owner", mustChange: false };
   try {
     const { db } = await sdk();
     const snap = await dbMod.getDoc(dbMod.doc(db, "admin_roles", email));
-    if (snap.exists() && snap.data().role && ROLES[snap.data().role]) return snap.data().role;
+    if (snap.exists() && snap.data().role && ROLES[snap.data().role]) {
+      return { role: snap.data().role, mustChange: snap.data().mustChangePassword === true };
+    }
   } catch { /* no role doc or read denied → fall through */ }
   for (const force of [false, true]) {
     const t = await user.getIdTokenResult(force).catch(() => null);
-    if (t && t.claims.admin) return "owner";
+    if (t && t.claims.admin) return { role: "owner", mustChange: false };
   }
   return null;
 }
@@ -234,14 +235,16 @@ async function boot() {
   const { auth } = await sdk();
   authMod.onAuthStateChanged(auth, async (user) => {
     if (!user) { showView("out"); return; }
-    role = await resolveRole(user);
-    if (!role) {
+    const rr = await resolveRole(user);
+    if (!rr) {
       await authMod.signOut(auth);
       showView("out");
       $("#loginError").textContent = `Signed in as ${user.email || "this account"}, but it has no portal role yet. Ask the owner to add it under Admins & roles (or run scripts/grant-admin.js), then sign in again.`;
       return;
     }
     me = (user.email || "").toLowerCase();
+    role = rr.role;
+    if (rr.mustChange) { showView("change"); return; }
     showView("in");
     renderShell();
     route();
@@ -258,6 +261,35 @@ async function boot() {
     } catch (err) {
       $("#loginError").textContent = err.code === "auth/invalid-credential" ? "Invalid email or password." : err.message;
       btn.disabled = false; btn.textContent = label;
+    }
+  });
+
+  // "Forgot password?" — Firebase emails them a reset link (works for any existing login)
+  $("#forgot")?.addEventListener("click", async () => {
+    const email = $("#li-email").value.trim();
+    if (!email.includes("@")) { $("#loginError").textContent = "Type your email first, then tap “Forgot password?”."; return; }
+    try {
+      await authMod.sendPasswordResetEmail(auth, email);
+      $("#loginError").textContent = "";
+      toast("Password-reset email sent ✔", "ok");
+    } catch (err) { $("#loginError").textContent = err.message; }
+  });
+
+  // Forced first-login password change (temporary password from the owner)
+  $("#changeForm")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const errEl = $("#changeError"); errEl.textContent = "";
+    const a = $("#cp-new").value, b = $("#cp-confirm").value;
+    if (a.length < 8) { errEl.textContent = "Use at least 8 characters."; return; }
+    if (a !== b) { errEl.textContent = "Passwords don't match."; return; }
+    try {
+      await authMod.updatePassword(auth.currentUser, a);
+      const { db } = await sdk();
+      await dbMod.updateDoc(dbMod.doc(db, "admin_roles", me), { mustChangePassword: false });
+      toast("Password updated ✔ Welcome aboard!", "ok");
+      setTimeout(() => location.reload(), 600);
+    } catch (err2) {
+      errEl.textContent = err2.code === "auth/requires-recent-login" ? "Session expired — sign in again, then retry." : err2.message;
     }
   });
 }
@@ -563,23 +595,17 @@ async function renderAdmins() {
   if (role !== "owner") { region.innerHTML = `<p class="muted">Owner-only section.</p>`; return; }
   region.innerHTML = `
     <div class="card" style="padding:var(--sp-4);margin-bottom:1.2rem">
-      <h2 style="margin:0 0 .4rem">Add an admin</h2>
-      <p class="muted" style="font-size:.88rem;margin:0 0 1rem">Step 1 saves the role here. Step 2 (below) creates their password login — Firebase does not allow a web page to create other people's passwords, so pick any of the three methods.</p>
+      <h2 style="margin:0 0 .4rem">Add an admin — one click</h2>
+      <p class="muted" style="font-size:.88rem;margin:0 0 1rem">Fill the four fields and hit <b>Add admin</b>: the login is created instantly and the role is saved. They sign in with the temporary password and <b>must change it at first login</b>.</p>
       <form id="addAdminForm" class="form-grid">
         <div class="field"><label for="aa-email">Email *</label><input id="aa-email" type="email" required placeholder="name@trp.srmtrichy.edu.in" /></div>
-        <div class="field"><label for="aa-name">Display name</label><input id="aa-name" placeholder="e.g. Priya R." /></div>
+        <div class="field"><label for="aa-name">Display name</label><input id="aa-name" placeholder="e.g. Keerthivasan A" /></div>
         <div class="field"><label for="aa-role">Role</label><select id="aa-role">${Object.entries(ROLES).filter(([r]) => r !== "owner").map(([r, m]) => `<option value="${r}">${m.label} — ${m.blurb}</option>`).join("")}</select></div>
-        <div class="field full"><button class="btn btn-primary" type="submit">Save role</button></div>
+        <div class="field"><label for="aa-pass">Temporary password *</label><input id="aa-pass" type="text" minlength="8" required placeholder="8+ chars, share privately" /></div>
+        <div class="field full"><button class="btn btn-primary" type="submit">Add admin</button></div>
       </form>
-      <div class="cmd-box" id="cmdBox" hidden>
-        <code id="cmdText"></code>
-        <button class="btn btn-ghost btn-sm" id="cmdCopy" type="button">Copy</button>
-      </div>
-      <p class="muted" style="font-size:.82rem;margin:.8rem 0 0">
-        <b>Step 2 options:</b><br>
-        ① Git Bash (uses your service-account JSON): run the copied command inside <code>embedx-backend/scripts</code> after <code>npm install</code>.<br>
-        ② GitHub: run the <b>Create admin login</b> workflow (embedx-backend → Actions tab) with email + temporary password.<br>
-        ③ Firebase Console → Authentication → Users → Add user (email + temp password), then their role saved in Step 1 already works.
+      <p class="muted" style="font-size:.82rem;margin:.9rem 0 0">
+        Passwords are stored hashed by Firebase — <b>nobody can view them</b>, not even you. If someone forgets theirs: row button <b>“Send reset email”</b> below, the <b>“Forgot password?”</b> link on the login page, or (Git Bash, <code>embedx-backend/scripts</code>): <code>node reset-password.js email@x NewTemp123</code>.
       </p>
     </div>
     <h2 style="margin:0 0 .6rem">Current admins</h2>
@@ -589,17 +615,30 @@ async function renderAdmins() {
     const email = $("#aa-email").value.trim().toLowerCase();
     const name = $("#aa-name").value.trim();
     const r = $("#aa-role").value;
+    const pass = $("#aa-pass").value;
     if (!email.includes("@")) { toast("Enter a valid email.", "err"); return; }
+    if (pass.length < 8) { toast("Temporary password needs 8+ characters.", "err"); return; }
+    // 1) create the Auth login from the browser (public sign-up endpoint; portal access still gated by admin_roles)
+    let created = false, existed = false;
+    try {
+      const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${firebaseConfig.apiKey}`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password: pass, returnSecureToken: true })
+      });
+      const js = await res.json().catch(() => ({}));
+      if (res.ok) created = true;
+      else if (String(js.error && js.error.message).includes("EMAIL_EXISTS")) existed = true;
+      else { toast(`Login create failed: ${esc((js.error && js.error.message) || res.status)}`, "err"); return; }
+    } catch (err) { toast(`Network error: ${esc(err.message)}`, "err"); return; }
+    // 2) save the role (+ force password change for brand-new logins)
     const { db } = await sdk();
     try {
-      await dbMod.setDoc(dbMod.doc(db, "admin_roles", email), { role: r, name, addedBy: me, addedAt: new Date().toISOString() }, { merge: true });
-      toast(`Role saved for ${email}. Now create their login (step 2).`, "ok");
-      const box = $("#cmdBox"); box.hidden = false;
-      $("#cmdText").textContent = `node create-admin.js ${email} "TempPass123" ${r}${name ? ` "${name}"` : ""}`;
+      await dbMod.setDoc(dbMod.doc(db, "admin_roles", email), { role: r, name, addedBy: me, addedAt: new Date().toISOString(), mustChangePassword: created }, { merge: true });
+      toast(created ? `Done ✔ ${email} can sign in now and will be asked to change the temporary password.` : `Login already existed for ${email} — role saved. Use “Send reset email” if they forgot their password.`, "ok");
+      $("#addAdminForm").reset();
       loadAdmins();
-    } catch (err) { toast(`Save failed: ${esc(err.message)}`, "err"); }
+    } catch (err) { toast(`Role save failed: ${esc(err.message)}`, "err"); }
   });
-  $("#cmdCopy").addEventListener("click", () => { navigator.clipboard.writeText($("#cmdText").textContent); toast("Copied ✔", "ok"); });
   loadAdmins();
 }
 
@@ -619,15 +658,24 @@ async function loadAdmins() {
         <strong>${esc(a.email)}</strong>
         <span class="muted">${esc(a.name || "")}${a.addedAt ? ` • added ${(a.addedAt || "").slice(0, 10)}` : ""}</span>
       </div>
+      ${a.mustChangePassword ? `<span class="chip" title="Must change temporary password at next login">🔑 change due</span>` : ""}
       <select data-rolefor="${esc(a.email)}" class="btn btn-ghost btn-sm">
         ${Object.entries(ROLES).filter(([r]) => r !== "owner").map(([r, m]) => `<option value="${r}" ${a.role === r ? "selected" : ""}>${m.label}</option>`).join("")}
       </select>
+      <button class="btn btn-ghost btn-sm" data-reset="${esc(a.email)}">Send reset email</button>
       <button class="btn btn-ghost btn-sm" data-revoke="${esc(a.email)}" style="color:var(--err)">Revoke</button>
     </div>`).join("")}`;
   region.querySelectorAll("[data-rolefor]").forEach((s) => s.addEventListener("change", async () => {
     const { db } = await sdk();
     await dbMod.updateDoc(dbMod.doc(db, "admin_roles", s.dataset.rolefor), { role: s.value });
     toast("Role updated ✔", "ok");
+  }));
+  region.querySelectorAll("[data-reset]").forEach((b) => b.addEventListener("click", async () => {
+    try {
+      const { auth } = await sdk();
+      await authMod.sendPasswordResetEmail(auth, b.dataset.reset);
+      toast(`Reset email sent to ${b.dataset.reset} ✔`, "ok");
+    } catch (err) { toast(`Could not send: ${esc(err.message)}`, "err"); }
   }));
   region.querySelectorAll("[data-revoke]").forEach((b) => b.addEventListener("click", async () => {
     if (!confirm(`Remove portal access for ${b.dataset.revoke}? (Their login stays but can no longer enter the portal.)`)) return;

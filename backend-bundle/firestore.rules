@@ -59,9 +59,15 @@ service cloud.firestore {
     match /achievements/{id}  { allow read: if true; allow create, update, delete: if canWrite('achievements'); }
 
     // ---- portal roles: staff can read the directory, only owner manages it ----
+    // (exception: a user may clear their own "must change password" flag after choosing a new one)
     match /admin_roles/{email} {
       allow read: if isStaff();
-      allow create, update, delete: if isOwner();
+      allow create, delete: if isOwner();
+      allow update: if isOwner()
+        || (signedIn()
+            && resource.id == request.auth.token.email
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['mustChangePassword'])
+            && request.resource.data.mustChangePassword == false);
     }
 
     // ---- tasks: staff read; owner/president manage; assignees may flip their own status ----
