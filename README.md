@@ -97,6 +97,8 @@ re-run after editing `public/js/data/*.js`). Form collections stay empty by desi
 | `projects` | `title, description/shortDesc, tags[], imageUrl, githubUrl, demoUrl, order, category, status, featured, highlight, hardware[], software[], outcomes[], gallery[]` | `featured: true` shows on the home page. |
 | `team` | `name, role, year, photoUrl, linkedin, github, order, group ("faculty" / "student"), focus, bio, department` | `group` splits the team page sections. |
 | `gallery` | `imageUrl, caption, order` | written by the admin portal; home-page gallery + lightbox |
+| `resources` | `title, category, level, tags[], desc` | written by the admin portal; Learning Hub |
+| `achievements` | `badge, title, subtitle, description, image, team, institution, projectId` | written by the admin portal; Hall of Achievers |
 | `announcements` | `title, kind, body, pinned, createdAt` | written by the admin portal; home notice board (pinned first) |
 | `members_applications` | written by the Join + EMBEDNOVA forms | create-only; read via Console export |
 | `contact_messages` | written by the Contact form | create-only |
@@ -115,6 +117,8 @@ Club admins can publish and edit, with instant effect on the live site:
 * **Projects** — full card + detail content, tags, cover upload
 * **Team** — faculty/student members, photos, roles
 * **Gallery** — add/replace/delete photos with captions and ordering
+* **Resources & Achievers** — Learning Hub guides and Hall-of-Achievers cards
+* Live **content counters** per collection at the top of the dashboard
 
 Photo workflow: pick a file → in-browser editor (rotate, crop aspect 1:1 / 4:3 /
 16:9 / 3:4, max-width resize) → exported as optimized **WebP** → uploaded to
@@ -137,6 +141,18 @@ Firebase Storage (`images/<collection>/…`) → URL saved on the document.
 
 Form submissions (`members_applications`, `contact_messages`) remain create-only
 and are **not** readable from the portal; export them from the Firebase Console.
+
+### Security hardening shipped with the portal
+
+* **Content-Security-Policy** meta on every page (no inline scripts — the theme
+  bootstrap lives in `js/theme.js`; SDK only from `www.gstatic.com`).
+* Admin = Firebase Auth **plus** either the `admin` custom claim or the
+  bootstrap owner email allowlisted in `firestore.rules` / `storage.rules`
+  (`814725105014@trp.srmtrichy.edu.in`). Rotate that password regularly and
+  never share it — anyone with it + the email can publish content.
+* Storage writes: admin-only, images ≤5 MB; form collections create-only.
+* Site-wide search (Ctrl/⌘+K), scroll progress and back-to-top respect
+  `prefers-reduced-motion`.
 
 ## 6. GitHub auto-deploy
 

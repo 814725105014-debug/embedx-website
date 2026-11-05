@@ -3,4 +3,4 @@ User-agent: *
 Allow: /
 
 # TODO: after first deploy, replace the project-id placeholder with your live domain.
-Sitemap: https://REPLACE_WITH_FIREBASE_PROJECT_ID.web.app/sitemap.xml
+Sitemap: https://gen-lang-client-0330226585.web.app/sitemap.xml

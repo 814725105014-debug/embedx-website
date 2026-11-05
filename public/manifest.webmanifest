@@ -1,0 +1,15 @@
+{
+  "name": "EMBEDX — Embedded Systems & Automation Club",
+  "short_name": "EMBEDX",
+  "description": "Official club portal: projects, events, team, learning hub and announcements of the EEE Department, SRM TRP Engineering College.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#08060c",
+  "theme_color": "#7c3aed",
+  "icons": [
+    { "src": "/assets/images/favicon-64.png", "sizes": "64x64", "type": "image/png" },
+    { "src": "/assets/images/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "/assets/images/embedx-emblem.webp", "sizes": "256x256", "type": "image/webp" }
+  ]
+}

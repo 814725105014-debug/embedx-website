@@ -18,7 +18,8 @@ async function loadCollection(name, orderField = "order", dir = "asc") {
   if (!isConfigured) throw new Error("Firestore not configured");
   const app = await getApp();
   const { getFirestore, collection, getDocs, query, orderBy } = await import(`${SDK}/firebase-firestore.js`);
-  const snap = await getDocs(query(collection(getFirestore(app), name), orderBy(orderField, dir)));
+  const ref = collection(getFirestore(app), name);
+  const snap = await getDocs(orderField ? query(ref, orderBy(orderField, dir)) : query(ref));
   if (snap.empty) throw new Error(`collection ${name} is empty`);
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
@@ -46,6 +47,14 @@ export async function getTeam() {
 export async function getGallery() {
   try { return await loadCollection("gallery"); }
   catch { const m = await import("./data/gallery.js"); return m.gallery; }
+}
+export async function getResources() {
+  try { return await loadCollection("resources", null); }
+  catch { const m = await import("./data/resources.js"); return m.resources; }
+}
+export async function getAchievements() {
+  try { return await loadCollection("achievements", null); }
+  catch { const m = await import("./data/achievements.js"); return m.achievements; }
 }
 export async function getAnnouncements() {
   try { return await loadCollection("announcements", "createdAt", "desc"); }

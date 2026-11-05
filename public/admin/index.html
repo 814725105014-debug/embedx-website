@@ -9,8 +9,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" />
+  <meta name="theme-color" content="#08060c" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://firebasestorage.googleapis.com; connect-src 'self' https://www.gstatic.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://firebasestorage.googleapis.com https://www.googleapis.com; object-src 'none'; base-uri 'self'; form-action 'self'" />
   <link rel="stylesheet" href="/css/style.css" />
-  <script>document.documentElement.dataset.theme = localStorage.getItem("embedx-theme") || "dark";</script>
+  <script src="/js/theme.js"></script>
   <script type="module" src="/js/admin.js"></script>
 </head>
 <body data-page="admin" class="admin-body">
@@ -50,6 +53,8 @@
       <button class="filter-btn" data-tab="projects">Projects</button>
       <button class="filter-btn" data-tab="team">Team</button>
       <button class="filter-btn" data-tab="gallery">Gallery</button>
+      <button class="filter-btn" data-tab="resources">Resources</button>
+      <button class="filter-btn" data-tab="achievements">Achievers</button>
     </nav>
     <section class="admin-panel">
       <div class="admin-head">
@@ -60,6 +65,7 @@
         <button class="btn btn-primary" id="addItem">+ New</button>
       </div>
       <div id="configWarn" class="toast err" style="display:none;margin-bottom:1rem"></div>
+      <div id="statsStrip" class="admin-stats" style="margin-bottom:1rem"></div>
       <div id="listRegion" class="admin-list"></div>
     </section>
   </main>

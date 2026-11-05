@@ -4,10 +4,8 @@ import "./forms.js";
 import { initAll } from "./ui.js";
 import { icon } from "./icons.js";
 import { esc, asset, skeletons, projectCard, eventCard, teamCard, domainCard, resourceCard, achievementCard, announcementCard, galleryButton } from "./render.js";
-import { getProjects, getEvents, getTeam, getGallery, getAnnouncements } from "./store.js";
+import { getProjects, getEvents, getTeam, getGallery, getAnnouncements, getResources, getAchievements } from "./store.js";
 import { domains, tools, careers } from "./data/domains.js";
-import { resources, resourceCategories } from "./data/resources.js";
-import { achievements } from "./data/achievements.js";
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -52,7 +50,11 @@ async function home() {
   const dg = $("#domainsGrid");
   if (dg) dg.innerHTML = domains.slice(0, 6).map(domainCard).join("") +
     `<div class="card center" style="display:grid;place-content:center;gap:.6rem">${icon("circuit")}<a class="btn btn-ghost btn-sm" href="/pages/domains.html">Explore All 12 Technical Domains</a></div>`;
-  if (ag) ag.innerHTML = achievements.slice(0, 2).map(achievementCard).join("");
+  if (ag) {
+    const ach = await getAchievements();
+    ag.innerHTML = ach.slice(0, 2).map(achievementCard).join("");
+    initAll();
+  }
   if (pg) {
     skeletons(pg, 4);
     const list = await getProjects();
@@ -257,20 +259,26 @@ function domainsPage() {
 }
 
 /* ---------- resources ---------- */
-function resourcesPage() {
+async function resourcesPage() {
   const grid = $("#resourcesGrid");
+  skeletons(grid, 6, 220);
+  const all = await getResources();
+  const cats = ["All Resources", ...new Set(all.map((r) => r.category))];
   const paint = (cat) => {
-    const rows = resources.filter((r) => cat === "All Resources" || r.category === cat);
-    grid.innerHTML = rows.map(resourceCard).join("");
+    const rows = all.filter((r) => cat === "All Resources" || r.category === cat);
+    grid.innerHTML = rows.length ? rows.map(resourceCard).join("") : `<div class="card center muted">No resources in this category yet.</div>`;
     initAll();
   };
   paint("All Resources");
-  filterBar($("#resourceFilters"), resourceCategories, paint);
+  filterBar($("#resourceFilters"), cats, paint);
 }
 
 /* ---------- achievers ---------- */
-function achieversPage() {
-  $("#achieversGrid").innerHTML = achievements.map(achievementCard).join("");
+async function achieversPage() {
+  const grid = $("#achieversGrid");
+  skeletons(grid, 4, 320);
+  const list = await getAchievements();
+  grid.innerHTML = list.map(achievementCard).join("");
   initAll();
 }
 

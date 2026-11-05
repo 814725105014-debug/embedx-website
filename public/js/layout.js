@@ -1,5 +1,6 @@
 // EMBEDX — Shared chrome: navbar, mobile menu, footer, theme toggle.
 import { icon } from "./icons.js";
+import { initSearch } from "./search.js";
 
 const NAV = [
   ["Home", "/"],
@@ -41,6 +42,7 @@ function injectChrome() {
       </a>
       <nav class="nav-links" aria-label="Primary">${links}</nav>
       <div class="nav-actions">
+        <button class="icon-btn" id="searchOpen" aria-label="Search the site (Ctrl+K)" title="Search (Ctrl+K)">${icon("search")}</button>
         <button class="icon-btn" id="themeToggle" aria-label="Toggle light / dark theme">${icon("moon")}</button>
         <a class="btn btn-primary btn-sm nav-join" href="/pages/join.html">Join EMBEDX</a>
         <button class="icon-btn nav-burger" id="burger" aria-label="Open menu" aria-expanded="false">${icon("menu")}</button>
@@ -97,6 +99,19 @@ function injectChrome() {
   toasts.setAttribute("aria-live", "polite");
   document.body.append(toasts);
 
+  // scroll progress + back-to-top
+  const prog = document.createElement("div");
+  prog.id = "scrollProgress";
+  prog.setAttribute("aria-hidden", "true");
+  document.body.prepend(prog);
+  const toTop = document.createElement("button");
+  toTop.id = "toTop";
+  toTop.className = "icon-btn";
+  toTop.setAttribute("aria-label", "Back to top");
+  toTop.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>`;
+  document.body.append(toTop);
+  toTop.addEventListener("click", () => scrollTo({ top: 0, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }));
+
   // nav behaviour
   const burger = header.querySelector("#burger");
   burger.addEventListener("click", () => {
@@ -107,9 +122,15 @@ function injectChrome() {
   mobile.addEventListener("click", (e) => {
     if (e.target.tagName === "A") { mobile.classList.remove("open"); burger.setAttribute("aria-expanded", "false"); burger.innerHTML = icon("menu"); }
   });
-  const onScroll = () => header.classList.toggle("scrolled", scrollY > 30);
+  const onScroll = () => {
+    header.classList.toggle("scrolled", scrollY > 30);
+    const max = document.documentElement.scrollHeight - innerHeight;
+    prog.style.width = (max > 0 ? (scrollY / max) * 100 : 0) + "%";
+    toTop.classList.toggle("show", scrollY > 600);
+  };
   addEventListener("scroll", onScroll, { passive: true });
   onScroll();
+  initSearch();
 
   // theme toggle
   const tBtn = header.querySelector("#themeToggle");

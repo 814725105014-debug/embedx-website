@@ -1,12 +1,14 @@
 rules_version = '2';
 
 // EMBEDX Firestore security rules.
-//  • Public read: events, projects, team, gallery, announcements.
-//  • Admin write (Firebase Auth + custom claim admin=true): same collections.
+//  • Public read: events, projects, team, gallery, announcements, resources, achievements.
+//  • Admin write: Firebase Auth + (custom claim admin=true OR bootstrap allowlisted email).
 //  • Create-only with strict validation: members_applications, contact_messages.
 //  • Everything else denied.
 //
-// Grant admin claim:  scripts/grant-admin.js <email>  (backend repo, Admin SDK)
+// Bootstrap admin (owner account, allowlisted so the portal works from day one):
+//   814725105014@trp.srmtrichy.edu.in
+// Additional admins: scripts/grant-admin.js <email>  (sets the admin custom claim)
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -20,8 +22,12 @@ service cloud.firestore {
       return field is string && field.size() >= 5 && field.size() <= 120
              && field.matches('^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$');
     }
+    function isOwner() {
+      return request.auth != null
+             && request.auth.token.email == '814725105014@trp.srmtrichy.edu.in';
+    }
     function isAdmin() {
-      return request.auth != null && request.auth.token.admin == true;
+      return (request.auth != null && request.auth.token.admin == true) || isOwner();
     }
 
     // ---- content collections: public read, admin write ----
@@ -42,6 +48,14 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
     match /announcements/{announcementId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+    match /resources/{resourceId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+    match /achievements/{achievementId} {
       allow read: if true;
       allow create, update, delete: if isAdmin();
     }

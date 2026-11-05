@@ -554,3 +554,11 @@ button { font: inherit; cursor: pointer; }
 @media (max-width: 480px) {
   .nav-inner { flex-wrap: wrap; height: auto; min-height: var(--nav-h); padding: .5rem 0; row-gap: .4rem; }
 }
+
+/* ---------- 16. Search, scroll progress, back-to-top, admin stats ---------- */
+#scrollProgress { position: fixed; top: 0; left: 0; height: 3px; width: 0; background: var(--grad-mix); z-index: 120; pointer-events: none; }
+#toTop { position: fixed; left: 1.2rem; bottom: 1.2rem; z-index: 90; opacity: 0; pointer-events: none; transform: translateY(8px); transition: opacity .3s, transform .3s; background: var(--bg-3); }
+#toTop.show { opacity: 1; pointer-events: auto; transform: none; }
+#toTop:hover { color: var(--violet); border-color: var(--violet); }
+.admin-stats { display: flex; gap: .5rem; flex-wrap: wrap; }
+@media (max-width: 480px) { #toTop { left: .8rem; bottom: .8rem; } }

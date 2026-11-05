@@ -98,6 +98,38 @@ const SCHEMAS = {
     title: (d) => d.name,
     sub: (d) => `${d.role || ""} • ${d.group || ""} ${d.year || ""}`
   },
+  resources: {
+    label: "resource",
+    sort: ["title", "asc"],
+    fields: [
+      { k: "title", t: "text", req: true, label: "Title" },
+      { k: "category", t: "select", opts: ["Programming", "Embedded Systems", "Electronics & PCB", "IoT & Telemetry", "PLC Automation", "Career Roadmap"], label: "Category" },
+      { k: "level", t: "select", opts: ["Beginner", "Beginner to Intermediate", "Intermediate", "Advanced", "All Levels"], label: "Level" },
+      { k: "tags", t: "text", label: "Tags (comma separated)" },
+      { k: "desc", t: "textarea", req: true, label: "Summary" }
+    ],
+    defaults: { category: "Embedded Systems", level: "Intermediate" },
+    title: (d) => d.title,
+    sub: (d) => `${d.category || ""} • ${d.level || ""}`
+  },
+  achievements: {
+    label: "achievement",
+    sort: ["title", "asc"],
+    fields: [
+      { k: "badge", t: "text", label: "Badge (e.g. National Representation • 2026)" },
+      { k: "title", t: "text", req: true, label: "Title" },
+      { k: "subtitle", t: "text", label: "Subtitle" },
+      { k: "description", t: "textarea", label: "Description" },
+      { k: "image", t: "image", label: "Image" },
+      { k: "team", t: "text", label: "Team" },
+      { k: "institution", t: "text", label: "Institution" },
+      { k: "projectId", t: "text", label: "Linked project id (for “Read Project Specs”)" }
+    ],
+    defaults: { institution: "Department of EEE, SRM TRP Engineering College" },
+    image: "image",
+    title: (d) => d.title,
+    sub: (d) => d.badge || ""
+  },
   gallery: {
     label: "gallery photo",
     sort: ["order", "asc"],
@@ -174,6 +206,7 @@ async function loadList() {
     const snap = await dbMod.getDocs(dbMod.query(dbMod.collection(db, current), dbMod.orderBy(field, dir)));
     items = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
     renderList();
+    loadStats();
   } catch (err) {
     console.error(err);
     region.innerHTML = `<p class="muted">Could not load ${current}: ${esc(err.message)}</p>`;
@@ -185,8 +218,21 @@ const hints = {
   events: "Full event pages read these documents; rich fields like tracks/FAQs seeded earlier are preserved on edit.",
   projects: "Featured projects appear on the home page grid.",
   team: "group=faculty shows in the Faculty Mentorship section, students in the Executive Council.",
-  gallery: "Photos appear in the home-page gallery with lightbox. Upload replaces or adds new shots."
+  gallery: "Photos appear in the home-page gallery with lightbox. Upload replaces or adds new shots.",
+  resources: "Learning Hub guides shown on the Resources page with category filters.",
+  achievements: "Hall of Achievers cards; link each to a project id for the specs button."
 };
+
+async function loadStats() {
+  const strip = document.getElementById("statsStrip");
+  if (!strip || !isConfigured) return;
+  try {
+    const { db } = await sdk();
+    const names = ["announcements", "events", "projects", "team", "gallery", "resources", "achievements"];
+    const counts = await Promise.all(names.map(async (n) => [n, (await dbMod.getDocs(dbMod.collection(db, n))).size]));
+    strip.innerHTML = counts.map(([n, c]) => `<span class="chip ${c ? "chip-accent" : ""}">${n}: ${c}</span>`).join("");
+  } catch { /* stats are best-effort */ }
+}
 
 function renderList() {
   const schema = SCHEMAS[current];

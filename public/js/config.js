@@ -1,13 +1,11 @@
-// EMBEDX — Firebase configuration.
-// PASTE your Firebase web app config object here (Firebase Console → Project settings → Your apps).
-// Until a real config is pasted, the site runs in static-fallback mode (no Firestore).
+// EMBEDX — Firebase configuration (project: gen-lang-client-0330226585).
 export const firebaseConfig = {
-  apiKey: "",
-  authDomain: "",
-  projectId: "",
-  storageBucket: "",
-  messagingSenderId: "",
-  appId: ""
+  apiKey: "AIzaSyCZVh3MEjNgV47GEcHwd2pNbO7z-P_F1KA",
+  authDomain: "gen-lang-client-0330226585.firebaseapp.com",
+  projectId: "gen-lang-client-0330226585",
+  storageBucket: "gen-lang-client-0330226585.firebasestorage.app",
+  messagingSenderId: "503567724815",
+  appId: "1:503567724815:web:cc7b19941a75de785dce7a"
 };
 
 export const isConfigured = Boolean(firebaseConfig.apiKey && firebaseConfig.projectId);
