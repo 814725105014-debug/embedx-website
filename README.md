@@ -96,12 +96,47 @@ re-run after editing `public/js/data/*.js`). Form collections stay empty by desi
 | `events` | `title, date, venue, description, imageUrl, registrationLink, isUpcoming, type, subtitle, tagline, order, featured, tracks[], faqs[], …` | `order` = sort order. Rich fields (`tracks`, `faqs`, `skillsDeveloped`, `contactInfo`) power the detail page. |
 | `projects` | `title, description/shortDesc, tags[], imageUrl, githubUrl, demoUrl, order, category, status, featured, highlight, hardware[], software[], outcomes[], gallery[]` | `featured: true` shows on the home page. |
 | `team` | `name, role, year, photoUrl, linkedin, github, order, group ("faculty" / "student"), focus, bio, department` | `group` splits the team page sections. |
+| `gallery` | `imageUrl, caption, order` | written by the admin portal; home-page gallery + lightbox |
+| `announcements` | `title, kind, body, pinned, createdAt` | written by the admin portal; home notice board (pinned first) |
 | `members_applications` | written by the Join + EMBEDNOVA forms | create-only; read via Console export |
 | `contact_messages` | written by the Contact form | create-only |
 
 Image URLs in Firestore should be **root-absolute** (`/assets/images/foo.webp`).
 If Firestore is unreachable or a collection is empty, the site silently falls back
 to the static data modules — the site never breaks.
+
+## 5b. Admin portal (`/admin`)
+
+A built-in CMS at **`https://<PROJECT_ID>.web.app/admin/`** (link in the site footer).
+Club admins can publish and edit, with instant effect on the live site:
+
+* **Announcements** — notice board on the home page (pinned first)
+* **Events** — create/edit/delete, upcoming & featured flags, poster upload
+* **Projects** — full card + detail content, tags, cover upload
+* **Team** — faculty/student members, photos, roles
+* **Gallery** — add/replace/delete photos with captions and ordering
+
+Photo workflow: pick a file → in-browser editor (rotate, crop aspect 1:1 / 4:3 /
+16:9 / 3:4, max-width resize) → exported as optimized **WebP** → uploaded to
+Firebase Storage (`images/<collection>/…`) → URL saved on the document.
+
+### Creating an admin (one-time, per person)
+
+1. Firebase Console → **Authentication → Users → Add user** (email + password).
+   Keep the Email/Password provider enabled; no other providers needed.
+2. Grant the custom claim (backend repo):
+   ```bash
+   cd ../embedx-backend/scripts && npm install
+   export GOOGLE_APPLICATION_CREDENTIALS=/path/service-account.json
+   export FIREBASE_PROJECT_ID=<PROJECT_ID>
+   node grant-admin.js admin@yourcollege.edu
+   ```
+3. The admin signs in at `/admin`. Security is enforced server-side:
+   `firestore.rules` and `storage.rules` require `request.auth.token.admin == true`
+   for every write — the portal UI is only a convenience layer.
+
+Form submissions (`members_applications`, `contact_messages`) remain create-only
+and are **not** readable from the portal; export them from the Firebase Console.
 
 ## 6. GitHub auto-deploy
 
