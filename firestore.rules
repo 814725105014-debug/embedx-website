@@ -1,9 +1,12 @@
 rules_version = '2';
 
 // EMBEDX Firestore security rules.
-// Public read: events, projects, team.
-// Create-only (with strict field validation): members_applications, contact_messages.
-// Everything else: denied. Admin writes happen via Firebase Console / firebase-admin (seed script).
+//  • Public read: events, projects, team, gallery, announcements.
+//  • Admin write (Firebase Auth + custom claim admin=true): same collections.
+//  • Create-only with strict validation: members_applications, contact_messages.
+//  • Everything else denied.
+//
+// Grant admin claim:  scripts/grant-admin.js <email>  (backend repo, Admin SDK)
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -17,19 +20,30 @@ service cloud.firestore {
       return field is string && field.size() >= 5 && field.size() <= 120
              && field.matches('^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$');
     }
+    function isAdmin() {
+      return request.auth != null && request.auth.token.admin == true;
+    }
 
-    // ---- public read-only collections ----
+    // ---- content collections: public read, admin write ----
     match /events/{eventId} {
       allow read: if true;
-      allow write: if false;
+      allow create, update, delete: if isAdmin();
     }
     match /projects/{projectId} {
       allow read: if true;
-      allow write: if false;
+      allow create, update, delete: if isAdmin();
     }
     match /team/{memberId} {
       allow read: if true;
-      allow write: if false;
+      allow create, update, delete: if isAdmin();
+    }
+    match /gallery/{photoId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+    match /announcements/{announcementId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
     }
 
     // ---- club membership applications: create-only ----
