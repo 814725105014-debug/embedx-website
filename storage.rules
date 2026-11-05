@@ -13,12 +13,23 @@ service firebase.storage {
       return signedIn()
              && exists(/databases/$(firestore)/documents/admin_roles/$(request.auth.token.email));
     }
-    function myRole() {
-      return get(/databases/$(firestore)/documents/admin_roles/$(request.auth.token.email)).data.role;
+    function legacyPerms(r) {
+      return r == 'president'         ? ['announcements', 'team', 'achievements', 'tasks']
+        :    r == 'event_coordinator' ? ['events']
+        :    r == 'social_media'      ? ['gallery', 'announcements']
+        :    r == 'technical'         ? ['projects', 'resources', 'achievements']
+        :    [];
     }
+    function permsOf() {
+      return get(/databases/$(firestore)/documents/admin_roles/$(request.auth.token.email)).data.perms != null
+        ? get(/databases/$(firestore)/documents/admin_roles/$(request.auth.token.email)).data.perms
+        : legacyPerms(get(/databases/$(firestore)/documents/admin_roles/$(request.auth.token.email)).data.role);
+    }
+    // upload allowed when the admin can edit at least one visual section
     function canUpload() {
       return isOwner()
-        || (hasRole() && myRole() in ['president', 'social_media', 'event_coordinator', 'technical']);
+        || (hasRole() && ('gallery' in permsOf() || 'events' in permsOf() || 'team' in permsOf()
+                          || 'projects' in permsOf() || 'achievements' in permsOf()));
     }
     match /images/{allPaths=**} {
       allow read: if true;
