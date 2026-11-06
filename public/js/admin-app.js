@@ -731,14 +731,14 @@ async function renderMailWorkspace() {
   const gatewayUrl = String(mailWorkspace?.url || "").trim();
   const safeGatewayUrl = /^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec(?:\?.*)?$/.test(gatewayUrl) ? gatewayUrl : "";
   region.innerHTML = `
-    ${!safeGatewayUrl ? `<div class="admin-mail-setup card" role="status"><strong>Mail gateway needs one-time setup</strong><p>After the Apps Script project is authorized and deployed as a web app, add its <code>/exec</code> URL to <code>mailWorkspace.url</code> in <code>public/js/config.js</code>. Mail sends are safely disabled until then.</p><ol><li>Run <code>npm run apps-script:setup</code> and then <code>npm run apps-script:deploy-mail</code> from <code>backend-bundle/scripts</code>.</li><li>Authorize each coordinator’s Google account once; the authenticated coordinator is the sender.</li><li>Add the deployment URL to config and publish Hosting.</li></ol></div>` : ""}
+    ${!safeGatewayUrl ? `<div class="admin-mail-setup card" role="status"><strong>Official mail needs one-time owner setup</strong><p>The site owner deploys the mail service once and publishes its <code>/exec</code> URL in <code>public/js/config.js</code>. Coordinators do not need a terminal or commands. Mail stays disabled until the owner setup is published.</p><ol><li>Owner only: run <code>npm run apps-script:deploy-mail</code> from <code>backend-bundle/scripts</code> and add the generated URL to the site config.</li><li>After the site update is live, each coordinator clicks <b>Connect Google mailbox</b> and approves Gmail sending for their own college account.</li><li>Click <b>Verify connected mailbox</b>; Send enables after the sender matches the signed-in Admin account.</li></ol></div>` : ""}
     <section class="admin-mail-grid">
       <section class="admin-mail-panel card">
         <div class="admin-mail-panel-head"><div><p class="eyebrow">Authenticated sender</p><h2>Your college mailbox</h2></div><span class="admin-mail-status-pill" id="mailConnectionPill">Not connected</span></div>
         <div class="admin-mail-sender"><span class="admin-mail-avatar" aria-hidden="true">${esc((me.split("@")[0] || "E").slice(0, 1).toUpperCase())}</span><div><strong id="mailSenderAddress">${esc(me)}</strong><span id="mailSenderRole">${esc(ROLES[role]?.label || role || "Admin")}</span></div></div>
         <p class="muted">Messages are sent from the Google mailbox authorized for this signed-in coordinator. The visible sender cannot be overridden.</p>
-        ${safeGatewayUrl ? `<div class="admin-mail-connect-actions"><a class="btn btn-ghost btn-sm" href="${esc(safeGatewayUrl + (safeGatewayUrl.includes("?") ? "&" : "?") + "authorize=1")}" target="_blank" rel="noopener noreferrer">Authorize Google mailbox ↗</a><button class="btn btn-primary btn-sm" id="verifyMailSender" type="button" disabled>Verify sender</button></div>` : ""}
-        <p class="admin-mail-status" id="mailStatus" role="status" aria-live="polite">${safeGatewayUrl ? "Authorize your college Google mailbox once, then verify it here." : ""}</p>
+        ${safeGatewayUrl ? `<div class="admin-mail-connect-actions"><a class="btn btn-ghost btn-sm" href="${esc(safeGatewayUrl + (safeGatewayUrl.includes("?") ? "&" : "?") + "authorize=1")}" target="_blank" rel="noopener noreferrer">Connect Google mailbox ↗</a><button class="btn btn-primary btn-sm" id="verifyMailSender" type="button" disabled>Verify connected mailbox</button></div>` : ""}
+        <p class="admin-mail-status" id="mailStatus" role="status" aria-live="polite">${safeGatewayUrl ? "Connect your college Google mailbox once, approve Gmail sending, then verify it here." : ""}</p>
       </section>
 
       <section class="admin-mail-panel card admin-mail-directory">
@@ -851,7 +851,7 @@ async function renderMailWorkspace() {
         state.origin = event.origin;
         state.ready = true;
         $("#verifyMailSender").disabled = false;
-        setMailStatus("Secure mail bridge ready. Verify your Google mailbox to enable sending.");
+        setMailStatus("Secure bridge ready. Connect and verify your own Google mailbox to enable sending.");
         return;
       }
       if (message.type === "result" && state.origin === event.origin) {
@@ -907,7 +907,7 @@ async function renderMailWorkspace() {
 
     $("#officialMailForm").addEventListener("submit", async (event) => {
       event.preventDefault();
-      if (!verifiedSender) { setMailStatus("Verify your Google mailbox before sending.", "error"); return; }
+      if (!verifiedSender) { setMailStatus("Connect and verify your Google mailbox before sending.", "error"); return; }
       const groups = [parseMailAddresses($("#mailTo").value), parseMailAddresses($("#mailCc").value), parseMailAddresses($("#mailBcc").value)];
       const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
       const seen = new Set();

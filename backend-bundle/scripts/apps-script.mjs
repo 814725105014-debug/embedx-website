@@ -15,7 +15,9 @@ const mailLinkFile = path.join(mailAppDir, ".clasp.json");
 const credentialsFile = path.join(homedir(), ".clasprc.json");
 const DEFAULT_SCRIPT_ID = "1oArp0lQZiDrvz7ZqNVWZbhjLds_kRpleJNRA6OpB0WAzj30bWX5pH-mc";
 const DEFAULT_PROJECT_TITLE = "EMBEDX CLUB NEW WEBSITE";
-const MAIL_PROJECT_TITLE = "EMBEDX Official Mail Workspace";
+// Keep this title whitespace-free: npm.cmd on Windows can split clasp arguments
+// passed through `npm exec` unless shell quoting is carefully escaped.
+const MAIL_PROJECT_TITLE = "EMBEDX-Official-Mail-Workspace";
 const action = process.argv[2] || "setup";
 const npm = process.platform === "win32" ? "npm.cmd" : "npm";
 
@@ -69,8 +71,8 @@ try {
     clasp(["push", "--force"], mailAppDir);
     if (action === "deploy-mail") {
       console.log("Creating the official-mail web-app deployment from the manifest. Copy the /exec URL from clasp output.");
-      clasp(["version", "EMBEDX official mail workspace"], mailAppDir);
-      clasp(["deploy", "--description", "EMBEDX official mail workspace"], mailAppDir);
+      clasp(["version", "EMBEDX-official-mail-workspace"], mailAppDir);
+      clasp(["deploy", "--description", "EMBEDX-official-mail-workspace"], mailAppDir);
       console.log("Confirm the deployment is User accessing the web app and restricted to the college Google Workspace domain.");
     } else {
       console.log("Mail source is pushed. In Apps Script → Deploy → Manage deployments, edit the existing mail deployment to use a new version; keep its execution/access settings and URL.");

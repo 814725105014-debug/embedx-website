@@ -137,9 +137,10 @@ stored in Hosting or Firestore. HOD, President, and coordinator role presets inc
 must check **Official mail** in Admins & roles. Each coordinator must sign into their
 college Google account and approve the Apps Script Gmail authorization once.
 
-After the reviewed website and rules changes are published, run the dependency-free
-mail security checks locally, then create the dedicated, least-privilege mail project
-from `backend-bundle/scripts/`:
+This is a one-time deployment step for the site owner only; coordinators do not run
+terminal commands. After the reviewed website and rules changes are published, the
+owner runs the dependency-free mail security checks and creates the dedicated,
+least-privilege mail project from `backend-bundle/scripts/`:
 
 ```bash
 npm run test:mail
@@ -147,7 +148,7 @@ npm run apps-script:deploy-mail
 ```
 
 On first run, `apps-script:deploy-mail` uses `clasp` to create a separate standalone
-**EMBEDX Official Mail Workspace** Apps Script project, push only `appsscript-mail/`,
+**EMBEDX-Official-Mail-Workspace** Apps Script project, push only `appsscript-mail/`,
 create a version, and deploy it. Sign in with a college-domain Google account and
 enable the Apps Script API if prompted. The dedicated manifest requests only external
 HTTP, Gmail send, mail quota, and user-email scopes; it does not expose the Forms/Sheets
@@ -165,9 +166,10 @@ task notices: task mail remains a separate owner-executed deployment, configured
 through `EMBEDX_TASK_MAIL_WEB_APP_URL`.
 
 
-Each coordinator opens Admin → Official mail → **Authorize Google mailbox**, signs in
-with the same college email used for EMBEDX Admin, and approves Gmail access. The
-workspace verifies the Google identity against their Firebase Admin email before
-re-enabling Send. The Apps Script project owner separately continues to run
+After the owner publishes the URL, each coordinator opens Admin → Official mail,
+clicks **Connect Google mailbox**, signs in with the same college email used for
+EMBEDX Admin, and approves Gmail sending. Then they click **Verify connected mailbox**;
+the workspace matches Google identity to Firebase Admin email before enabling Send.
+No coordinator needs to run commands. The Apps Script project owner separately continues to run
 `setupEmbedxSheets()` once for Forms & responses; that owner-authorized time trigger
 continues to run as its installer.
