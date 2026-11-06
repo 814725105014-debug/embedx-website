@@ -14,6 +14,7 @@ No Cloud Functions are required.
 - `scripts/create-admin.js`, `grant-admin.js`, `reset-password.js`, `update-admin.js`: trusted Admin SDK owner tools.
 - `appsscript/task-mail.gs`: optional, token-verified task-email web app source.
 - `appsscript/forms-sync.gs` + `appsscript/appsscript.json`: owner-authorized Firestore-to-Sheets sync, spreadsheet creation, response notifications, and applicant confirmations.
+- `scripts/process-image-deletion-requests.mjs`: validates Admin Gallery asset deletions and stages safe repository removals for a GitHub PR; `.github/workflows/gallery-image-deletions.yml` runs it with a private Firebase service-account secret.
 
 ## Seed content
 
@@ -87,12 +88,26 @@ Public forms write directly to Firestore; the portal reflects those records and
 public clients cannot read them. The join and enquiry forms remain on their existing
 validated collections so existing workflows are preserved.
 
-To connect the automatic spreadsheet archive, create a standalone Google Apps Script
-project, enable **Show `appsscript.json`**, copy `appsscript/forms-sync.gs` into a
-`.gs` file, and paste the checked-in manifest. Deploy Firestore rules first, then
-sign in as the allowlisted owner and run `setupEmbedxSheets()` once. Authorize the
-requested Google Sheets, Firestore REST, email, and time-trigger scopes. It creates
-a spreadsheet, installs a five-minute sync trigger, and publishes the sheet URL and
+To create and update the Apps Script project without copying source files by hand,
+run this from `backend-bundle/scripts/`:
+
+```bash
+npm run apps-script:setup
+```
+
+On first run, the helper authenticates with Google, links the source folder to the
+provided **EMBEDX CLUB NEW WEBSITE** project, and uploads all checked-in `.gs` files
+and the manifest with `clasp`. Enable the Apps Script API in Google account settings
+if prompted. Future code updates use `npm run apps-script:push`; that command
+force-syncs the repo's source over the online project, so keep the repository as the
+source of truth. The generated
+`appsscript/.clasp.json` only links your local folder to your Apps Script project and
+is intentionally git-ignored.
+
+Deploy Firestore rules first. Then open the created project, run `setupEmbedxSheets()`
+once as the allowlisted owner, and approve the requested Google Sheets, Firestore
+REST, email, and time-trigger scopes. This owner-authorized step creates the
+spreadsheet, installs a five-minute sync trigger, and publishes the sheet URL and
 health to `site_settings/forms` for the admin portal. No Web App endpoint, shared
 secret, Cloud Function, or paid Firebase service is involved. Share the generated
 sheet only with trusted reviewers.

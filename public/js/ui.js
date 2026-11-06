@@ -3,6 +3,21 @@ import { icon } from "./icons.js";
 
 const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+// A small brand-colored click pulse provides feedback without changing layout or intercepting input.
+if (!reduced && matchMedia("(hover: hover) and (pointer: fine)").matches) {
+  document.addEventListener("pointerdown", (event) => {
+    if (event.pointerType !== "mouse" || event.button !== 0 || !(event.target instanceof Element)) return;
+    const target = event.target.closest("a,button,summary,label[for],input,select,[role=button],[data-lightbox]");
+    if (!target || target.matches(":disabled") || target.closest("[data-no-ripple]")) return;
+    const pulse = document.createElement("span");
+    pulse.className = "cursor-click-ripple";
+    pulse.style.left = `${event.clientX}px`;
+    pulse.style.top = `${event.clientY}px`;
+    pulse.addEventListener("animationend", () => pulse.remove(), { once: true });
+    document.body.append(pulse);
+  }, { passive: true });
+}
+
 export function initReveal() {
   const els = [...document.querySelectorAll("[data-reveal]")].filter((el) => !el.dataset.revealBound);
   if (!els.length) return;

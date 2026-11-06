@@ -3,9 +3,11 @@
 Official website of **EMBEDX**, the technical club of the Department of Electrical and
 Electronics Engineering (EEE), SRM TRP Engineering College, Tiruchirappalli.
 
-Dark glassmorphism redesign (2026) of the legacy static site, rebuilt as **vanilla
+A responsive, motion-rich dark glassmorphism website for EMBEDX, rebuilt as **vanilla
 HTML/CSS/JS with ES modules — no build step** — hosted on **Firebase Hosting** with
 **Cloud Firestore** as the backend for events, projects, team and form submissions.
+The design keeps the club's signature black, white, purple and gold palette, with
+accessible light/dark themes, glossy surfaces, smoother transitions and mobile-first layouts.
 
 > The legacy Neocities-era source is preserved untouched at the repository root
 > (`index.html`, `about.html`, `assets/`, `css/`, `js/`, `_worker.js`, …).
@@ -21,7 +23,8 @@ public/                  ← Firebase Hosting root (the new site)
   404.html               ← custom Firebase 404 ("Circuit Disconnected")
   pages/                 ← about, domains, projects, project-detail, events,
                            event-detail, achievers, team, resources, join, contact
-  css/style.css          ← entire design system (tokens, glass, motion, responsive)
+  css/style.css          ← base design system and responsive components
+  css/corporate.css      ← motion, glossy interaction and mobile-responsive polish
   js/
     config.js            ← ⭐ paste your Firebase web config here
     store.js             ← Firestore-first data layer with static fallback
@@ -137,11 +140,13 @@ empty rather than resurrecting deleted content.
 
 A built-in CMS at **`https://<PROJECT_ID>.web.app/admin/`** (linked in the site footer).
 It includes content editing, task assignment, media editing, and owner-managed
-per-admin section permissions. Navigation and URLs work without a full page reload. The Gallery page previews the bundled public-site photos and clearly shows which are already in Firestore; **Import missing photos** copies only absent starter entries so they can be captioned and reordered in Admin.
+per-admin section permissions. Navigation and URLs work without a full page reload. The Gallery page previews the bundled public-site photos and clearly shows which are already in Firestore; **Import missing photos** copies only absent starter entries so they can be captioned and reordered in Admin. Deleting a bundled gallery photo removes its Firestore entry immediately and queues a guarded GitHub pull request; the repository file is removed only after an authorized reviewer merges that PR.
 
 Owners can also open **Website settings** in Admin to edit the public college logo, official portal URL, phone, email, and LinkedIn/Instagram/Facebook links. These values are read publicly by the shared footer, home-page portal card, and Contact page; updates appear after a page reload. Assign the `site` permission to a trusted admin if they should be able to edit these values.
 
 Event registrations are assigned per event under **Events → Edit → Registration form**. Choose an existing form or leave the event unassigned; create custom event-specific forms under **Forms & responses → Create form**. The Forms page shows both events without an assigned form and forms not assigned to any event. Deleting a custom form clears its event assignments and removes its stored responses. Built-in Join/Enquiry schemas remain protected; use custom forms for event-specific questions.
+
+Gallery deletion requests are processed by `.github/workflows/gallery-image-deletions.yml` on a schedule (or via **Actions → Review gallery image deletions → Run workflow**). The workflow validates that a local image file has no remaining Firestore or source-code references, removes its fallback entry, and opens or updates a GitHub PR. The GitHub-hosted file remains until that PR is reviewed and merged. This uses the existing `FIREBASE_SERVICE_ACCOUNT_EMBEDX_CLUB_EEE` GitHub secret plus the built-in Actions token; the service account must have Firestore read/write access. No GitHub token is exposed to the public Admin page.
 
 ### Creating an admin (one click)
 
@@ -213,15 +218,25 @@ responses. Feedback forms support accessible 1–5 star rating questions. Join a
 enquiry submissions stay in their existing Firestore collections and are now
 visible to authorized Forms admins; public users cannot read submissions.
 
-To create and connect the spreadsheet, deploy the owner-only Apps Script bridge:
+Create and sync the Apps Script project without manually copying any files:
 
-1. In a standalone Google Apps Script project, enable **Show `appsscript.json`**.
-2. Copy `backend-bundle/appsscript/forms-sync.gs` into the project and replace its
-   manifest with `backend-bundle/appsscript/appsscript.json`.
-3. Sign in as `814725105014@trp.srmtrichy.edu.in`, run `setupEmbedxSheets()` once,
-   and approve the requested Firestore, Sheets, mail, and trigger permissions.
-4. The script creates the spreadsheet and response tabs, syncs every five minutes,
-   and publishes the sheet URL and sync health to Admin → Forms & responses.
+```bash
+cd backend-bundle/scripts
+npm run apps-script:setup
+```
+
+On first run, the helper opens Google sign-in once, links to the provided standalone
+project **EMBEDX CLUB NEW WEBSITE**, and uploads every checked-in `.gs` source plus
+`appsscript.json` using the official `clasp` CLI. Enable the Apps Script API in your
+Google account settings if prompted. For later code updates, run
+`npm run apps-script:push`; this syncs the repo source as a batch (the checked-in files
+are the source of truth, so online-only edits are replaced).
+
+The one-time Google authorization still requires the project owner: open the new
+project in Apps Script, run `setupEmbedxSheets()` once, and approve the requested
+Firestore, Sheets, mail, and trigger scopes. It creates the spreadsheet and response
+tabs, syncs every five minutes, and publishes the sheet URL and sync health to Admin
+→ Forms & responses.
 
 Deploy Firestore rules first. The Apps Script reads Firestore as the allowlisted
 owner and stores only the response archive; Firestore remains the live source for

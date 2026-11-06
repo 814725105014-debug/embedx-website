@@ -2,6 +2,16 @@
   "name": "embedx-backend",
   "private": true,
   "description": "Firestore + Storage backend for the EMBEDX club website: rules, indexes, seed & admin tooling.",
-  "scripts": { "seed": "node seed.js", "deploy": "cd .. && firebase deploy --only firestore:rules,firestore:indexes", "deploy:storage": "cd .. && firebase deploy --only storage" },
-  "dependencies": { "firebase-admin": "^12.7.0" }
+  "scripts": {
+    "seed": "node seed.js",
+    "deploy": "cd .. && firebase deploy --only firestore:rules,firestore:indexes",
+    "deploy:storage": "cd .. && firebase deploy --only storage",
+    "apps-script:setup": "node apps-script.mjs setup",
+    "apps-script:create": "node apps-script.mjs create",
+    "apps-script:push": "node apps-script.mjs push",
+    "apps-script:login": "node apps-script.mjs login"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.7.0"
+  }
 }

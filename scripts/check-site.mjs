@@ -74,7 +74,7 @@ const { writeFile: writeTemp, unlink: unlinkTemp } = await import("node:fs/promi
 let checkedScript = 0;
 for (const dir of [path.join(root, "scripts"), path.join(root, "backend-bundle", "scripts"), path.join(root, "backend-bundle", "appsscript")]) {
   for (const file of await readdir(dir)) {
-    if (!/\.(?:js|gs)$/.test(file)) continue;
+    if (!/\.(?:js|mjs|gs)$/.test(file)) continue;
     const source = await readFile(path.join(dir, file), "utf8");
     const tmp = path.join("/tmp", `embedx-trusted-${process.pid}-${checkedScript++}.mjs`);
     await writeTemp(tmp, source);

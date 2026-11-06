@@ -6,6 +6,7 @@ ui-debug.log
 *.log
 node_modules/
 scripts/node_modules/
+backend-bundle/appsscript/.clasp.json
 .env
 .env.*
 

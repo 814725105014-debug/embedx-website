@@ -1,0 +1,62 @@
+name: Review gallery image deletions
+
+on:
+  schedule:
+    - cron: "17,47 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: gallery-image-deletions
+  cancel-in-progress: false
+
+jobs:
+  prepare-image-removal:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the default branch
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install trusted Firestore client
+        working-directory: backend-bundle/scripts
+        run: npm install --no-save --package-lock=false
+
+      - name: Validate queued requests and stage safe file removals
+        env:
+          FIREBASE_PROJECT_ID: embedx-club-eee
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_EMBEDX_CLUB_EEE }}
+        run: node backend-bundle/scripts/process-image-deletion-requests.mjs prepare
+
+      - name: Open or update the reviewed GitHub pull request
+        id: create-pr
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: automation/gallery-image-deletions
+          delete-branch: false
+          commit-message: Remove unreferenced gallery image assets
+          title: Remove gallery images requested in Admin
+          body: |
+            This pull request was generated from an authenticated Admin Gallery deletion request.
+
+            It removes the Firestore starter-gallery fallback entry and the repository image only after checking that the asset is not referenced by other bundled pages or Firestore content. Review the file list and preview before merging.
+          add-paths: |
+            public/assets/images/
+            public/js/data/gallery.js
+            backend-bundle/data/gallery.js
+
+      - name: Attach the pull request to queued requests in Firestore
+        if: steps.create-pr.outputs.pull-request-url != ''
+        env:
+          FIREBASE_PROJECT_ID: embedx-club-eee
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_EMBEDX_CLUB_EEE }}
+          IMAGE_DELETE_PR_URL: ${{ steps.create-pr.outputs.pull-request-url }}
+        run: node backend-bundle/scripts/process-image-deletion-requests.mjs mark-pr
