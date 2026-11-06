@@ -6,6 +6,7 @@
 .admin-starter-thumb.is-published { border-color:var(--ok,#29d391); }
 .admin-starter-thumb.is-missing { border-color:var(--warn,#f59e0b); }
 .admin-starter-thumb.is-pending-delete { border-color:var(--cyan); }
+.admin-starter-thumb.is-deleted { border-color:var(--danger,#ff6b81); background:rgba(255,107,129,.08); }
 .admin-asset-delete-status { padding:1rem; margin-bottom:1rem; }
 .admin-asset-delete-status h2 { margin:0 0 .25rem; font-size:1.05rem; }
 .admin-asset-delete-status p { margin:0; font-size:.82rem; }

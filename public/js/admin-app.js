@@ -110,6 +110,7 @@ let statsCache = null;
 let listRequestId = 0;
 let formsRefreshTimer = null;
 let mailBridgeState = null;
+let starterContentSyncUser = "";
 
 async function sdk() {
   const { initializeApp, getApps, getApp } = await import(`${SDK}/firebase-app.js`);
@@ -365,7 +366,7 @@ async function boot() {
   }
   const { auth } = await sdk();
   authMod.onAuthStateChanged(auth, async (user) => {
-    if (!user) { showView("out"); return; }
+    if (!user) { starterContentSyncUser = ""; showView("out"); return; }
     const rr = await resolveRole(user);
     if (!rr) {
       await authMod.signOut(auth);
@@ -395,6 +396,10 @@ async function boot() {
     renderShell();
     renderMain();
     route();
+    if (role === "owner" && starterContentSyncUser !== me) {
+      starterContentSyncUser = me;
+      void restoreStarterContent({ quiet: true });
+    }
   });
 
   $("#loginForm").addEventListener("submit", async (e) => {
@@ -531,7 +536,6 @@ async function renderOverview() {
     <div class="admin-cards">
       ${counts.map(([n, c]) => `<a class="admin-card card" href="/admin/${n}"><b>${c}</b><span>${n}</span></a>`).join("")}
     </div>
-    ${role === "owner" && isConfigured ? `<section class="admin-seed-toolbar card"><div><strong>Starter content</strong><p class="muted">Add missing bundled content across all public collections. Existing Firestore documents and admin edits are never overwritten.</p></div><button class="btn btn-ghost btn-sm" id="restoreStarterContent">Restore missing content</button></section>` : ""}
     <h2 style="margin:1.8rem 0 .6rem">My open tasks ${mine.length ? `(${mine.length})` : ""}</h2>
     ${mine.length ? mine.map(taskRow).join("") : `<p class="muted">Nothing assigned to you right now. ${role === "owner" || role === "president" ? "Assign work from the <a href='/admin/tasks'>Tasks</a> page." : ""}</p>`}
     <h2 style="margin:1.8rem 0 .6rem">Your access</h2>
@@ -540,16 +544,15 @@ async function renderOverview() {
         `<div class="admin-row card"><div class="admin-row-main"><strong>${esc(label)}</strong><span class="muted">${can(id) ? "read + write" : "read only"}</span></div></div>`).join("")}
       <div class="admin-row card"><div class="admin-row-main"><strong>Tasks</strong><span class="muted">${can("tasks") ? "assign + edit" : "your assigned tasks"}</span></div></div>
     </div>`;
-  region.querySelector("#restoreStarterContent")?.addEventListener("click", (event) => restoreStarterContent(event.currentTarget));
 }
 
-async function restoreStarterContent(button) {
-  button.disabled = true;
-  const label = button.textContent;
-  button.textContent = "Restoring…";
+async function restoreStarterContent({ quiet = false } = {}) {
   let added = 0;
   try {
+    if (role !== "owner" || !isConfigured) return 0;
     const { db } = await sdk();
+    const tombstoneSnapshot = await dbMod.getDocs(dbMod.collection(db, "content_tombstones"));
+    const deletedKeys = new Set(tombstoneSnapshot.docs.map((doc) => `${doc.get("section")}/${doc.get("contentId")}`));
     for (const [collectionName, rows] of Object.entries(STARTER_CONTENT)) {
       if (!rows.length) continue;
       let presentIds = new Set();
@@ -560,7 +563,8 @@ async function restoreStarterContent(button) {
         presentGalleryImages = new Set(currentGallery.docs.map((doc) => doc.get("imageUrl")).filter(Boolean));
       }
       const candidates = rows.map((row, index) => ({ row, index })).filter(({ row }) =>
-        row.id && !presentIds.has(row.id) && !(collectionName === "gallery" && presentGalleryImages.has(row.imageUrl))
+        row.id && !deletedKeys.has(`${collectionName}/${row.id}`) && !presentIds.has(row.id)
+        && !(collectionName === "gallery" && presentGalleryImages.has(row.imageUrl))
       );
       if (!candidates.length) continue;
       const count = await dbMod.runTransaction(db, async (transaction) => {
@@ -582,14 +586,18 @@ async function restoreStarterContent(button) {
       added += count;
     }
     statsCache = null;
-    toast(added ? `Restored ${added} missing starter record${added === 1 ? "" : "s"}. Existing content was preserved.` : "Starter content is already present; nothing was changed.", "ok");
-    await renderOverview();
+    if (added) {
+      if (PAGE === "overview") await renderOverview();
+      else if (STARTER_CONTENT[PAGE]) await route();
+      loadStats();
+    }
+    if (!quiet && added) toast(`Restored ${added} missing starter record${added === 1 ? "" : "s"}. Existing content was preserved.` , "ok");
+    return added;
   } catch (err) {
-    console.error("Starter content restore failed", err);
-    toast(`Content restore stopped after ${added} addition(s): ${err.message}`, "err");
-    await renderOverview();
-  } finally {
-    if (button.isConnected) { button.disabled = false; button.textContent = label; }
+    console.error("Automatic starter-content sync failed", err);
+    if (!quiet) toast(`Automatic content sync failed: ${err.message}`, "err");
+    else toast("Automatic content sync could not finish. Check Firestore permissions and rules deployment.", "err");
+    return added;
   }
 }
 
@@ -998,7 +1006,7 @@ async function renderForms() {
         ${sheetUrl ? `<a class="btn btn-ghost btn-sm" href="${esc(sheetUrl)}" target="_blank" rel="noopener noreferrer">Open response sheet</a>` : ""}
       </section>
       <section class="admin-event-assignment card"><div class="admin-event-assignment-head"><div><h2>Event registration forms</h2><p class="muted">${unassignedEventCount} event(s) have no registration form. Assign a dedicated form in Events → Edit; forms can be created and edited below. Unassigned events no longer open the EMBEDNOVA form by mistake.</p></div><a class="btn btn-ghost btn-sm" href="/admin/events">Manage events</a></div><div class="admin-event-assignment-list">${eventAssignmentRows || `<p class="muted">No events are published yet.</p>`}</div></section>
-      <section class="admin-form-toolbar"><div><h2>Managed forms</h2><p class="muted">Open, close, seed, and share forms. Closed forms reject new responses. Custom forms support star ratings and exportable responses. Responses auto-refresh every 30 seconds.</p></div><div class="admin-form-toolbar-actions"><button class="btn btn-ghost btn-sm" id="refreshForms">Refresh</button>${can("forms") ? `<button class="btn btn-ghost btn-sm" id="seedForms">Seed standard forms</button><button class="btn btn-primary btn-sm" id="newManagedForm">+ Create form</button>` : ""}</div></section>
+      <section class="admin-form-toolbar"><div><h2>Managed forms</h2><p class="muted">Standard forms sync automatically when the owner opens Admin. Closed forms reject new responses. Custom forms support star ratings and exportable responses. Responses auto-refresh every 30 seconds.</p></div><div class="admin-form-toolbar-actions"><button class="btn btn-ghost btn-sm" id="refreshForms">Refresh</button>${can("forms") ? `<button class="btn btn-primary btn-sm" id="newManagedForm">+ Create form</button>` : ""}</div></section>
       <div class="admin-managed-forms">${forms.length ? forms.map((form) => `
         <article class="admin-managed-form card">
           <div class="admin-managed-form-copy"><div class="admin-form-title-line"><strong>${esc(form.title || form.id)}</strong><span class="chip ${form.status === "open" ? "chip-accent" : ""}">${esc(form.status || "draft")}</span>${form.builtin ? `<span class="chip">Built in</span>` : ""}</div><p class="muted">${esc(form.description || "")}</p><small>${(form.fields || []).length} field(s) · ${esc(form.kind || "custom")}</small><p class="muted form-assignment-note">${esc(formAssignmentText(form.id))}</p></div>
@@ -1007,12 +1015,11 @@ async function renderForms() {
             ${can("forms") ? `<button class="btn btn-ghost btn-sm" data-form-edit="${esc(form.id)}">${form.builtin ? "Edit settings" : "Edit"}</button><button class="btn btn-ghost btn-sm" data-form-toggle="${esc(form.id)}">${form.status === "open" ? "Close" : "Open"}</button>${!form.builtin ? `<button class="btn btn-danger btn-sm" data-form-delete="${esc(form.id)}">Delete</button>` : ""}` : ""}
             <button class="btn btn-ghost btn-sm" data-form-copy="${esc(form.id)}">Copy link</button>
           </div>
-        </article>`).join("") : `<p class="muted">No forms yet. Seed the standard forms or create a new one.</p>`}</div>
+        </article>`).join("") : `<p class="muted">No forms yet. Standard forms sync automatically when the owner opens Admin; you can also create a custom form.</p>`}</div>
       <section class="admin-legacy-submissions"><div class="admin-form-toolbar"><div><h2>Recent join applications</h2><p class="muted">${joinSnap.size} total · newest first</p></div><button class="btn btn-ghost btn-sm" id="exportJoin">Export CSV</button></div>${renderLegacyPreview(lastJoin, "members_applications")}</section>
       <section class="admin-legacy-submissions"><div class="admin-form-toolbar"><div><h2>Recent enquiries</h2><p class="muted">${enquirySnap.size} total · newest first</p></div><button class="btn btn-ghost btn-sm" id="exportEnquiries">Export CSV</button></div>${renderLegacyPreview(lastEnquiry, "contact_messages")}</section>
       <div id="formEditorMount"></div><div id="formResponseMount"></div>`;
     region.querySelector("#refreshForms")?.addEventListener("click", () => renderForms());
-    region.querySelector("#seedForms")?.addEventListener("click", () => seedStarterForms());
     region.querySelector("#newManagedForm")?.addEventListener("click", () => showManagedFormEditor(null));
     region.querySelectorAll("[data-form-edit]").forEach((b) => b.addEventListener("click", () => showManagedFormEditor(forms.find((f) => f.id === b.dataset.formEdit))));
     region.querySelectorAll("[data-form-toggle]").forEach((b) => b.addEventListener("click", () => toggleManagedForm(forms.find((f) => f.id === b.dataset.formToggle))));
@@ -1036,27 +1043,6 @@ function renderLegacyPreview(rows, collectionName) {
   return `<div class="admin-response-list">${rows.map((row) => `<article class="admin-response-card card"><div><strong>${esc(row.name || "Unnamed")}</strong><span class="muted">${esc(row.email || "")} · ${esc((row.createdAt || "").slice(0, 19).replace("T", " "))}</span><p>${esc(row.message || row.interest || row.subject || "")}</p></div><button class="btn btn-danger btn-sm" data-collection="${collectionName}" data-delete-legacy="${esc(row.id)}">Delete</button></article>`).join("")}</div>`;
 }
 
-async function seedStarterForms() {
-  const button = $("#seedForms");
-  if (button) { button.disabled = true; button.textContent = "Seeding…"; }
-  try {
-    const { db } = await sdk();
-    let added = 0;
-    for (const form of starterForms) {
-      const created = await dbMod.runTransaction(db, async (transaction) => {
-        const ref = dbMod.doc(db, "forms", form.id);
-        const snap = await transaction.get(ref);
-        if (snap.exists()) return false;
-        const { id, ...data } = form;
-        transaction.set(ref, data);
-        return true;
-      });
-      if (created) added++;
-    }
-    toast(added ? `${added} standard form(s) added without overwriting existing settings.` : "Standard forms are already seeded; no settings changed.", "ok");
-    await renderForms();
-  } catch (err) { toast(`Could not seed forms: ${err.message}`, "err"); if (button) { button.disabled = false; button.textContent = "Seed standard forms"; } }
-}
 
 function showManagedFormEditor(form) {
   if (!can("forms")) return;
@@ -1236,15 +1222,25 @@ async function renderGalleryTools() {
   const list = $("#listRegion");
   if (!region || !list) return;
   let requests = [];
+  let deletedIds = new Set();
   try { const { db } = await sdk(); requests = await getGalleryDeletionRequests(db); }
   catch (error) { console.warn("GitHub image deletion status is not available", error); }
+  try {
+    const { db } = await sdk();
+    const tombstones = await dbMod.getDocs(dbMod.query(dbMod.collection(db, "content_tombstones"), dbMod.where("section", "==", "gallery")));
+    deletedIds = new Set(tombstones.docs.map((doc) => String(doc.get("contentId") || "")));
+  } catch (error) { console.warn("Gallery deletion history is not available", error); }
   const activeIds = new Set(requests.filter((request) => ACTIVE_ASSET_DELETE_STATUSES.has(request.status || "pending")).map((request) => request.galleryId));
-  const missing = starterGallery.filter((item) => !isStarterGalleryPresent(item) && !activeIds.has(item.id));
   const toolbar = document.createElement("section");
-  toolbar.className = "admin-seed-toolbar admin-gallery-sync card";
-  toolbar.innerHTML = `<div class="admin-gallery-sync-copy"><strong>Bundled website gallery · ${starterGallery.length} starter photos</strong><p class="muted">Import missing starter photos to publish them again. Deleting a bundled photo removes it from the live gallery and queues a reviewed GitHub pull request for the repository file.</p><div class="admin-starter-thumbs">${starterGallery.map((photo) => { const present = isStarterGalleryPresent(photo); const removing = activeIds.has(photo.id); return `<div class="admin-starter-thumb ${present ? "is-published" : removing ? "is-pending-delete" : "is-missing"}" title="${esc(photo.caption)}"><img src="${esc(asset(photo.imageUrl))}" alt="${esc(photo.caption)}" loading="lazy" /><span>${present ? "Published" : removing ? "GitHub PR pending" : "Not in Firestore"}</span></div>`; }).join("")}</div></div><button class="btn btn-primary btn-sm" id="restoreGallery" ${missing.length ? "" : "disabled"}>${missing.length ? `Import ${missing.length} missing photo${missing.length === 1 ? "" : "s"}` : "No photos to import"}</button>`;
+  toolbar.className = "admin-gallery-sync card";
+  toolbar.innerHTML = `<div class="admin-gallery-sync-copy"><strong>Bundled website gallery · ${starterGallery.length} starter photos</strong><p class="muted">Missing starter photos sync automatically when the owner opens Admin. Deleted entries stay removed. The Firestore record is deleted immediately; the public gallery hides it while Firestore is reachable. Its bundled file and fallback row are removed through a reviewed GitHub pull request.</p><div class="admin-starter-thumbs">${starterGallery.map((photo) => {
+    const present = isStarterGalleryPresent(photo);
+    const removing = activeIds.has(photo.id);
+    const removed = deletedIds.has(photo.id);
+    const state = removed ? "Removed" : present ? "Published" : removing ? "GitHub PR pending" : "Waiting for owner sync";
+    return `<div class="admin-starter-thumb ${present ? "is-published" : removing ? "is-pending-delete" : removed ? "is-deleted" : "is-missing"}" title="${esc(photo.caption)}">${removed ? "" : `<img src="${esc(asset(photo.imageUrl))}" alt="${esc(photo.caption)}" loading="lazy" />`}<span>${state}</span></div>`;
+  }).join("")}</div></div>`;
   region.insertBefore(toolbar, list);
-  toolbar.querySelector("#restoreGallery").addEventListener("click", (event) => restoreStarterGallery(event.currentTarget));
 
   if (requests.length) {
     const statuses = { pending: "Queued", queued_for_pr: "Preparing GitHub PR", pr_open: "PR awaiting review", blocked: "Blocked — image still referenced", completed: "Completed" };
@@ -1270,39 +1266,6 @@ async function renderCollection(sec) {
   loadStats();
 }
 
-async function restoreStarterGallery(button) {
-  button.disabled = true;
-  try {
-    const { db } = await sdk();
-    const requests = await getGalleryDeletionRequests(db);
-    const activeIds = new Set(requests.filter((request) => ACTIVE_ASSET_DELETE_STATUSES.has(request.status || "pending")).map((request) => request.galleryId));
-    const candidates = starterGallery.filter((item) => !isStarterGalleryPresent(item) && !activeIds.has(item.id));
-    if (!candidates.length) {
-      toast("There are no safe starter photos to import right now. Pending GitHub deletions cannot be restored.", "info");
-      return;
-    }
-    const added = await dbMod.runTransaction(db, async (transaction) => {
-      const refs = candidates.map((item) => dbMod.doc(db, "gallery", item.id));
-      const snapshots = [];
-      for (const ref of refs) snapshots.push(await transaction.get(ref));
-      let count = 0;
-      snapshots.forEach((snapshot, index) => {
-        if (snapshot.exists()) return;
-        const { id, ...data } = candidates[index];
-        transaction.set(refs[index], data);
-        count++;
-      });
-      return count;
-    });
-    toast(added ? `Restored ${added} missing starter photo${added === 1 ? "" : "s"}.` : "Starter photos already exist; nothing was changed.", "ok");
-    await renderCollection("gallery");
-  } catch (err) {
-    console.error("Gallery restore failed", err);
-    toast(`Could not restore starter photos: ${err.message}`, "err");
-  } finally {
-    if (button.isConnected) button.disabled = false;
-  }
-}
 
 async function loadList(sec) {
   if (PAGE !== sec) return;
@@ -1634,12 +1597,18 @@ async function saveForm(e) {
   }
 }
 
+function addContentTombstone(batch, db, section, contentId) {
+  const ref = dbMod.doc(dbMod.collection(db, "content_tombstones"));
+  batch.set(ref, { section, contentId: String(contentId), deletedBy: me, deletedAt: dbMod.serverTimestamp() });
+}
+
 async function removeItem(id) {
   const sec = PAGE;
   if (!can(sec)) { toast("Your role can't delete here.", "err"); return; }
   const item = items.find((row) => row.id === id);
   const imageUrl = sec === "gallery" ? String(item?.imageUrl || "") : "";
   const repoImage = repositoryImagePath(imageUrl);
+  const starterOwned = Boolean(STARTER_CONTENT[sec]?.some((row) => row.id === id));
   const warning = repoImage
     ? `Remove this photo from the live gallery and queue a reviewed GitHub pull request to delete ${repoImage}? The repository file remains until the pull request is approved and merged.`
     : `Delete this ${SCHEMAS[sec].label}? This cannot be undone.`;
@@ -1650,9 +1619,16 @@ async function removeItem(id) {
       const batch = dbMod.writeBatch(db);
       const requestRef = dbMod.doc(dbMod.collection(db, "asset_delete_requests"));
       batch.delete(dbMod.doc(db, sec, id));
+      if (starterOwned) addContentTombstone(batch, db, sec, id);
       batch.set(requestRef, { galleryId: id, imageUrl: repoImage, requestedBy: me, requestedAt: dbMod.serverTimestamp() });
       await batch.commit();
       toast("Removed from the live gallery. A GitHub deletion pull request has been queued for review.", "ok");
+    } else if (starterOwned) {
+      const batch = dbMod.writeBatch(db);
+      batch.delete(dbMod.doc(db, sec, id));
+      addContentTombstone(batch, db, sec, id);
+      await batch.commit();
+      toast("Deleted from Firestore and the live website. It will not be restored from starter content.", "ok");
     } else {
       await dbMod.deleteDoc(dbMod.doc(db, sec, id));
       toast("Deleted.", "ok");
@@ -1661,7 +1637,13 @@ async function removeItem(id) {
     if (sec === "gallery") await renderCollection(sec);
     else await loadList(sec);
     loadStats();
-  } catch (err) { toast(`Delete failed: ${err.message}`, "err"); }
+  } catch (err) {
+    console.error(`Delete failed for ${sec}/${id}`, err);
+    const permissionHint = err.code === "permission-denied"
+      ? `Check that your Admin account has edit permission for ${SCHEMAS[sec]?.label || sec} and that the matching Firestore rules are deployed. No deletion was confirmed.`
+      : "";
+    toast(`Delete failed${err.code ? ` [${err.code}]` : ""}: ${err.message}${permissionHint ? ` — ${permissionHint}` : ""}`, "err");
+  }
 }
 
 /* ---------------- task assignment email (Apps Script web app hook) ---------------- */

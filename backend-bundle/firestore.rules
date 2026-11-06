@@ -92,6 +92,23 @@ service cloud.firestore {
                     && request.auth.token.email_verified == true)));
     }
 
+    // ---- permanent content deletion markers: prevent automatic starter sync from resurrecting deletes ----
+    match /content_tombstones/{tombstoneId} {
+      allow read: if isOwner()
+        || (signedIn()
+            && resource.data.section in ['announcements', 'events', 'projects', 'team', 'gallery', 'resources', 'achievements', 'forms']
+            && canWrite(resource.data.section));
+      allow create: if signedIn()
+        && request.resource.data.keys().hasAll(['section', 'contentId', 'deletedBy', 'deletedAt'])
+        && request.resource.data.keys().hasOnly(['section', 'contentId', 'deletedBy', 'deletedAt'])
+        && request.resource.data.section in ['announcements', 'events', 'projects', 'team', 'gallery', 'resources', 'achievements', 'forms']
+        && isStr(request.resource.data.contentId, 1, 150)
+        && request.resource.data.deletedBy == request.auth.token.email
+        && request.resource.data.deletedAt == request.time
+        && canWrite(request.resource.data.section);
+      allow update, delete: if false;
+    }
+
     // ---- tasks: task managers read/manage all; assignees see only their own tasks ----
     match /tasks/{id} {
       allow read: if canWrite('tasks') || isTaskAssignee(resource.data);

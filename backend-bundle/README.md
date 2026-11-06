@@ -22,8 +22,10 @@ The seeder adds missing docs in seven public content collections and the `forms`
 configuration collection (`join`, `enquiry`, `embednova`, `feedback`). It never seeds
 form responses, `admin_roles`, or tasks. Announcements are intentionally empty until
 real notices are written. The gallery source refers to images already deployed under
-`public/assets/images/`. The Admin → Overview restore action adds missing starter
-docs without overwriting existing edits or requiring Storage.
+`public/assets/images/`. On owner sign-in, the portal automatically adds missing
+starter docs without overwriting existing edits or requiring Storage. Permanent
+Firestore deletion tombstones keep intentionally deleted starter items from being
+resurrected by portal sync or the trusted CLI seeder.
 
 To seed from a trusted machine (Admin SDK bypasses Firestore rules):
 

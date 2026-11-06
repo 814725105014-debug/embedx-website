@@ -105,9 +105,13 @@ Seeds seven public content collections (`announcements`, `events`, `projects`,
 stable document IDs. It only creates missing IDs and preserves existing Firestore
 documents, so rerunning it will not overwrite admin edits. `announcements` is
 intentionally empty until real notices are written. Form responses, admin roles, and
-tasks are never seeded. Owner-only **Restore missing content** and **Seed standard
-forms** controls can initialize content from the admin portal without a service
-account. Gallery images use bundled assets, not Firebase Storage.
+tasks are never seeded. On owner sign-in, the Admin portal automatically syncs missing
+starter records without a service account. Permanent Firestore tombstones prevent
+intentionally deleted starter records from being re-added by that sync or the trusted
+CLI seeder. Use the Admin delete action for permanent removal; deleting a starter
+document directly in Firebase Console is treated as missing content and will be
+repaired at the next owner sign-in. Gallery images use bundled assets, not Firebase
+Storage.
 
 > Alternative: add/edit documents manually in **Firebase Console → Firestore**.
 
@@ -133,14 +137,21 @@ Image URLs should be **root-absolute local paths** (`/assets/images/foo.webp`) o
 HTTPS URLs. The admin image editor accepts either; file upload/crop is available
 only when a Firebase Storage bucket exists and the project can use it. Keep this
 Spark setup on static/HTTPS image references until then. If Firestore is unreachable,
-the site falls back to bundled static data; an intentionally empty collection stays
-empty rather than resurrecting deleted content.
+the site falls back to bundled data. Admin deletions create Firestore tombstones so
+automatic starter sync cannot resurrect them; bundled gallery fallback rows and files
+are removed through a reviewed GitHub pull request.
 
 ## 5b. Admin portal (`/admin`)
 
 A built-in CMS at **`https://<PROJECT_ID>.web.app/admin/`** (linked in the site footer).
 It includes content editing, task assignment, media editing, and owner-managed
-per-admin section permissions. Navigation and URLs work without a full page reload. The Gallery page previews the bundled public-site photos and clearly shows which are already in Firestore; **Import missing photos** copies only absent starter entries so they can be captioned and reordered in Admin. Deleting a bundled gallery photo removes its Firestore entry immediately and queues a guarded GitHub pull request; the repository file is removed only after an authorized reviewer merges that PR.
+per-admin section permissions. Navigation and URLs work without a full page reload.
+On owner sign-in, missing bundled starter records are synced automatically; existing
+Firestore edits are preserved, and tombstones protect Admin-deleted records. The
+Gallery page shows starter-photo sync and deletion status. Deleting a bundled gallery
+photo removes its Firestore entry immediately and queues a guarded GitHub pull
+request. The public gallery reflects the deletion while Firestore is reachable; the
+bundled fallback file and row remain until an authorized reviewer merges the PR.
 
 Owners can also open **Website settings** in Admin to edit the public college logo, official portal URL, phone, email, and LinkedIn/Instagram/Facebook links. These values are read publicly by the shared footer, home-page portal card, and Contact page; updates appear after a page reload. Assign the `site` permission to a trusted admin if they should be able to edit these values.
 

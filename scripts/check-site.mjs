@@ -105,6 +105,13 @@ try {
 } catch (err) { fail(`firestore.indexes.json: invalid index schema (${err.message})`); }
 const config = await readFile(path.join(pub, "js/config.js"), "utf8");
 if (/taskMail\s*=\s*\{[^}]*\btoken\s*:/s.test(config)) fail("public/js/config.js: public task-mail token must not be shipped");
+const adminAppSource = await readFile(path.join(pub, "js/admin-app.js"), "utf8");
+if (/id=["'](?:restoreStarterContent|restoreGallery|seedForms)["']/.test(adminAppSource)) fail("public/js/admin-app.js: starter data must sync automatically, without manual seed controls");
+if (!adminAppSource.includes('dbMod.collection(db, "content_tombstones")') || !adminAppSource.includes("addContentTombstone(batch")) fail("public/js/admin-app.js: automatic restore/delete tombstone protection is missing");
+for (const seedFile of ["scripts/seed.js", "backend-bundle/scripts/seed.js"]) {
+  const source = await readFile(path.join(root, seedFile), "utf8");
+  if (!source.includes('collection("content_tombstones")') || !source.includes("deletedKeys.has")) fail(`${seedFile}: trusted seeder must preserve intentionally deleted starter records`);
+}
 if (/CHANGE_ME|REPLACE_WITH|TODO:\s*after first deploy/i.test(config)) fail("public/js/config.js: contains unfinished deployment placeholder");
 const sitemap = await readFile(path.join(pub, "sitemap.xml"), "utf8");
 if (/TODO|REPLACE_WITH/i.test(sitemap)) fail("public/sitemap.xml: unfinished placeholder remains");
