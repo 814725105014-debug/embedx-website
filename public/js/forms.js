@@ -1,6 +1,6 @@
 // EMBEDX — Form handling: validation, honeypot, rate limiting, Firestore writes, toasts.
 import { submitApplication, submitContact, getFormDefinition, submitFormResponse, isConfigured } from "./store.js?v=20261106-forms";
-import { toast } from "./ui.js?v=20261106";
+import { toast } from "./ui.js?v=20261106-cursor-animation";
 
 const RATE_KEY = "embedx_rate";
 const RATE_MAX = 3;

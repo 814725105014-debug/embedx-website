@@ -26,7 +26,8 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' https://trp.srmtrichy.edu.in data: https://firebasestorage.googleapis.com https://www.google-analytics.com; connect-src 'self' https://www.gstatic.com https://www.google-analytics.com https://analytics.google.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://firebasestorage.googleapis.com https://www.googleapis.com; object-src 'none'; base-uri 'self'; form-action 'self'" />
   <link rel="stylesheet" href="/css/style.css?v=20261106-event-forms" />
   <script src="/js/theme.js?v=20261106"></script>
-  <script type="module" src="/js/main.js?v=20261106-event-forms"></script>
+  <script type="module" src="/js/main.js?v=20261106-cursor-animation"></script>
+  <link rel="stylesheet" href="/css/corporate.css?v=20261106-cursor-animation" />
 </head>
 <body data-page="home">
 <a class="skip-link" href="#main">Skip to content</a>
@@ -35,7 +36,7 @@
   <!-- HERO -->
   <section class="hero">
     <div class="wrap hero-grid">
-      <div>
+      <div class="hero-copy">
         <p class="eyebrow">Department of EEE • SRM TRP Engineering College</p>
         <h1>EMBED<span class="grad-text">X</span><br />Embedded Systems &amp; Automation Club</h1>
         <p class="hero-tag">Building practical skills, intelligent embedded systems, robotic mechanisms, and real-world engineering solutions through hands-on innovation.</p>
@@ -46,16 +47,17 @@
           <a class="btn btn-primary" href="/pages/about.html">Explore EMBEDX</a>
           <a class="btn btn-ghost" href="/pages/join.html">Join the Club</a>
         </div>
-        <p class="muted" style="font-size:.85rem">Embedded C • ARM • RTOS &nbsp;|&nbsp; Robotics &amp; Industrial PLC &nbsp;|&nbsp; Practical Engineering</p>
+        <p class="muted hero-techline">Embedded C • ARM • RTOS &nbsp;|&nbsp; Robotics &amp; Industrial PLC &nbsp;|&nbsp; Practical Engineering</p>
         <div class="hero-stats">
           <div class="stat glass"><b class="grad-text" data-count="12" data-suffix="+">0</b><span>Technical Domains</span></div>
           <div class="stat glass"><b class="grad-text" data-count="2026">0</b><span>National Level Innovation</span></div>
           <div class="stat glass"><b class="grad-text" data-count="100" data-suffix="%">0</b><span>Hands-On Practice</span></div>
         </div>
       </div>
-      <div class="hero-visual" aria-hidden="true">
-        <div class="hero-ring"></div>
-        <div class="hero-logo glass"><img src="/assets/images/embedx-logo.webp" alt="" width="900" height="900" fetchpriority="high" /></div>
+      <div class="hero-visual">
+        <img class="hero-image" src="/assets/images/robotics-hero.webp" alt="Collaborative robotic arm working over a microcontroller board in an embedded systems lab" width="1264" height="848" fetchpriority="high" />
+        <div class="hero-image-caption"><span class="hero-image-pulse" aria-hidden="true"></span><span><strong>From circuit to system</strong><small>Embedded · Robotics · Automation</small></span></div>
+        <span class="hero-image-index" aria-hidden="true">01 <i></i> 03</span>
       </div>
     </div>
   </section>

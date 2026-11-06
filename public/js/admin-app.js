@@ -2,7 +2,7 @@
 // One page per section (/admin/, /admin/events, /admin/admins, …) sharing this module.
 // Real security lives in firestore.rules / storage.rules (roles from `admin_roles` collection).
 import { firebaseConfig, isConfigured, taskMail } from "./config.js?v=20261106-admin-controls";
-import { toast } from "./ui.js?v=20261106-admin-controls";
+import { toast } from "./ui.js?v=20261106-cursor-animation";
 import { esc, asset } from "./render.js?v=20261106-admin-controls";
 import { announcements as starterAnnouncements } from "./data/announcements.js?v=20261106-admin-controls";
 import { events as starterEvents } from "./data/events.js?v=20261106-event-forms";
@@ -36,7 +36,7 @@ const PAGES = {
   events:        { h1: "Events",         hint: "Edit event details and posters, then assign a managed registration form or leave it unassigned.", crud: true },
   projects:      { h1: "Projects",       hint: "Featured projects appear on the home page grid.", crud: true },
   team:          { h1: "Team",           hint: "Executive council & faculty — swap photos and edit details any time.", crud: true },
-  gallery:       { h1: "Gallery",        hint: "Upload, replace or edit photos for the home-page gallery.", crud: true },
+  gallery:       { h1: "Gallery",        hint: "Manage photos; deleting a bundled image queues a reviewed GitHub pull request for its repository file.", crud: true },
   resources:     { h1: "Resources",      hint: "Learning Hub guides with category filters.", crud: true },
   achievements:  { h1: "Achievers",      hint: "Hall of Achievers cards.", crud: true },
   forms:         { h1: "Forms & responses", hint: "Design forms, close intake, review submissions, export records, and manage Google Sheets sync.", crud: false },
@@ -140,6 +140,19 @@ function safeHttpsUrl(value) {
   const url = String(value || "").trim();
   if (!url) return true;
   try { return new URL(url).protocol === "https:"; } catch { return false; }
+}
+
+function repositoryImagePath(value) {
+  let source = String(value || "").trim();
+  if (/^https:\/\//i.test(source)) {
+    try {
+      const url = new URL(source);
+      if (!["embedx-club-eee.web.app", "embedx-club-eee.firebaseapp.com"].includes(url.hostname)) return "";
+      source = url.pathname;
+    } catch { return ""; }
+  }
+  if (!source.startsWith("/")) source = `/${source}`;
+  return /^\/assets\/images\/[A-Za-z0-9][A-Za-z0-9._-]*\.(?:webp|png|jpe?g|gif|svg)$/i.test(source) ? source : "";
 }
 
 /* ---------------- schemas ---------------- */
@@ -947,6 +960,37 @@ function isStarterGalleryPresent(photo, currentItems = items) {
   return currentItems.some((item) => item.id === photo.id || item.imageUrl === photo.imageUrl);
 }
 
+const ACTIVE_ASSET_DELETE_STATUSES = new Set(["pending", "queued_for_pr", "pr_open"]);
+async function getGalleryDeletionRequests(db) {
+  const snapshot = await dbMod.getDocs(dbMod.collection(db, "asset_delete_requests"));
+  return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+    .sort((a, b) => String(b.requestedAt?.toDate?.()?.toISOString?.() || "").localeCompare(String(a.requestedAt?.toDate?.()?.toISOString?.() || "")));
+}
+
+async function renderGalleryTools() {
+  const region = $("#pageRegion");
+  const list = $("#listRegion");
+  if (!region || !list) return;
+  let requests = [];
+  try { const { db } = await sdk(); requests = await getGalleryDeletionRequests(db); }
+  catch (error) { console.warn("GitHub image deletion status is not available", error); }
+  const activeIds = new Set(requests.filter((request) => ACTIVE_ASSET_DELETE_STATUSES.has(request.status || "pending")).map((request) => request.galleryId));
+  const missing = starterGallery.filter((item) => !isStarterGalleryPresent(item) && !activeIds.has(item.id));
+  const toolbar = document.createElement("section");
+  toolbar.className = "admin-seed-toolbar admin-gallery-sync card";
+  toolbar.innerHTML = `<div class="admin-gallery-sync-copy"><strong>Bundled website gallery · ${starterGallery.length} starter photos</strong><p class="muted">Import missing starter photos to publish them again. Deleting a bundled photo removes it from the live gallery and queues a reviewed GitHub pull request for the repository file.</p><div class="admin-starter-thumbs">${starterGallery.map((photo) => { const present = isStarterGalleryPresent(photo); const removing = activeIds.has(photo.id); return `<div class="admin-starter-thumb ${present ? "is-published" : removing ? "is-pending-delete" : "is-missing"}" title="${esc(photo.caption)}"><img src="${esc(asset(photo.imageUrl))}" alt="${esc(photo.caption)}" loading="lazy" /><span>${present ? "Published" : removing ? "GitHub PR pending" : "Not in Firestore"}</span></div>`; }).join("")}</div></div><button class="btn btn-primary btn-sm" id="restoreGallery" ${missing.length ? "" : "disabled"}>${missing.length ? `Import ${missing.length} missing photo${missing.length === 1 ? "" : "s"}` : "No photos to import"}</button>`;
+  region.insertBefore(toolbar, list);
+  toolbar.querySelector("#restoreGallery").addEventListener("click", (event) => restoreStarterGallery(event.currentTarget));
+
+  if (requests.length) {
+    const statuses = { pending: "Queued", queued_for_pr: "Preparing GitHub PR", pr_open: "PR awaiting review", blocked: "Blocked — image still referenced", completed: "Completed" };
+    const panel = document.createElement("section");
+    panel.className = "admin-asset-delete-status card";
+    panel.innerHTML = `<div class="admin-asset-delete-head"><div><h2>GitHub image removals</h2><p class="muted">Repository files are removed only through a reviewed pull request.</p></div></div><div class="admin-asset-delete-list">${requests.slice(0, 8).map((request) => { const status = request.status || "pending"; const url = String(request.prUrl || ""); const prLink = /^https:\/\/github\.com\//i.test(url) ? `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">Review pull request ↗</a>` : ""; return `<article class="admin-asset-delete-row"><div><strong>${esc(request.imageUrl || request.galleryId || "Image")}</strong><span class="muted">${esc(statuses[status] || status)}</span>${request.detail ? `<small class="muted">${esc(request.detail)}</small>` : ""}</div>${prLink}</article>`; }).join("")}</div>`;
+    region.insertBefore(panel, list);
+  }
+}
+
 async function renderCollection(sec) {
   const schema = SCHEMAS[sec];
   if (!schema) { $("#pageRegion").innerHTML = `<p class="muted">Unknown section.</p>`; return; }
@@ -958,14 +1002,7 @@ async function renderCollection(sec) {
   if (add) { add.hidden = !can(sec); add.onclick = () => openForm(null); }
   await loadList(sec);
   if (PAGE !== sec) return;
-  if (sec === "gallery" && can(sec) && $("#listRegion")) {
-    const toolbar = document.createElement("section");
-    toolbar.className = "admin-seed-toolbar admin-gallery-sync card";
-    const missing = starterGallery.filter((item) => !isStarterGalleryPresent(item));
-    toolbar.innerHTML = `<div class="admin-gallery-sync-copy"><strong>Bundled website gallery · ${starterGallery.length} starter photos</strong><p class="muted">These images are part of the public-site starter set. Import missing photos into Firestore to edit their captions, order, and image links here. Existing entries are preserved; local /assets/ paths and HTTPS image links are supported. File upload requires Firebase Storage.</p><div class="admin-starter-thumbs">${starterGallery.map((photo) => { const present = isStarterGalleryPresent(photo); return `<div class="admin-starter-thumb ${present ? "is-published" : "is-missing"}" title="${esc(photo.caption)}"><img src="${esc(asset(photo.imageUrl))}" alt="${esc(photo.caption)}" loading="lazy" /><span>${present ? "Published" : "Not in Firestore"}</span></div>`; }).join("")}</div></div><button class="btn btn-primary btn-sm" id="restoreGallery" ${missing.length ? "" : "disabled"}>${missing.length ? `Import ${missing.length} missing photo${missing.length === 1 ? "" : "s"}` : "All starter photos imported"}</button>`;
-    $("#pageRegion").prepend(toolbar);
-    $("#restoreGallery").addEventListener("click", (event) => restoreStarterGallery(event.currentTarget));
-  }
+  if (sec === "gallery" && can(sec) && $("#listRegion")) await renderGalleryTools();
   loadStats();
 }
 
@@ -973,9 +1010,11 @@ async function restoreStarterGallery(button) {
   button.disabled = true;
   try {
     const { db } = await sdk();
-    const candidates = starterGallery.filter((item) => !isStarterGalleryPresent(item));
+    const requests = await getGalleryDeletionRequests(db);
+    const activeIds = new Set(requests.filter((request) => ACTIVE_ASSET_DELETE_STATUSES.has(request.status || "pending")).map((request) => request.galleryId));
+    const candidates = starterGallery.filter((item) => !isStarterGalleryPresent(item) && !activeIds.has(item.id));
     if (!candidates.length) {
-      toast("All starter photos are already in the gallery; nothing was changed.", "info");
+      toast("There are no safe starter photos to import right now. Pending GitHub deletions cannot be restored.", "info");
       return;
     }
     const added = await dbMod.runTransaction(db, async (transaction) => {
@@ -992,22 +1031,12 @@ async function restoreStarterGallery(button) {
       return count;
     });
     toast(added ? `Restored ${added} missing starter photo${added === 1 ? "" : "s"}.` : "Starter photos already exist; nothing was changed.", "ok");
-    await loadList("gallery");
-    const thumbs = document.querySelectorAll(".admin-starter-thumb");
-    starterGallery.forEach((photo, index) => {
-      const thumb = thumbs[index]; if (!thumb) return;
-      const present = isStarterGalleryPresent(photo);
-      thumb.classList.toggle("is-published", present); thumb.classList.toggle("is-missing", !present);
-      const badge = thumb.querySelector("span"); if (badge) badge.textContent = present ? "Published" : "Not in Firestore";
-    });
-    const stillMissing = starterGallery.filter((item) => !isStarterGalleryPresent(item));
-    button.textContent = stillMissing.length ? `Import ${stillMissing.length} missing photo${stillMissing.length === 1 ? "" : "s"}` : "All starter photos imported";
-    button.disabled = !stillMissing.length;
+    await renderCollection("gallery");
   } catch (err) {
     console.error("Gallery restore failed", err);
     toast(`Could not restore starter photos: ${err.message}`, "err");
   } finally {
-    if (button.isConnected && button.textContent !== "All starter photos imported") button.disabled = false;
+    if (button.isConnected) button.disabled = false;
   }
 }
 
@@ -1344,13 +1373,29 @@ async function saveForm(e) {
 async function removeItem(id) {
   const sec = PAGE;
   if (!can(sec)) { toast("Your role can't delete here.", "err"); return; }
-  if (!confirm(`Delete this ${SCHEMAS[sec].label}? This cannot be undone.`)) return;
-  const { db } = await sdk();
+  const item = items.find((row) => row.id === id);
+  const imageUrl = sec === "gallery" ? String(item?.imageUrl || "") : "";
+  const repoImage = repositoryImagePath(imageUrl);
+  const warning = repoImage
+    ? `Remove this photo from the live gallery and queue a reviewed GitHub pull request to delete ${repoImage}? The repository file remains until the pull request is approved and merged.`
+    : `Delete this ${SCHEMAS[sec].label}? This cannot be undone.`;
+  if (!confirm(warning)) return;
   try {
-    await dbMod.deleteDoc(dbMod.doc(db, sec, id));
-    toast("Deleted.", "ok");
+    const { db } = await sdk();
+    if (repoImage) {
+      const batch = dbMod.writeBatch(db);
+      const requestRef = dbMod.doc(dbMod.collection(db, "asset_delete_requests"));
+      batch.delete(dbMod.doc(db, sec, id));
+      batch.set(requestRef, { galleryId: id, imageUrl: repoImage, requestedBy: me, requestedAt: dbMod.serverTimestamp() });
+      await batch.commit();
+      toast("Removed from the live gallery. A GitHub deletion pull request has been queued for review.", "ok");
+    } else {
+      await dbMod.deleteDoc(dbMod.doc(db, sec, id));
+      toast("Deleted.", "ok");
+    }
     statsCache = null;
-    loadList(sec);
+    if (sec === "gallery") await renderCollection(sec);
+    else await loadList(sec);
     loadStats();
   } catch (err) { toast(`Delete failed: ${err.message}`, "err"); }
 }
