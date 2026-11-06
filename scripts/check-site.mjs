@@ -89,11 +89,20 @@ for (const name of ["firebase.json", "firestore.indexes.json", "public/manifest.
   try { JSON.parse(await readFile(path.join(root, name), "utf8")); }
   catch (err) { fail(`${name}: invalid JSON (${err.message})`); }
 }
-for (const name of ["firestore.rules", "storage.rules"]) {
+for (const name of ["firestore.rules", "storage.rules", "firestore.indexes.json"]) {
   const a = await readFile(path.join(root, name), "utf8");
   const b = await readFile(path.join(root, "backend-bundle", name), "utf8");
   if (a !== b) fail(`${name}: differs from backend-bundle mirror`);
 }
+try {
+  const indexConfig = JSON.parse(await readFile(path.join(root, "firestore.indexes.json"), "utf8"));
+  for (const [index, entry] of (indexConfig.indexes || []).entries()) {
+    if (!entry.collectionGroup || entry.queryScope !== "COLLECTION" || !Array.isArray(entry.fields) || entry.fields.length < 2) fail(`firestore.indexes.json: index ${index} needs collectionGroup, COLLECTION scope, and at least two fields`);
+    for (const field of entry.fields || []) {
+      if (!field.fieldPath || (!field.order && !field.arrayConfig)) fail(`firestore.indexes.json: index ${index} has a field missing fieldPath/order/arrayConfig`);
+    }
+  }
+} catch (err) { fail(`firestore.indexes.json: invalid index schema (${err.message})`); }
 const config = await readFile(path.join(pub, "js/config.js"), "utf8");
 if (/taskMail\s*=\s*\{[^}]*\btoken\s*:/s.test(config)) fail("public/js/config.js: public task-mail token must not be shipped");
 if (/CHANGE_ME|REPLACE_WITH|TODO:\s*after first deploy/i.test(config)) fail("public/js/config.js: contains unfinished deployment placeholder");
