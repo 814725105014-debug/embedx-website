@@ -18,6 +18,7 @@ if (!reduced && matchMedia("(hover: hover) and (pointer: fine)").matches) {
   }, { passive: true });
 }
 
+let revealObserver = null;
 export function initReveal() {
   const els = [...document.querySelectorAll("[data-reveal]")].filter((el) => !el.dataset.revealBound);
   if (!els.length) return;
@@ -25,28 +26,50 @@ export function initReveal() {
     els.forEach((el) => { el.dataset.revealBound = "1"; el.classList.add("revealed"); });
     return;
   }
-  const io = new IntersectionObserver((entries) => {
-    entries.forEach((en) => {
-      if (en.isIntersecting) { en.target.classList.add("revealed"); io.unobserve(en.target); }
-    });
-  }, { threshold: 0.12, rootMargin: "0px 0px -6% 0px" });
-  els.forEach((el, i) => { el.dataset.revealBound = "1"; el.style.setProperty("--d", `${Math.min(i % 6, 5) * 0.07}s`); io.observe(el); });
+  if (!revealObserver) {
+    revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach((en) => {
+        if (en.isIntersecting) { en.target.classList.add("revealed"); revealObserver.unobserve(en.target); }
+      });
+    }, { threshold: 0.08, rootMargin: "0px 0px 4% 0px" });
+  }
+  els.forEach((el, i) => {
+    el.dataset.revealBound = "1";
+    el.style.setProperty("--d", `${(i % 3) * 0.025}s`);
+    revealObserver.observe(el);
+  });
 }
 
 export function initTilt() {
-  if (reduced || !matchMedia("(pointer: fine)").matches) return;
+  if (reduced || !matchMedia("(hover: hover) and (pointer: fine)").matches) return;
   document.querySelectorAll(".tilt").forEach((card) => {
     if (card.dataset.tiltBound) return;
     card.dataset.tiltBound = "1";
-    card.addEventListener("pointermove", (e) => {
-      const r = card.getBoundingClientRect();
-      const px = (e.clientX - r.left) / r.width;
-      const py = (e.clientY - r.top) / r.height;
+    let frame = 0;
+    let pointerX = 0;
+    let pointerY = 0;
+    const updateTilt = () => {
+      frame = 0;
+      const rect = card.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+      const px = Math.max(0, Math.min(1, (pointerX - rect.left) / rect.width));
+      const py = Math.max(0, Math.min(1, (pointerY - rect.top) / rect.height));
       card.style.setProperty("--mx", `${px * 100}%`);
       card.style.setProperty("--my", `${py * 100}%`);
-      card.style.transform = `translateY(-6px) rotateX(${(0.5 - py) * 5}deg) rotateY(${(px - 0.5) * 6}deg)`;
+      card.style.transform = `translateY(-3px) rotateX(${(0.5 - py) * 2}deg) rotateY(${(px - 0.5) * 2}deg)`;
+    };
+    card.addEventListener("pointermove", (event) => {
+      pointerX = event.clientX;
+      pointerY = event.clientY;
+      if (!frame) frame = requestAnimationFrame(updateTilt);
+    }, { passive: true });
+    card.addEventListener("pointerleave", () => {
+      if (frame) cancelAnimationFrame(frame);
+      frame = 0;
+      card.style.removeProperty("--mx");
+      card.style.removeProperty("--my");
+      card.style.transform = "";
     });
-    card.addEventListener("pointerleave", () => { card.style.transform = ""; });
   });
 }
 

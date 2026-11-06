@@ -26,7 +26,7 @@ export function projectCard(p) {
   const status = /Achieved/i.test(p.status || "") ? "" : "proto";
   return `
   <article class="card tilt" data-reveal>
-    <div class="card-img"><img src="${esc(asset(p.imageUrl))}" alt="${esc(p.title)} project photo" loading="lazy" width="1000" height="620" /></div>
+    <div class="card-img"><img src="${esc(asset(p.imageUrl))}" alt="${esc(p.title)} project photo" loading="lazy" decoding="async" width="1000" height="620" /></div>
     <div style="display:flex;gap:.5rem;align-items:center;justify-content:space-between;flex-wrap:wrap">
       <span class="chip chip-accent">${esc(p.category)}</span>
       <span class="badge-status ${status}">${esc(p.status || "Active")}</span>
@@ -63,7 +63,7 @@ export function teamCard(m) {
   ].join("");
   return `
   <article class="card team-card tilt" data-reveal>
-    <img src="${esc(asset(m.photoUrl))}" alt="Portrait of ${esc(m.name)}" loading="lazy" width="108" height="108" />
+    <img src="${esc(asset(m.photoUrl))}" alt="Portrait of ${esc(m.name)}" loading="lazy" decoding="async" width="108" height="108" />
     <h3 style="margin-bottom:.15rem">${esc(m.name)}</h3>
     <p class="role">${esc(m.role)}</p>
     <p class="meta">${esc(m.focus || "")} • ${esc(m.department || "EEE")}${m.year && m.year !== "Faculty" ? " • " + esc(m.year) : ""}</p>
@@ -104,7 +104,7 @@ export function achievementCard(a) {
   const projectId = a.projectId || "";
   return `
   <article class="card tilt" data-reveal>
-    ${image ? `<div class="card-img"><img src="${esc(asset(image))}" alt="${esc(a.title)}" loading="lazy" width="1000" height="620" /></div>` : ""}
+    ${image ? `<div class="card-img"><img src="${esc(asset(image))}" alt="${esc(a.title)}" loading="lazy" decoding="async" width="1000" height="620" /></div>` : ""}
     <span class="badge-status">${esc(a.badge || a.date || "Achievement")}</span>
     <h3 style="margin-top:.7rem">${esc(a.title)}</h3>
     <p class="card-sub">${esc(a.subtitle || "")}</p>
@@ -131,5 +131,5 @@ export function announcementCard(a) {
 
 export function galleryButton(g) {
   const src = asset(g.imageUrl);
-  return `<button data-lightbox="${esc(src)}" data-caption="${esc(g.caption || "")}" aria-label="Enlarge: ${esc(g.caption || "club photo")}"><img src="${esc(src)}" alt="${esc(g.caption || "EMBEDX club photo")}" loading="lazy" /></button>`;
+  return `<button data-lightbox="${esc(src)}" data-caption="${esc(g.caption || "")}" aria-label="Enlarge: ${esc(g.caption || "club photo")}"><img src="${esc(src)}" alt="${esc(g.caption || "EMBEDX club photo")}" loading="lazy" decoding="async" /></button>`;
 }

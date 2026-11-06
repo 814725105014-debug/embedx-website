@@ -2,8 +2,8 @@
 // One page per section (/admin/, /admin/events, /admin/admins, …) sharing this module.
 // Real security lives in firestore.rules / storage.rules (roles from `admin_roles` collection).
 import { firebaseConfig, isConfigured, taskMail } from "./config.js?v=20261106-remove-official-mail";
-import { toast } from "./ui.js?v=20261106-cursor-animation";
-import { esc, asset } from "./render.js?v=20261106-admin-controls";
+import { toast } from "./ui.js?v=20261106-smooth-render";
+import { esc, asset } from "./render.js?v=20261106-smooth-render";
 import { announcements as starterAnnouncements } from "./data/announcements.js?v=20261106-admin-controls";
 import { events as starterEvents } from "./data/events.js?v=20261106-event-forms";
 import { projects as starterProjects } from "./data/projects.js?v=20261106-admin-controls";
@@ -12,7 +12,7 @@ import { gallery as starterGallery } from "./data/gallery.js?v=20261106-admin-co
 import { resources as starterResources } from "./data/resources.js?v=20261106-admin-controls";
 import { achievements as starterAchievements } from "./data/achievements.js?v=20261106-admin-controls";
 import { forms as starterForms } from "./data/forms.js?v=20261106-admin-controls";
-import { DEFAULT_SITE_SETTINGS, getSiteSettings, normalizeSiteSettings } from "./store.js?v=20261106-attached-college-logo";
+import { DEFAULT_SITE_SETTINGS, getSiteSettings, normalizeSiteSettings } from "./store.js?v=20261106-smooth-render";
 
 const STARTER_CONTENT = {
   announcements: starterAnnouncements,
@@ -974,7 +974,7 @@ async function renderGalleryTools() {
     const removing = activeIds.has(photo.id);
     const removed = deletedIds.has(photo.id);
     const state = removed ? "Removed" : present ? "Published" : removing ? "GitHub PR pending" : "Waiting for owner sync";
-    return `<div class="admin-starter-thumb ${present ? "is-published" : removing ? "is-pending-delete" : removed ? "is-deleted" : "is-missing"}" title="${esc(photo.caption)}">${removed ? "" : `<img src="${esc(asset(photo.imageUrl))}" alt="${esc(photo.caption)}" loading="lazy" />`}<span>${state}</span></div>`;
+    return `<div class="admin-starter-thumb ${present ? "is-published" : removing ? "is-pending-delete" : removed ? "is-deleted" : "is-missing"}" title="${esc(photo.caption)}">${removed ? "" : `<img src="${esc(asset(photo.imageUrl))}" alt="${esc(photo.caption)}" loading="lazy" decoding="async" />`}<span>${state}</span></div>`;
   }).join("")}</div></div>`;
   region.insertBefore(toolbar, list);
 
@@ -1057,7 +1057,7 @@ function renderList(sec) {
   if (!items.length) { region.innerHTML = `<p class="muted">${can(sec) ? `No ${schema.label}s yet — use “+ New” to add one.` : `No ${schema.label}s to display.`}</p>`; return; }
   region.innerHTML = items.map((d) => `
     <div class="admin-row card">
-      ${schema.image && (d[schema.image] || (sec === "achievements" && d.imageUrl)) ? `<img src="${esc(asset(d[schema.image] || d.imageUrl))}" alt="" loading="lazy" />` : '<span class="admin-noimg">◈</span>'}
+      ${schema.image && (d[schema.image] || (sec === "achievements" && d.imageUrl)) ? `<img src="${esc(asset(d[schema.image] || d.imageUrl))}" alt="" loading="lazy" decoding="async" />` : '<span class="admin-noimg">◈</span>'}
       <div class="admin-row-main">
         <strong>${esc(schema.title(d))}</strong>
         <span class="muted">${esc(schema.sub(d))}</span>

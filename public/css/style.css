@@ -31,14 +31,14 @@
   --shadow: 0 18px 50px -18px rgba(0, 0, 0, .7);
   --grid-line: rgba(168, 139, 250, .08);
   --nav-bg: rgba(8, 6, 12, .78);
-  --glass-filter: blur(24px) brightness(.94) saturate(1.55);
+  --glass-filter: blur(10px) brightness(.97) saturate(1.18);
   --glass-surface: linear-gradient(135deg, rgba(255,255,255,.085), rgba(255,255,255,.025) 48%, rgba(168,85,247,.035)), var(--surface);
   --glass-sheen: linear-gradient(135deg, rgba(255,255,255,.09), transparent 42%, rgba(168,85,247,.025));
   --glass-edge: rgba(255,255,255,.16);
   --glass-chrome: rgba(14,11,21,.88);
   --glass-shadow: 0 .75px .75px rgba(255,255,255,.07), .7px .8px 1.2px -0.4px rgba(3,2,8,.2), 2px 2.4px 4px -1.2px rgba(3,2,8,.24), 0 14px 34px -22px rgba(0,0,0,.78);
   --glass-bevel: inset 1px 1px .8px rgba(255,255,255,.24), inset 4px 4px 3px -5px rgba(255,255,255,.12), inset 0 0 0 .5px rgba(255,255,255,.04);
-  --glass-hover-shadow: 0 22px 60px -22px rgba(0,0,0,.76), 0 0 0 1px rgba(168,85,247,.22), 0 0 42px -18px var(--glow-cyan);
+  --glass-hover-shadow: 0 16px 36px -24px rgba(0,0,0,.68), 0 0 0 1px rgba(168,85,247,.18), 0 0 24px -20px var(--glow-cyan);
   --ok: #34d399;
   --err: #f87171;
   --warn: #fbbf24;
@@ -84,14 +84,14 @@
   --shadow: 0 18px 44px -20px rgba(23, 18, 31, .3);
   --grid-line: rgba(23, 18, 31, .06);
   --nav-bg: rgba(247, 245, 250, .82);
-  --glass-filter: blur(20px) brightness(1.02) saturate(1.12);
+  --glass-filter: blur(8px) brightness(1.01) saturate(1.06);
   --glass-surface: linear-gradient(135deg, rgba(255,255,255,.94), rgba(255,255,255,.72) 54%, rgba(124,58,237,.035)), var(--surface);
   --glass-sheen: linear-gradient(135deg, rgba(255,255,255,.8), transparent 44%, rgba(124,58,237,.025));
   --glass-edge: rgba(23,18,31,.13);
   --glass-chrome: rgba(247,245,250,.9);
   --glass-shadow: 0 .75px .75px rgba(255,255,255,.95), .7px .8px 1.2px -0.4px rgba(23,18,31,.08), 2px 2.4px 4px -1.2px rgba(23,18,31,.09), 0 14px 34px -22px rgba(23,18,31,.24);
   --glass-bevel: inset 1px 1px .8px rgba(255,255,255,.98), inset 4px 4px 3px -5px rgba(23,18,31,.08), inset 0 0 0 .5px rgba(23,18,31,.035);
-  --glass-hover-shadow: 0 22px 48px -24px rgba(23,18,31,.28), 0 0 0 1px rgba(124,58,237,.13), 0 0 30px -20px rgba(124,58,237,.18);
+  --glass-hover-shadow: 0 16px 34px -24px rgba(23,18,31,.24), 0 0 0 1px rgba(124,58,237,.12);
 }
 
 /* ---------- 2. Base ---------- */
@@ -124,11 +124,7 @@ body::after {
     radial-gradient(38% 34% at 12% 8%, var(--glow-cyan), transparent 70%),
     radial-gradient(40% 36% at 88% 16%, var(--glow-violet), transparent 70%),
     radial-gradient(50% 40% at 50% 108%, rgba(168, 85, 247, .12), transparent 70%);
-  animation: aurora 22s ease-in-out infinite alternate;
-}
-@keyframes aurora {
-  0% { transform: translate3d(-2%, -1%, 0) scale(1); }
-  100% { transform: translate3d(2%, 3%, 0) scale(1.08); }
+  /* Keep the large decorative wash static to avoid repainting the full viewport. */
 }
 img { max-width: 100%; height: auto; display: block; }
 svg { width: 18px; height: 18px; flex: none; }
@@ -193,11 +189,12 @@ button { font: inherit; cursor: pointer; }
   background: var(--glass-surface);
   border: 1px solid var(--glass-edge);
   border-radius: var(--r-md);
-  backdrop-filter: var(--glass-filter);
-  -webkit-backdrop-filter: var(--glass-filter);
+  /* A large grid of simultaneous backdrop filters is expensive; gradients + bevel retain the glass look. */
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   box-shadow: var(--glass-shadow);
   padding: var(--sp-3);
-  transition: transform .35s cubic-bezier(.2, .7, .3, 1), border-color .35s, box-shadow .35s, background .35s;
+  transition: transform .22s ease-out, border-color .22s, box-shadow .22s, background .22s;
   overflow: hidden;
 }
 .card::before {
@@ -206,7 +203,7 @@ button { font: inherit; cursor: pointer; }
   pointer-events: none;
 }
 .card:hover, .card:focus-within {
-  transform: translateY(-6px);
+  transform: translateY(-3px);
   border-color: var(--border-strong);
   box-shadow: var(--glass-hover-shadow);
 }
@@ -222,7 +219,7 @@ button { font: inherit; cursor: pointer; }
 .btn svg { width: 18px; height: 18px; flex: none; }
 .btn-primary { background: var(--grad); color: #ffffff; box-shadow: 0 10px 30px -12px var(--glow-cyan); }
 .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 16px 40px -12px var(--glow-violet); color: #ffffff; }
-.btn-ghost { background: var(--surface); color: var(--text); border-color: var(--border-strong); backdrop-filter: blur(10px); }
+.btn-ghost { background: var(--glass-surface); color: var(--text); border-color: var(--border-strong); }
 .btn-ghost:hover { transform: translateY(-2px); border-color: var(--cyan); color: var(--cyan); }
 .btn-sm { padding: .55rem 1.05rem; font-size: .82rem; }
 .btn:active { transform: translateY(0) scale(.98); }
@@ -308,19 +305,16 @@ button { font: inherit; cursor: pointer; }
 .hero-visual { position: relative; display: grid; place-items: center; }
 .hero-logo {
   width: min(340px, 78%); border-radius: var(--r-lg); padding: 1.2rem;
-  animation: float 7s ease-in-out infinite;
 }
 .hero-logo img { width: 100%; }
-@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-14px); } }
 .hero-ring {
   position: absolute; width: min(430px, 92%); aspect-ratio: 1; border-radius: 50%;
-  border: 1px dashed rgba(168, 85, 247, .35); animation: spin 40s linear infinite;
+  border: 1px dashed rgba(168, 85, 247, .35);
 }
 .hero-ring::after {
   content: ""; position: absolute; top: -5px; left: 50%; width: 10px; height: 10px;
   border-radius: 50%; background: var(--violet); box-shadow: 0 0 16px var(--glow-violet);
 }
-@keyframes spin { to { transform: rotate(360deg); } }
 .hero-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: var(--sp-4); }
 .stat { text-align: center; padding: 1.1rem .6rem; }
 .stat b { display: block; font-family: var(--font-head); font-size: clamp(1.5rem, 3vw, 2.1rem); font-weight: 800; }
@@ -442,15 +436,12 @@ button { font: inherit; cursor: pointer; }
 .toast.hide { opacity: 0; transform: translateX(30px); transition: .3s; }
 
 .skeleton {
-  position: relative; overflow: hidden; background: var(--surface);
+  position: relative; overflow: hidden;
+  background: linear-gradient(135deg, var(--surface-2), var(--surface));
   border: 1px solid var(--border); border-radius: var(--r-md); min-height: 260px;
 }
-.skeleton::after {
-  content: ""; position: absolute; inset: 0;
-  background: linear-gradient(100deg, transparent 30%, rgba(148, 163, 184, .14) 50%, transparent 70%);
-  animation: shimmer 1.4s infinite;
-}
-@keyframes shimmer { to { transform: translateX(100%); } from { transform: translateX(-100%); } }
+/* Static loading placeholders avoid running a full-screen's worth of shimmer animations. */
+.skeleton::after { content: none; }
 
 .modal-backdrop {
   position: fixed; inset: 0; z-index: 250; background: rgba(3, 7, 15, .7);
@@ -521,9 +512,10 @@ button { font: inherit; cursor: pointer; }
 .notfound .code { font-family: var(--font-head); font-size: clamp(4rem, 16vw, 9rem); font-weight: 800; }
 
 /* ---------- 13. Reveal motion ---------- */
-[data-reveal] { opacity: 0; transform: translateY(26px); transition: opacity .7s cubic-bezier(.2, .7, .3, 1), transform .7s cubic-bezier(.2, .7, .3, 1); transition-delay: var(--d, 0s); }
+[data-reveal] { opacity: 0; transform: translateY(14px); transition: opacity .4s ease-out, transform .4s ease-out; transition-delay: var(--d, 0s); }
 [data-reveal].revealed { opacity: 1; transform: none; }
-.tilt { transform-style: preserve-3d; will-change: transform; }
+/* Avoid reserving a compositor layer for every card; only the hovered card is transformed. */
+.tilt { transform-style: flat; }
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
@@ -594,7 +586,7 @@ button { font: inherit; cursor: pointer; }
 }
 
 /* ---------- 16. Search, scroll progress, back-to-top, admin stats ---------- */
-#scrollProgress { position: fixed; top: 0; left: 0; height: 3px; width: 0; background: var(--grad-mix); z-index: 120; pointer-events: none; }
+#scrollProgress { position: fixed; top: 0; left: 0; height: 3px; width: 100%; transform: scaleX(0); transform-origin: left center; background: var(--grad-mix); z-index: 120; pointer-events: none; }
 #toTop { position: fixed; left: 1.2rem; bottom: 1.2rem; z-index: 90; opacity: 0; pointer-events: none; transform: translateY(8px); transition: opacity .3s, transform .3s; background: var(--bg-3); }
 #toTop.show { opacity: 1; pointer-events: auto; transform: none; }
 #toTop:hover { color: var(--violet); border-color: var(--violet); }
@@ -806,18 +798,22 @@ details.perm-edit summary { padding: .55rem 0; min-height: 44px; display: flex; 
 
 /* ---------- 24. Site-wide 3D glass finish ---------- */
 /* Glass is kept local and lightweight: no remote texture dependency. */
-.nav, .mobile-menu, .footer, .faq details, .admin-top, .cmd-box {
+.nav, .mobile-menu {
   background-image: var(--glass-sheen);
   border-color: var(--glass-edge);
   backdrop-filter: var(--glass-filter);
   -webkit-backdrop-filter: var(--glass-filter);
   box-shadow: var(--glass-shadow);
 }
+.footer, .faq details, .admin-top, .cmd-box {
+  background-image: var(--glass-sheen);
+  border-color: var(--glass-edge);
+  box-shadow: var(--glass-shadow);
+}
 .nav { background-color: var(--nav-bg); }
 .mobile-menu { background-color: var(--nav-bg); }
 .footer, .admin-top, .cmd-box { background-color: var(--glass-chrome); }
 .faq details { background-color: var(--surface); position: relative; }
-.cmd-box { background-color: var(--bg-3); position: relative; }
 .modal::after, .faq details::after, .cmd-box::after {
   content: ""; position: absolute; inset: 0; border-radius: inherit;
   box-shadow: var(--glass-bevel); pointer-events: none;
@@ -827,19 +823,21 @@ details.perm-edit summary { padding: .55rem 0; min-height: 44px; display: flex; 
 .glass3d[data-glass-context="video"],
 .glass[data-glass-context="video"],
 .card[data-glass-context="video"] {
-  --glass-filter: blur(28px) brightness(.84) saturate(1.4);
+  --glass-filter: blur(16px) brightness(.88) saturate(1.25);
   --glass-surface: linear-gradient(135deg, rgba(8,6,12,.78), rgba(8,6,12,.54)), var(--surface);
   --glass-edge: rgba(255,255,255,.27);
 }
+.card[data-glass-context="video"] { backdrop-filter: var(--glass-filter); -webkit-backdrop-filter: var(--glass-filter);
+}
 [data-theme="light"] :is(.glass3d, .glass, .card)[data-glass-context="video"] {
-  --glass-filter: blur(22px) brightness(.94) saturate(1.1);
+  --glass-filter: blur(12px) brightness(.96) saturate(1.05);
   --glass-surface: linear-gradient(135deg, rgba(255,255,255,.9), rgba(255,255,255,.75)), var(--surface);
   --glass-edge: rgba(23,18,31,.2);
 }
 
 @media (max-width: 720px) {
-  :is(.glass3d, .glass, .card, .nav, .mobile-menu, .footer, .modal, .faq details, .admin-top, .cmd-box) {
-    --glass-filter: blur(15px) brightness(.96) saturate(1.3);
+  :is(.glass3d, .glass, .nav, .mobile-menu, .modal) {
+    --glass-filter: blur(6px) brightness(.98) saturate(1.08);
   }
 }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {

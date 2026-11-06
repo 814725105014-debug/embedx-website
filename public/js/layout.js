@@ -1,7 +1,7 @@
 // EMBEDX — Shared chrome: navbar, mobile menu, footer, theme toggle.
 import { icon } from "./icons.js";
-import { initSearch } from "./search.js?v=20261106";
-import { getSiteSettings } from "./store.js?v=20261106-attached-college-logo";
+import { initSearch } from "./search.js?v=20261106-smooth-render";
+import { getSiteSettings } from "./store.js?v=20261106-smooth-render";
 
 const NAV = [
   ["Home", "/"],
@@ -68,10 +68,10 @@ function injectChrome() {
       <div class="footer-grid">
         <div class="footer-brand">
           <div class="footer-brand-lockup">
-            <img src="/assets/images/embedx-emblem.webp" alt="" width="48" height="48" loading="lazy" />
+            <img src="/assets/images/embedx-emblem.webp" alt="" width="48" height="48" loading="lazy" decoding="async" />
             <div><strong>EMBEDX</strong><span>Embedded Systems &amp; Automation Club</span></div>
           </div>
-          <div class="college-mark-lockup"><span class="college-logo-frame"><img class="college-mark" data-site-src="collegeLogoUrl" src="/assets/images/srm-trp-college-attached.png" alt="SRM TRP Engineering College logo" loading="lazy" /></span><span>SRM TRP Engineering College</span></div>
+          <div class="college-mark-lockup"><span class="college-logo-frame"><img class="college-mark" data-site-src="collegeLogoUrl" src="/assets/images/srm-trp-college-attached.png" alt="SRM TRP Engineering College logo" loading="lazy" decoding="async" /></span><span>SRM TRP Engineering College</span></div>
           <p class="muted footer-institution">Department of Electrical and Electronics Engineering (EEE)<br />SRM TRP Engineering College (Autonomous)<br />SRM Nagar, Samayapuram, Tiruchirappalli – 621 105.</p>
           <p class="chip chip-accent" style="margin-top:.4rem">INNOVATE • INTEGRATE • INSPIRE</p>
         </div>
@@ -130,13 +130,20 @@ function injectChrome() {
   mobile.addEventListener("click", (e) => {
     if (e.target.closest("a")) { mobile.classList.remove("open"); burger.setAttribute("aria-expanded", "false"); burger.innerHTML = icon("menu"); }
   });
+  let scrollFrame = 0;
   const onScroll = () => {
-    header.classList.toggle("scrolled", scrollY > 30);
-    const max = document.documentElement.scrollHeight - innerHeight;
-    prog.style.width = (max > 0 ? (scrollY / max) * 100 : 0) + "%";
-    toTop.classList.toggle("show", scrollY > 600);
+    if (scrollFrame) return;
+    scrollFrame = requestAnimationFrame(() => {
+      scrollFrame = 0;
+      header.classList.toggle("scrolled", scrollY > 30);
+      const max = document.documentElement.scrollHeight - innerHeight;
+      const progress = max > 0 ? Math.min(1, Math.max(0, scrollY / max)) : 0;
+      prog.style.transform = `scaleX(${progress})`;
+      toTop.classList.toggle("show", scrollY > 600);
+    });
   };
   addEventListener("scroll", onScroll, { passive: true });
+  addEventListener("resize", onScroll, { passive: true });
   onScroll();
   initSearch();
 
