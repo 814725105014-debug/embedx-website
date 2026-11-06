@@ -109,8 +109,8 @@ export const events = [
       institution: "SRM TRP Engineering College",
       location: "SRM Nagar, Samayapuram, Trichy – 621 105",
       phone: "0431-2908050",
-      email: "eee@srmtrpr.edu.in",
-      website: "www.trpengg.ac.in"
+      email: "hod.eee@trp.srmtrichy.edu.in",
+      website: "trp.srmtrichy.edu.in"
     }
   },
   {
