@@ -5,7 +5,7 @@ import { firebaseConfig, isConfigured, taskMail } from "./config.js?v=20261106-a
 import { toast } from "./ui.js?v=20261106-admin-controls";
 import { esc, asset } from "./render.js?v=20261106-admin-controls";
 import { announcements as starterAnnouncements } from "./data/announcements.js?v=20261106-admin-controls";
-import { events as starterEvents } from "./data/events.js?v=20261106-admin-controls";
+import { events as starterEvents } from "./data/events.js?v=20261106-event-forms";
 import { projects as starterProjects } from "./data/projects.js?v=20261106-admin-controls";
 import { team as starterTeam } from "./data/team.js?v=20261106-admin-controls";
 import { gallery as starterGallery } from "./data/gallery.js?v=20261106-admin-controls";
@@ -33,7 +33,7 @@ const OWNER_EMAIL = "814725105014@trp.srmtrichy.edu.in";
 const PAGES = {
   overview:      { h1: "Overview",       hint: "Live counts, your open tasks and access at a glance.", crud: false },
   announcements: { h1: "Announcements",  hint: "Published instantly to the home-page notice board (pinned first).", crud: true },
-  events:        { h1: "Events",         hint: "Create and update upcoming events, posters and details.", crud: true },
+  events:        { h1: "Events",         hint: "Edit event details and posters, then assign a managed registration form or leave it unassigned.", crud: true },
   projects:      { h1: "Projects",       hint: "Featured projects appear on the home page grid.", crud: true },
   team:          { h1: "Team",           hint: "Executive council & faculty — swap photos and edit details any time.", crud: true },
   gallery:       { h1: "Gallery",        hint: "Upload, replace or edit photos for the home-page gallery.", crud: true },
@@ -168,6 +168,8 @@ const SCHEMAS = {
       { k: "date", t: "text", label: "Date label" },
       { k: "venue", t: "text", label: "Venue" },
       { k: "registrationStatus", t: "text", label: "Registration status" },
+      { k: "registrationFormId", t: "event-form", full: true, label: "Registration form" },
+      { k: "registrationLink", t: "text", full: true, label: "External registration URL (optional)" },
       { k: "eligibility", t: "text", label: "Eligibility" },
       { k: "description", t: "textarea", label: "Description" },
       { k: "imageUrl", t: "image", label: "Poster image" },
@@ -175,10 +177,10 @@ const SCHEMAS = {
       { k: "featured", t: "check", label: "Featured" },
       { k: "order", t: "num", label: "Sort order" }
     ],
-    defaults: { isUpcoming: true, featured: false, order: 1, type: "Technical Workshop" },
+    defaults: { isUpcoming: true, featured: false, order: 1, type: "Technical Workshop", registrationFormId: "" },
     image: "imageUrl",
     title: (d) => d.title,
-    sub: (d) => `${d.type || ""} • ${d.date || ""} ${d.isUpcoming ? "• upcoming" : ""}`
+    sub: (d) => `${d.type || ""} • ${d.date || ""} ${d.isUpcoming ? "• upcoming" : ""} • ${d.registrationFormId ? "form assigned" : d.id === "embednova" ? "EMBEDNOVA form" : /^https:\/\//i.test(String(d.registrationLink || "")) && safeHttpsUrl(d.registrationLink) ? "external registration" : "unassigned"}`
   },
   projects: {
     label: "project",
@@ -679,11 +681,12 @@ async function renderForms() {
   region.innerHTML = `<div class="skeleton" style="min-height:180px"></div>`;
   try {
     const { db } = await sdk();
-    const [formSnap, settingSnap, joinSnap, enquirySnap] = await Promise.all([
+    const [formSnap, settingSnap, joinSnap, enquirySnap, eventSnap] = await Promise.all([
       dbMod.getDocs(dbMod.collection(db, "forms")),
       dbMod.getDoc(dbMod.doc(db, "site_settings", "forms")).catch(() => null),
       dbMod.getDocs(dbMod.collection(db, "members_applications")),
-      dbMod.getDocs(dbMod.collection(db, "contact_messages"))
+      dbMod.getDocs(dbMod.collection(db, "contact_messages")),
+      dbMod.getDocs(dbMod.collection(db, "events"))
     ]);
     const forms = formSnap.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => String(a.title).localeCompare(String(b.title)));
     const setting = settingSnap?.exists() ? settingSnap.data() : {};
@@ -691,6 +694,22 @@ async function renderForms() {
     const sheetState = setting.lastError ? "Needs attention" : sheetUrl ? (setting.syncEnabled === false ? "Paused" : "Connected") : "Not connected";
     const lastJoin = joinSnap.docs.map((d) => ({ id: d.id, ...d.data(), _collection: "members_applications" })).sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || ""))).slice(0, 5);
     const lastEnquiry = enquirySnap.docs.map((d) => ({ id: d.id, ...d.data(), _collection: "contact_messages" })).sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || ""))).slice(0, 5);
+    const events = eventSnap.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => String(a.title || a.id).localeCompare(String(b.title || b.id)));
+    const assignedFormId = (event) => event.registrationFormId || (event.id === "embednova" && forms.some((form) => form.id === "embednova") ? "embednova" : "");
+    const hasExternalRegistration = (event) => /^https:\/\//i.test(String(event.registrationLink || "")) && safeHttpsUrl(event.registrationLink);
+    const unassignedEventCount = events.filter((event) => !assignedFormId(event) && !hasExternalRegistration(event)).length;
+    const eventAssignmentRows = events.map((event) => {
+      const formId = assignedFormId(event);
+      const form = forms.find((item) => item.id === formId);
+      const externalRegistration = hasExternalRegistration(event);
+      const label = form ? `${form.title || form.id} · ${form.status || "draft"}` : formId ? `Missing form · ${formId}` : externalRegistration ? "External registration link" : "Unassigned";
+      const stateClass = formId ? (form ? "chip-accent" : "chip-warning") : externalRegistration ? "" : "chip-warning";
+      return `<article class="admin-event-assignment-row"><div><strong>${esc(event.title || event.id)}</strong><span class="muted">${esc(event.date || "")}</span></div><span class="chip ${stateClass}">${esc(label)}</span></article>`;
+    }).join("");
+    const formAssignmentText = (formId) => {
+      const attached = events.filter((event) => assignedFormId(event) === formId).map((event) => event.title || event.id);
+      return attached.length ? `Assigned to: ${attached.slice(0, 3).join(", ")}${attached.length > 3 ? ` and ${attached.length - 3} more` : ""}` : "Not assigned to any event";
+    };
     if (PAGE !== "forms" || !region.isConnected) return;
     region.innerHTML = `
       <section class="admin-sheet-status card ${sheetUrl && !setting.lastError ? "is-connected" : "is-pending"}" aria-label="Google Sheets response archive status">
@@ -701,10 +720,11 @@ async function renderForms() {
         </div>
         ${sheetUrl ? `<a class="btn btn-ghost btn-sm" href="${esc(sheetUrl)}" target="_blank" rel="noopener noreferrer">Open response sheet</a>` : ""}
       </section>
+      <section class="admin-event-assignment card"><div class="admin-event-assignment-head"><div><h2>Event registration forms</h2><p class="muted">${unassignedEventCount} event(s) have no registration form. Assign a dedicated form in Events → Edit; forms can be created and edited below. Unassigned events no longer open the EMBEDNOVA form by mistake.</p></div><a class="btn btn-ghost btn-sm" href="/admin/events">Manage events</a></div><div class="admin-event-assignment-list">${eventAssignmentRows || `<p class="muted">No events are published yet.</p>`}</div></section>
       <section class="admin-form-toolbar"><div><h2>Managed forms</h2><p class="muted">Open, close, seed, and share forms. Closed forms reject new responses. Custom forms support star ratings and exportable responses. Responses auto-refresh every 30 seconds.</p></div><div class="admin-form-toolbar-actions"><button class="btn btn-ghost btn-sm" id="refreshForms">Refresh</button>${can("forms") ? `<button class="btn btn-ghost btn-sm" id="seedForms">Seed standard forms</button><button class="btn btn-primary btn-sm" id="newManagedForm">+ Create form</button>` : ""}</div></section>
       <div class="admin-managed-forms">${forms.length ? forms.map((form) => `
         <article class="admin-managed-form card">
-          <div class="admin-managed-form-copy"><div class="admin-form-title-line"><strong>${esc(form.title || form.id)}</strong><span class="chip ${form.status === "open" ? "chip-accent" : ""}">${esc(form.status || "draft")}</span>${form.builtin ? `<span class="chip">Built in</span>` : ""}</div><p class="muted">${esc(form.description || "")}</p><small>${(form.fields || []).length} field(s) · ${esc(form.kind || "custom")}</small></div>
+          <div class="admin-managed-form-copy"><div class="admin-form-title-line"><strong>${esc(form.title || form.id)}</strong><span class="chip ${form.status === "open" ? "chip-accent" : ""}">${esc(form.status || "draft")}</span>${form.builtin ? `<span class="chip">Built in</span>` : ""}</div><p class="muted">${esc(form.description || "")}</p><small>${(form.fields || []).length} field(s) · ${esc(form.kind || "custom")}</small><p class="muted form-assignment-note">${esc(formAssignmentText(form.id))}</p></div>
           <div class="admin-row-actions">
             <button class="btn btn-ghost btn-sm" data-form-responses="${esc(form.id)}">View responses</button>
             ${can("forms") ? `<button class="btn btn-ghost btn-sm" data-form-edit="${esc(form.id)}">${form.builtin ? "Edit settings" : "Edit"}</button><button class="btn btn-ghost btn-sm" data-form-toggle="${esc(form.id)}">${form.status === "open" ? "Close" : "Open"}</button>${!form.builtin ? `<button class="btn btn-danger btn-sm" data-form-delete="${esc(form.id)}">Delete</button>` : ""}` : ""}
@@ -828,23 +848,34 @@ async function toggleManagedForm(form) {
 }
 
 function copyManagedFormLink(id, form) {
-  const url = form?.kind === "join" ? `${location.origin}/pages/join.html` : form?.kind === "enquiry" ? `${location.origin}/pages/contact.html` : form?.kind === "registration" ? `${location.origin}/pages/event-detail.html?id=embednova#register` : `${location.origin}/pages/form.html?form=${encodeURIComponent(id)}`;
+  const url = form?.kind === "join" ? `${location.origin}/pages/join.html` : form?.kind === "enquiry" ? `${location.origin}/pages/contact.html` : form?.kind === "registration" ? `${location.origin}/pages/form.html?form=${encodeURIComponent(id)}&event=embednova&eventTitle=EMBEDNOVA` : `${location.origin}/pages/form.html?form=${encodeURIComponent(id)}`;
   if (navigator.clipboard?.writeText) navigator.clipboard.writeText(url).then(() => toast("Public form link copied.", "ok")).catch(() => window.prompt("Copy this public form link:", url));
   else window.prompt("Copy this public form link:", url);
 }
 
 async function deleteManagedForm(formId) {
-  if (!can("forms") || !confirm("Delete this form and all of its stored responses? This cannot be undone.")) return;
+  if (!can("forms")) return;
   try {
     const { db } = await sdk();
-    const snap = await dbMod.getDocs(dbMod.query(dbMod.collection(db, "form_responses"), dbMod.where("formId", "==", formId)));
-    for (let i = 0; i < snap.docs.length; i += 400) {
+    const [responseSnap, eventSnap] = await Promise.all([
+      dbMod.getDocs(dbMod.query(dbMod.collection(db, "form_responses"), dbMod.where("formId", "==", formId))),
+      dbMod.getDocs(dbMod.query(dbMod.collection(db, "events"), dbMod.where("registrationFormId", "==", formId)))
+    ]);
+    if (eventSnap.size && !can("events")) { toast("This form is assigned to an event. Ask an Events admin to unassign it before deleting.", "err"); return; }
+    const warning = `Delete this form, its ${responseSnap.size} response(s), and clear its assignment from ${eventSnap.size} event(s)? This cannot be undone.`;
+    if (!confirm(warning)) return;
+    for (let i = 0; i < eventSnap.docs.length; i += 400) {
       const batch = dbMod.writeBatch(db);
-      snap.docs.slice(i, i + 400).forEach((doc) => batch.delete(doc.ref));
+      eventSnap.docs.slice(i, i + 400).forEach((doc) => batch.update(doc.ref, { registrationFormId: "" }));
+      await batch.commit();
+    }
+    for (let i = 0; i < responseSnap.docs.length; i += 400) {
+      const batch = dbMod.writeBatch(db);
+      responseSnap.docs.slice(i, i + 400).forEach((doc) => batch.delete(doc.ref));
       await batch.commit();
     }
     await dbMod.deleteDoc(dbMod.doc(db, "forms", formId));
-    toast("Form and its responses deleted.", "ok");
+    toast("Form deleted; event assignments cleared and responses removed.", "ok");
     await renderForms();
   } catch (err) { toast(`Could not delete form: ${err.message}`, "err"); }
 }
@@ -857,10 +888,18 @@ async function showManagedResponses(form) {
     const { db } = await sdk();
     let rows = [];
     let collectionName = "form_responses";
-    if (form.kind === "join" || form.kind === "registration") {
+    if (form.kind === "join") {
       collectionName = "members_applications";
       const snap = await dbMod.getDocs(dbMod.collection(db, collectionName));
-      rows = snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((d) => form.kind === "registration" ? (d.formId === "embednova" || (!d.formId && String(d.interest || "").includes("EMBEDNOVA Registration"))) : (d.formId === "join" || (!d.formId && !String(d.interest || "").includes("EMBEDNOVA Registration"))));
+      rows = snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((d) => d.formId === "join" || (!d.formId && !String(d.interest || "").includes("EMBEDNOVA Registration")));
+    } else if (form.kind === "registration") {
+      const [legacySnap, responseSnap] = await Promise.all([
+        dbMod.getDocs(dbMod.collection(db, "members_applications")),
+        dbMod.getDocs(dbMod.query(dbMod.collection(db, "form_responses"), dbMod.where("formId", "==", form.id)))
+      ]);
+      const legacyRows = legacySnap.docs.map((d) => ({ id: d.id, ...d.data(), _collection: "members_applications" })).filter((d) => d.formId === "embednova" || (!d.formId && String(d.interest || "").includes("EMBEDNOVA Registration")));
+      const responseRows = responseSnap.docs.map((d) => ({ id: d.id, ...d.data(), _collection: "form_responses" }));
+      rows = [...legacyRows, ...responseRows];
     } else if (form.kind === "enquiry") {
       collectionName = "contact_messages";
       const snap = await dbMod.getDocs(dbMod.collection(db, collectionName));
@@ -873,7 +912,7 @@ async function showManagedResponses(form) {
     const ratingKeys = (form.fields || []).filter((field) => field.type === "stars").map((field) => field.key);
     const ratings = rows.flatMap((row) => ratingKeys.map((key) => Number((row.answers || {})[key])).filter((value) => Number.isFinite(value) && value >= 1 && value <= 5));
     const ratingSummary = ratings.length ? ` · Average rating ${ (ratings.reduce((sum, value) => sum + value, 0) / ratings.length).toFixed(1) }/5 (${ratings.length} ratings)` : "";
-    mount.innerHTML = `<section class="admin-form-responses card"><div class="admin-form-toolbar"><div><h2>Responses — ${esc(form.title || form.id)}</h2><p class="muted">${rows.length} response(s)${ratingSummary}. Export opens as CSV in spreadsheet software.</p></div><div><button class="btn btn-ghost btn-sm" id="exportFormResponses">Export CSV</button><button class="btn btn-ghost btn-sm" id="closeFormResponses">Close</button></div></div>${rows.length ? `<div class="admin-response-list">${rows.map((row) => { const answers = row.answers || {}; return `<article class="admin-response-card"><div><strong>${esc(row.name || answers.name || row.email || answers.email || "Response")}</strong><span class="muted">${esc(row.email || answers.email || "")} · ${esc((row.submittedAt || row.createdAt || "").slice(0, 19).replace("T", " "))}</span><p>${esc(row.message || row.subject || answers.message || JSON.stringify(answers))}</p></div><button class="btn btn-danger btn-sm" data-response-delete="${esc(row.id)}" data-response-collection="${collectionName}">Delete</button></article>`; }).join("")}</div>` : `<p class="muted">No responses yet.</p>`}</section>`;
+    mount.innerHTML = `<section class="admin-form-responses card"><div class="admin-form-toolbar"><div><h2>Responses — ${esc(form.title || form.id)}</h2><p class="muted">${rows.length} response(s)${ratingSummary}. Export opens as CSV in spreadsheet software.</p></div><div><button class="btn btn-ghost btn-sm" id="exportFormResponses">Export CSV</button><button class="btn btn-ghost btn-sm" id="closeFormResponses">Close</button></div></div>${rows.length ? `<div class="admin-response-list">${rows.map((row) => { const answers = row.answers || {}; return `<article class="admin-response-card"><div><strong>${esc(row.name || answers.name || row.email || answers.email || "Response")}</strong><span class="muted">${esc(row.email || answers.email || "")} · ${esc((row.submittedAt || row.createdAt || "").slice(0, 19).replace("T", " "))}</span><p>${esc(row.message || row.subject || answers.message || JSON.stringify(answers))}</p></div><button class="btn btn-danger btn-sm" data-response-delete="${esc(row.id)}" data-response-collection="${row._collection || collectionName}">Delete</button></article>`; }).join("")}</div>` : `<p class="muted">No responses yet.</p>`}</section>`;
     mount.querySelector("#closeFormResponses").addEventListener("click", () => { mount.innerHTML = ""; });
     mount.querySelector("#exportFormResponses").addEventListener("click", () => exportCsv(`embedx-${form.id}-responses.csv`, rows));
     mount.querySelectorAll("[data-response-delete]").forEach((button) => button.addEventListener("click", async () => {
@@ -1055,10 +1094,22 @@ function renderList(sec) {
 }
 
 /* ---------------- form (DOM-built: values can never break markup) ---------------- */
+async function eventRegistrationFormOptions(selectedId = "") {
+  let forms = [];
+  try {
+    const { db } = await sdk();
+    const snap = await dbMod.getDocs(dbMod.collection(db, "forms"));
+    forms = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })).sort((a, b) => String(a.title || a.id).localeCompare(String(b.title || b.id)));
+  } catch (err) { console.warn("Could not load registration form choices", err); }
+  const options = [{ value: "", label: "Unassigned — no registration form" }, ...forms.map((form) => ({ value: form.id, label: `${form.title || form.id} · ${form.status || "draft"}` }))];
+  if (selectedId && !forms.some((form) => form.id === selectedId)) options.push({ value: selectedId, label: `Missing form (${selectedId}) — choose another` });
+  return options;
+}
+
 function buildField(f, v) {
   const wrap = document.createElement("div");
   const id = `f-${f.k}`;
-  const full = ["textarea", "list", "check", "image"].includes(f.t);
+  const full = f.full || ["textarea", "list", "check", "image"].includes(f.t);
   wrap.className = "field" + (full ? " full" : "");
   if (f.t === "check") {
     const label = document.createElement("label");
@@ -1077,7 +1128,7 @@ function buildField(f, v) {
   if (f.t === "textarea" || f.t === "list") {
     input = document.createElement("textarea"); input.value = v ?? "";
     if (f.t === "list") input.placeholder = "Enter one item per line";
-  } else if (f.t === "select") {
+  } else if (f.t === "select" || f.t === "event-form") {
     input = document.createElement("select");
     (f.opts || []).forEach((o) => {
       const value = typeof o === "object" ? o.value : o;
@@ -1129,7 +1180,7 @@ function buildField(f, v) {
   return wrap;
 }
 
-function openForm(id = null) {
+async function openForm(id = null) {
   const sec = PAGE;
   const schema = SCHEMAS[sec];
   editingId = id;
@@ -1152,10 +1203,22 @@ function openForm(id = null) {
     if (!id) data.order = Math.max(0, ...items.map((row) => Number(row.order) || 0)) + 1;
     else if (data.order == null || data.order === "") data.order = Math.max(1, items.findIndex((row) => row.id === id) + 1);
   }
+  if (sec === "events" && !data.registrationFormId && data.id === "embednova") data.registrationFormId = "embednova";
+  let fields = schema.fields;
+  if (sec === "events") {
+    const choices = await eventRegistrationFormOptions(data.registrationFormId || "");
+    if (PAGE !== sec) return;
+    fields = schema.fields.map((field) => field.k === "registrationFormId" ? { ...field, opts: choices } : field);
+  }
   $("#formModalTitle").textContent = (id ? "Edit " : "New ") + schema.label;
   const host = $("#entityFields");
   host.innerHTML = "";
-  schema.fields.forEach((f) => host.appendChild(buildField(f, data?.[f.k] ?? (f.t === "check" ? false : ""))));
+  fields.forEach((f) => host.appendChild(buildField(f, data?.[f.k] ?? (f.t === "check" ? false : ""))));
+  if (sec === "events") {
+    const help = document.createElement("p"); help.className = "muted full event-registration-help";
+    help.innerHTML = `Choose <b>Unassigned</b> to hide registration, select a form for this event, or <a href="/admin/forms">create/edit forms in Forms &amp; responses</a>.`;
+    host.appendChild(help);
+  }
 
   $("#entityFields").querySelectorAll("input[type=file][data-imgfield]").forEach((inp) => {
     inp.addEventListener("change", () => {

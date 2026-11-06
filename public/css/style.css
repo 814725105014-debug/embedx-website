@@ -336,6 +336,9 @@ button { font: inherit; cursor: pointer; }
 @media (max-width: 900px) { .event-featured { grid-template-columns: 1fr; } }
 .event-poster { border-radius: var(--r-md); overflow: hidden; border: 1px solid var(--border); box-shadow: var(--shadow); }
 .event-poster img { width: 100%; }
+.event-poster-fallback { display:grid; place-content:center; gap:.55rem; min-height:280px; padding:2rem; text-align:center; color:var(--text-muted); background:linear-gradient(135deg,rgba(168,85,247,.12),rgba(0,212,255,.06)); }
+.event-poster-fallback strong { color:var(--text); font-family:var(--font-head); font-size:1.25rem; }
+.event-poster-fallback span { font-size:.88rem; }
 .event-meta { display: grid; gap: .55rem; margin: var(--sp-2) 0; }
 .event-meta li { display: flex; gap: .6rem; align-items: flex-start; color: var(--text-muted); font-size: .94rem; }
 .event-meta svg { width: 17px; height: 17px; color: var(--cyan); flex: none; margin-top: .22rem; }

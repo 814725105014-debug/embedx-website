@@ -215,37 +215,6 @@ wire("contactForm", {
   successMsg: "Message sent! The EMBEDX team will get back to you soon."
 });
 
-wire("registerForm", {
-  formKey: "embednova",
-  build: {
-    validate: (d) => {
-      const e = {};
-      const c = {
-        name: req(d, "name", "Participant name", 80),
-        institution: req(d, "institution", "Institution name", 120),
-        dept_year: req(d, "dept_year", "Department & year", 120),
-        email: validators.required(d.email || "", "Email") || validators.email(d.email || ""),
-        mobile: validators.required(d.mobile || "", "Mobile number") || validators.phone(d.mobile || "")
-      };
-      if (!d.tracks || (Array.isArray(d.tracks) ? !d.tracks.length : true)) e.tracks = "Select at least one challenge track.";
-      for (const [k, v] of Object.entries(c)) if (v) e[k] = v;
-      return e;
-    },
-    payload: (d) => ({
-      formId: "embednova",
-      name: d.name.trim(),
-      email: d.email.trim(),
-      regNo: "",
-      department: d.dept_year.trim(),
-      year: "",
-      interest: `EMBEDNOVA Registration: ${[].concat(d.tracks || []).join(", ")}`,
-      message: `Institution: ${d.institution} | Mobile: ${d.mobile}`,
-      createdAt: new Date().toISOString()
-    })
-  },
-  successMsg: "Registration submitted! Watch your email for track schedules. 🏆"
-});
-
 function renderPublicField(field) {
   const wrapper = document.createElement(field.type === "checkboxes" || field.type === "stars" ? "fieldset" : "div");
   wrapper.className = "field";
@@ -314,14 +283,24 @@ function renderPublicField(field) {
 async function mountPublicForm() {
   const mount = document.getElementById("publicFormMount");
   if (!mount) return;
-  const formId = new URLSearchParams(location.search).get("form") || mount.dataset.formKey || "";
-  if (!/^[A-Za-z0-9_-]{1,120}$/.test(formId)) { mount.textContent = "This form link is invalid."; return; }
+  const query = new URLSearchParams(location.search);
+  const formId = query.get("form") || mount.dataset.formKey || "";
+  const eventId = query.get("event") || "";
+  const eventTitle = (query.get("eventTitle") || "").trim().slice(0, 100);
+  if (!/^[A-Za-z0-9_-]{1,120}$/.test(formId) || (eventId && !/^[A-Za-z0-9_-]{1,120}$/.test(eventId))) { mount.textContent = "This form link is invalid."; return; }
   mount.innerHTML = `<p class="muted">Loading form…</p>`;
   try {
     const definition = await getFormDefinition(formId);
     if (!definition) { mount.innerHTML = `<div class="card"><h2>Form unavailable</h2><p class="muted">This form may have been removed or is not published.</p></div>`; return; }
-    document.title = `${definition.title || "Form"} | EMBEDX`;
-    if (definition.status !== "open") { mount.innerHTML = `<div class="card form-closed-notice"><h2>This form is closed</h2><p class="muted">The response period has ended. Contact EMBEDX if you need assistance.</p></div>`; return; }
+    document.title = `${eventTitle ? `${eventTitle} — ` : ""}${definition.title || "Form"} | EMBEDX`;
+    if (definition.status !== "open") {
+      const closed = document.createElement("div"); closed.className = "card form-closed-notice";
+      const heading = document.createElement("h2"); heading.textContent = "This form is closed";
+      const message = document.createElement("p"); message.className = "muted"; message.textContent = `${eventTitle ? `Registration for ${eventTitle} is currently closed. ` : "The response period has ended. "}Contact EMBEDX if you need assistance.`;
+      closed.append(heading, message);
+      if (eventId) { const back = document.createElement("a"); back.className = "btn btn-ghost"; back.href = `/pages/event-detail.html?id=${encodeURIComponent(eventId)}`; back.textContent = "Back to event"; closed.appendChild(back); }
+      mount.replaceChildren(closed); return;
+    }
     const fields = Array.isArray(definition.fields) ? definition.fields.slice(0, 25).filter((field) => field && /^[a-z0-9_]{1,60}$/i.test(field.key || "") && field.label) : [];
     if (!fields.length) { mount.innerHTML = `<div class="card"><h2>Form is not ready</h2><p class="muted">The administrator has not published any questions yet.</p></div>`; return; }
     const card = document.createElement("section"); card.className = "card public-custom-form";
@@ -336,7 +315,9 @@ async function mountPublicForm() {
     honey.append(honeyLabel, honeyInput);
     const submitWrap = document.createElement("div"); submitWrap.className = "full";
     const submitButton = document.createElement("button"); submitButton.type = "submit"; submitButton.className = "btn btn-primary"; submitButton.textContent = "Submit response";
-    submitWrap.appendChild(submitButton); grid.append(honey, submitWrap); form.appendChild(grid); card.append(title, description, form); mount.replaceChildren(card);
+    submitWrap.appendChild(submitButton); grid.append(honey, submitWrap); form.appendChild(grid); card.append(title, description);
+    if (eventTitle) { const context = document.createElement("p"); context.className = "event-form-context"; context.textContent = `Registration for ${eventTitle}`; card.appendChild(context); }
+    card.appendChild(form); mount.replaceChildren(card);
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
       if (form.dataset.sending === "1") return;
@@ -354,12 +335,20 @@ async function mountPublicForm() {
         else if (field.type === "stars") answers[field.key] = Number(selected.find((el) => el.checked)?.value || 0);
         else answers[field.key] = (new FormData(form).get(field.key) || "").toString().trim().slice(0, field.type === "textarea" ? 2000 : 500);
       });
+      if (eventId) { answers._eventId = eventId; if (eventTitle) answers._eventTitle = eventTitle; }
       if (rateLimited(`custom-${formId}`)) { toast("Too many submissions from this device. Please try again later.", "err"); return; }
       form.dataset.sending = "1"; submitButton.disabled = true; submitButton.textContent = "Submitting…";
       try {
-        await submitFormResponse({ formId, formTitle: String(definition.title || "Form").slice(0, 160), answers, submittedAt: new Date().toISOString() });
+        const responseTitle = `${eventTitle ? `${eventTitle} — ` : ""}${definition.title || "Form"}`.slice(0, 160);
+        await submitFormResponse({ formId, formTitle: responseTitle, answers, submittedAt: new Date().toISOString() });
         toast("Your response was received. Thank you!", "ok");
-        card.innerHTML = `<div class="success-state"><span class="success-icon" aria-hidden="true">✓</span><h2>Response received</h2><p class="muted">Thank you for sharing your response with EMBEDX.</p></div>`;
+        const success = document.createElement("div"); success.className = "success-state";
+        const icon = document.createElement("span"); icon.className = "success-icon"; icon.setAttribute("aria-hidden", "true"); icon.textContent = "✓";
+        const heading = document.createElement("h2"); heading.textContent = "Response received";
+        const message = document.createElement("p"); message.className = "muted"; message.textContent = eventTitle ? `Your response for ${eventTitle} was received. Thank you!` : "Thank you for sharing your response with EMBEDX.";
+        success.append(icon, heading, message);
+        if (eventId) { const back = document.createElement("a"); back.className = "btn btn-ghost"; back.href = `/pages/event-detail.html?id=${encodeURIComponent(eventId)}`; back.textContent = "Back to event"; success.appendChild(back); }
+        card.replaceChildren(success);
       } catch (err) { console.error(err); toast("We could not submit your response. Please retry or contact EMBEDX.", "err"); submitButton.disabled = false; submitButton.textContent = "Submit response"; }
       finally { form.dataset.sending = "0"; }
     });

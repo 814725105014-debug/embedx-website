@@ -141,6 +141,8 @@ per-admin section permissions. Navigation and URLs work without a full page relo
 
 Owners can also open **Website settings** in Admin to edit the public college logo, official portal URL, phone, email, and LinkedIn/Instagram/Facebook links. These values are read publicly by the shared footer, home-page portal card, and Contact page; updates appear after a page reload. Assign the `site` permission to a trusted admin if they should be able to edit these values.
 
+Event registrations are assigned per event under **Events → Edit → Registration form**. Choose an existing form or leave the event unassigned; create custom event-specific forms under **Forms & responses → Create form**. The Forms page shows both events without an assigned form and forms not assigned to any event. Deleting a custom form clears its event assignments and removes its stored responses. Built-in Join/Enquiry schemas remain protected; use custom forms for event-specific questions.
+
 ### Creating an admin (one click)
 
 1. Owner opens **Admins & roles**, enters the college email, name, role preset,
