@@ -250,22 +250,43 @@ function renderPublicField(field) {
   const wrapper = document.createElement(field.type === "checkboxes" || field.type === "stars" ? "fieldset" : "div");
   wrapper.className = "field";
   if (field.type === "checkboxes" || field.type === "stars") {
-    wrapper.classList.add("full");
-    wrapper.style.cssText = "border:1px solid var(--border);border-radius:var(--r-sm);padding:1rem";
+    wrapper.classList.add("full", field.type === "stars" ? "public-rating-field" : "public-checks-field");
+    wrapper.setAttribute("aria-required", String(!!field.required));
   }
   const label = document.createElement(field.type === "checkboxes" || field.type === "stars" ? "legend" : "label");
   label.textContent = `${field.label || "Question"}${field.required ? " *" : ""}`;
   wrapper.appendChild(label);
   if (field.type === "stars") {
     const rating = document.createElement("div"); rating.className = "star-rating"; rating.setAttribute("role", "radiogroup"); rating.setAttribute("aria-label", field.label || "Star rating");
+    const hint = document.createElement("span"); hint.className = "rating-guidance"; hint.id = `rating-help-${field.key}`; hint.textContent = "Choose 1–5 stars"; rating.setAttribute("aria-describedby", hint.id);
+    const options = [];
+    const paintRating = (value) => options.forEach((option) => option.classList.toggle("is-filled", Number(option.dataset.value) <= Number(value || 0)));
     for (let value = 1; value <= 5; value++) {
-      const option = document.createElement("label"); option.className = "star-rating-option";
-      const input = document.createElement("input"); input.type = "radio"; input.name = field.key; input.value = String(value); input.required = !!field.required && value === 1;
+      const option = document.createElement("label"); option.className = "star-rating-option"; option.dataset.value = String(value); option.title = `${value} star${value === 1 ? "" : "s"}`;
+      const input = document.createElement("input"); input.type = "radio"; input.name = field.key; input.value = String(value); input.required = !!field.required && value === 1; input.setAttribute("aria-label", option.title);
       const visual = document.createElement("span"); visual.textContent = "★"; visual.setAttribute("aria-hidden", "true");
-      const sr = document.createElement("span"); sr.className = "sr-only"; sr.textContent = `${value} star${value === 1 ? "" : "s"}`;
-      option.append(input, visual, sr); rating.appendChild(option);
+      const sr = document.createElement("span"); sr.className = "sr-only"; sr.textContent = option.title;
+      option.append(input, visual, sr); rating.appendChild(option); options.push(option);
     }
-    wrapper.appendChild(rating);
+    rating.addEventListener("change", (event) => {
+      if (event.target.matches("input[type=radio]")) { paintRating(event.target.value); hint.textContent = `${event.target.value} out of 5`; }
+    });
+    rating.addEventListener("pointerover", (event) => {
+      const option = event.target.closest(".star-rating-option");
+      if (option) { paintRating(option.dataset.value); hint.textContent = `${option.dataset.value} out of 5`; }
+    });
+    rating.addEventListener("pointerleave", () => {
+      const selected = rating.querySelector("input:checked"); paintRating(selected?.value); hint.textContent = selected ? `${selected.value} out of 5` : "Choose 1–5 stars";
+    });
+    rating.addEventListener("focusin", (event) => {
+      const option = event.target.closest(".star-rating-option");
+      if (option) { paintRating(option.dataset.value); hint.textContent = `${option.dataset.value} out of 5`; }
+    });
+    rating.addEventListener("focusout", (event) => {
+      if (rating.contains(event.relatedTarget)) return;
+      const selected = rating.querySelector("input:checked"); paintRating(selected?.value); hint.textContent = selected ? `${selected.value} out of 5` : "Choose 1–5 stars";
+    });
+    const control = document.createElement("div"); control.className = "star-rating-control"; control.append(rating, hint); wrapper.appendChild(control);
   } else if (field.type === "checkboxes") {
     const choices = document.createElement("div"); choices.className = "checks";
     (field.options || []).forEach((choice, index) => {

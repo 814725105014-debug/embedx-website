@@ -665,6 +665,13 @@ function siteSettingField(name, label, value, placeholder, type) {
 }
 
 /* ---------------- forms, responses, and sheet status ---------------- */
+function safeSpreadsheetUrl(value) {
+  try {
+    const url = new URL(String(value || ""));
+    return url.protocol === "https:" && url.hostname === "docs.google.com" && url.pathname.startsWith("/spreadsheets/") ? url.href : "";
+  } catch { return ""; }
+}
+
 async function renderForms() {
   if (formsRefreshTimer) { clearInterval(formsRefreshTimer); formsRefreshTimer = null; }
   const region = $("#pageRegion");
@@ -680,13 +687,19 @@ async function renderForms() {
     ]);
     const forms = formSnap.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => String(a.title).localeCompare(String(b.title)));
     const setting = settingSnap?.exists() ? settingSnap.data() : {};
+    const sheetUrl = safeSpreadsheetUrl(setting.spreadsheetUrl);
+    const sheetState = setting.lastError ? "Needs attention" : sheetUrl ? (setting.syncEnabled === false ? "Paused" : "Connected") : "Not connected";
     const lastJoin = joinSnap.docs.map((d) => ({ id: d.id, ...d.data(), _collection: "members_applications" })).sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || ""))).slice(0, 5);
     const lastEnquiry = enquirySnap.docs.map((d) => ({ id: d.id, ...d.data(), _collection: "contact_messages" })).sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || ""))).slice(0, 5);
     if (PAGE !== "forms" || !region.isConnected) return;
     region.innerHTML = `
-      <section class="admin-sheet-status card">
-        <div><strong>Google Sheets response archive</strong><p class="muted">${setting.lastError ? `Last sync error: ${esc(setting.lastError)}` : setting.lastSyncedAt ? `Last synced ${esc(setting.lastSyncedAt)}` : "Set up the owner Apps Script once to auto-create a spreadsheet and sync every five minutes."}</p></div>
-        ${setting.spreadsheetUrl ? `<a class="btn btn-ghost btn-sm" href="${esc(setting.spreadsheetUrl)}" target="_blank" rel="noopener noreferrer">Open response sheet</a>` : `<span class="chip">Not connected yet</span>`}
+      <section class="admin-sheet-status card ${sheetUrl && !setting.lastError ? "is-connected" : "is-pending"}" aria-label="Google Sheets response archive status">
+        <div class="admin-sheet-status-main">
+          <div class="admin-sheet-status-title"><strong>Google Sheets response archive</strong><span class="chip ${sheetUrl && !setting.lastError ? "chip-accent" : ""}">${esc(sheetState)}</span></div>
+          <p class="muted">${setting.lastError ? `Last sync error: ${esc(String(setting.lastError).slice(0, 500))}` : setting.lastSyncedAt ? `Last synced ${esc(setting.lastSyncedAt)}` : sheetUrl ? "Spreadsheet is linked; waiting for the first successful sync." : "No spreadsheet is linked yet. The owner must authorize the one-time Apps Script setup below."}</p>
+          ${sheetUrl ? "" : role === "owner" ? `<div class="admin-sheet-setup"><strong>One-time owner setup</strong><ol><li>Open a standalone Apps Script project and copy the bridge source and manifest.</li><li>Run <code>setupEmbedxSheets()</code> as the owner and approve the requested Google permissions.</li><li>Return here and refresh; the sheet link and five-minute sync health will appear automatically.</li></ol><div class="admin-sheet-links"><a class="btn btn-ghost btn-sm" href="https://script.google.com/home/start" target="_blank" rel="noopener noreferrer">Open Apps Script</a><a class="btn btn-ghost btn-sm" href="https://github.com/814725105014-debug/embedx-website/blob/main/backend-bundle/appsscript/forms-sync.gs" target="_blank" rel="noopener noreferrer">Bridge source</a><a class="btn btn-ghost btn-sm" href="https://github.com/814725105014-debug/embedx-website/blob/main/backend-bundle/appsscript/appsscript.json" target="_blank" rel="noopener noreferrer">Manifest</a></div></div>` : `<p class="muted">Ask the owner to complete the Apps Script setup and authorize the sync.</p>`}
+        </div>
+        ${sheetUrl ? `<a class="btn btn-ghost btn-sm" href="${esc(sheetUrl)}" target="_blank" rel="noopener noreferrer">Open response sheet</a>` : ""}
       </section>
       <section class="admin-form-toolbar"><div><h2>Managed forms</h2><p class="muted">Open, close, seed, and share forms. Closed forms reject new responses. Custom forms support star ratings and exportable responses. Responses auto-refresh every 30 seconds.</p></div><div class="admin-form-toolbar-actions"><button class="btn btn-ghost btn-sm" id="refreshForms">Refresh</button>${can("forms") ? `<button class="btn btn-ghost btn-sm" id="seedForms">Seed standard forms</button><button class="btn btn-primary btn-sm" id="newManagedForm">+ Create form</button>` : ""}</div></section>
       <div class="admin-managed-forms">${forms.length ? forms.map((form) => `
