@@ -11,6 +11,10 @@ export const firebaseConfig = {
 
 export const isConfigured = Boolean(firebaseConfig.apiKey && firebaseConfig.projectId);
 
-// Task assignment emails stay disabled until the old public-token deployment is
-// replaced with the Firebase-ID-token version in backend-bundle/appsscript/task-mail.gs.
-export const taskMail = { url: "" };
+// Set only the /exec URL from the restricted, user-executed official-mail deployment.
+// OAuth tokens and Google credentials never belong in website config.
+const EMBEDX_MAIL_WEB_APP_URL = "";
+// Task notices retain a separate owner-executed endpoint, protected by Firebase ID-token checks.
+const EMBEDX_TASK_MAIL_WEB_APP_URL = "";
+export const mailWorkspace = { url: EMBEDX_MAIL_WEB_APP_URL };
+export const taskMail = { url: EMBEDX_TASK_MAIL_WEB_APP_URL };

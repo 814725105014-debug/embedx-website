@@ -1,7 +1,7 @@
 // EMBEDX — Admin portal: multi-page, role-based CMS.
 // One page per section (/admin/, /admin/events, /admin/admins, …) sharing this module.
 // Real security lives in firestore.rules / storage.rules (roles from `admin_roles` collection).
-import { firebaseConfig, isConfigured, taskMail } from "./config.js?v=20261106-admin-controls";
+import { firebaseConfig, isConfigured, mailWorkspace, taskMail } from "./config.js?v=20261106-mail-workspace";
 import { toast } from "./ui.js?v=20261106-cursor-animation";
 import { esc, asset } from "./render.js?v=20261106-admin-controls";
 import { announcements as starterAnnouncements } from "./data/announcements.js?v=20261106-admin-controls";
@@ -12,7 +12,7 @@ import { gallery as starterGallery } from "./data/gallery.js?v=20261106-admin-co
 import { resources as starterResources } from "./data/resources.js?v=20261106-admin-controls";
 import { achievements as starterAchievements } from "./data/achievements.js?v=20261106-admin-controls";
 import { forms as starterForms } from "./data/forms.js?v=20261106-admin-controls";
-import { DEFAULT_SITE_SETTINGS, getSiteSettings, normalizeSiteSettings } from "./store.js?v=20261106-college-logo-mobile";
+import { DEFAULT_SITE_SETTINGS, getSiteSettings, normalizeSiteSettings } from "./store.js?v=20261106-attached-college-logo";
 
 const STARTER_CONTENT = {
   announcements: starterAnnouncements,
@@ -42,6 +42,7 @@ const PAGES = {
   forms:         { h1: "Forms & responses", hint: "Design forms, close intake, review submissions, export records, and manage Google Sheets sync.", crud: false },
   site:          { h1: "Website settings", hint: "Update college contact information, social links, and the official college logo used across the site.", crud: false },
   tasks:         { h1: "Tasks",          hint: "Assign work to a person or a role; assignees mark tasks done.", crud: true },
+  mail:          { h1: "Official mail",   hint: "Send branded EMBEDX communications with recipients, copies, and files from your authorized college mailbox.", crud: false },
   admins:        { h1: "Admins & roles", hint: "Add coordinators, HOD and president in one click; reset or revoke any time.", crud: false }
 };
 const pageFromPath = (pathname) => {
@@ -72,18 +73,19 @@ const WRITE = {
   forms:         ["owner", "president"],
   site:          ["owner"],
   tasks:         ["owner", "president"],
+  mail:          ["owner", "president", "event_coordinator", "social_media", "technical", "hod"],
   admins:        ["owner"]
 };
 // per-admin custom permissions: the owner ticks exactly these per person.
-const SECTIONS = ["announcements", "events", "projects", "team", "gallery", "resources", "achievements", "forms", "site", "tasks"];
-const SECTION_LABELS = { announcements: "Announcements", events: "Events", projects: "Projects", team: "Team", gallery: "Gallery", resources: "Resources", achievements: "Achievers", forms: "Forms & responses", site: "Website settings", tasks: "Tasks" };
+const SECTIONS = ["announcements", "events", "projects", "team", "gallery", "resources", "achievements", "forms", "site", "tasks", "mail"];
+const SECTION_LABELS = { announcements: "Announcements", events: "Events", projects: "Projects", team: "Team", gallery: "Gallery", resources: "Resources", achievements: "Achievers", forms: "Forms & responses", site: "Website settings", tasks: "Tasks", mail: "Official mail" };
 // fallback for role docs created before custom perms existed (mirrors firestore.rules legacyPerms)
 const LEGACY_PERMS = {
-  president: ["announcements", "team", "achievements", "forms", "tasks"],
-  event_coordinator: ["events"],
-  social_media: ["gallery", "announcements"],
-  technical: ["projects", "resources", "achievements"],
-  hod: []
+  president: ["announcements", "team", "achievements", "forms", "tasks", "mail"],
+  event_coordinator: ["events", "mail"],
+  social_media: ["gallery", "announcements", "mail"],
+  technical: ["projects", "resources", "achievements", "mail"],
+  hod: ["mail"]
 };
 const NAV = [
   ["overview", "Overview", "/admin/"],
@@ -97,6 +99,7 @@ const NAV = [
   ["forms", "Forms & responses", "/admin/forms"],
   ["site", "Website settings", "/admin/site"],
   ["tasks", "Tasks", "/admin/tasks"],
+  ["mail", "Official mail", "/admin/mail"],
   ["admins", "Admins & roles", "/admin/admins"]
 ];
 
@@ -106,6 +109,8 @@ let items = [], editingId = null, pendingImageField = null, editorState = null;
 let statsCache = null;
 let listRequestId = 0;
 let formsRefreshTimer = null;
+let mailBridgeState = null;
+let starterContentSyncUser = "";
 
 async function sdk() {
   const { initializeApp, getApps, getApp } = await import(`${SDK}/firebase-app.js`);
@@ -117,7 +122,7 @@ async function sdk() {
 }
 const $ = (s) => document.querySelector(s);
 const can = (sec) => role === "owner" || perms.includes(sec);
-const canView = (sec) => can(sec) || (role === "hod" && sec !== "tasks" && sec !== "admins" && sec !== "forms");
+const canView = (sec) => sec === "mail" ? can(sec) : can(sec) || (role === "hod" && sec !== "tasks" && sec !== "admins" && sec !== "forms");
 
 async function countCollection(db, name) {
   const ref = dbMod.collection(db, name);
@@ -361,7 +366,7 @@ async function boot() {
   }
   const { auth } = await sdk();
   authMod.onAuthStateChanged(auth, async (user) => {
-    if (!user) { showView("out"); return; }
+    if (!user) { starterContentSyncUser = ""; showView("out"); return; }
     const rr = await resolveRole(user);
     if (!rr) {
       await authMod.signOut(auth);
@@ -391,6 +396,10 @@ async function boot() {
     renderShell();
     renderMain();
     route();
+    if (role === "owner" && starterContentSyncUser !== me) {
+      starterContentSyncUser = me;
+      void restoreStarterContent({ quiet: true });
+    }
   });
 
   $("#loginForm").addEventListener("submit", async (e) => {
@@ -441,11 +450,11 @@ async function boot() {
 function renderShell() {
   $("#adminTop").innerHTML = `
     <div class="wrap admin-top-inner">
-      <a class="brand admin-brand" href="/" aria-label="EMBEDX — Department of EEE, SRM TRP Engineering College"><img src="/assets/images/embedx-emblem.webp" alt="" width="38" height="38" /><span class="brand-copy"><span class="brand-name">EMBED<span>X</span></span><span class="brand-sub">Department of EEE</span><span class="brand-institution">SRM TRP Engineering College · Admin</span></span><span class="admin-college-logo-frame"><img class="admin-college-mark" src="/assets/images/srm-trp-college-wordmark.webp" alt="SRM TRP Engineering College logo" /></span></a>
+      <a class="brand admin-brand" href="/" aria-label="EMBEDX — Department of EEE, SRM TRP Engineering College"><img src="/assets/images/embedx-emblem.webp" alt="" width="38" height="38" /><span class="brand-copy"><span class="brand-name">EMBED<span>X</span></span><span class="brand-sub">Department of EEE</span><span class="brand-institution">SRM TRP Engineering College · Admin</span></span><span class="admin-college-logo-frame"><img class="admin-college-mark" src="/assets/images/srm-trp-college-attached.png" alt="SRM TRP Engineering College logo" /></span></a>
       <div class="admin-top-actions">
         <span class="chip chip-accent" title="Signed in as">${esc(me)}</span>
         <span class="chip" title="Your role">${esc(ROLES[role].label)}</span>
-        <a class="btn btn-ghost btn-sm" href="/">View site</a>
+        <a class="btn btn-ghost btn-sm" href="/" target="_blank" rel="noopener noreferrer">View site ↗</a>
         <button class="btn btn-ghost btn-sm" id="signOut">Sign out</button>
       </div>
     </div>`;
@@ -473,6 +482,7 @@ function route() {
   if (PAGE === "admins") return renderAdmins();
   if (PAGE === "forms") return renderForms();
   if (PAGE === "site") return renderWebsiteSettings();
+  if (PAGE === "mail") return renderMailWorkspace();
   return renderCollection(PAGE);
 }
 
@@ -495,6 +505,7 @@ function renderMain() {
 
 function navigate(page, push = true) {
   if (!PAGES[page]) page = "overview";
+  if (PAGE === "mail") closeMailBridge();
   if (formsRefreshTimer) { clearInterval(formsRefreshTimer); formsRefreshTimer = null; }
   PAGE = page;
   document.body.dataset.adminPage = page;
@@ -525,7 +536,6 @@ async function renderOverview() {
     <div class="admin-cards">
       ${counts.map(([n, c]) => `<a class="admin-card card" href="/admin/${n}"><b>${c}</b><span>${n}</span></a>`).join("")}
     </div>
-    ${role === "owner" && isConfigured ? `<section class="admin-seed-toolbar card"><div><strong>Starter content</strong><p class="muted">Add missing bundled content across all public collections. Existing Firestore documents and admin edits are never overwritten.</p></div><button class="btn btn-ghost btn-sm" id="restoreStarterContent">Restore missing content</button></section>` : ""}
     <h2 style="margin:1.8rem 0 .6rem">My open tasks ${mine.length ? `(${mine.length})` : ""}</h2>
     ${mine.length ? mine.map(taskRow).join("") : `<p class="muted">Nothing assigned to you right now. ${role === "owner" || role === "president" ? "Assign work from the <a href='/admin/tasks'>Tasks</a> page." : ""}</p>`}
     <h2 style="margin:1.8rem 0 .6rem">Your access</h2>
@@ -534,16 +544,15 @@ async function renderOverview() {
         `<div class="admin-row card"><div class="admin-row-main"><strong>${esc(label)}</strong><span class="muted">${can(id) ? "read + write" : "read only"}</span></div></div>`).join("")}
       <div class="admin-row card"><div class="admin-row-main"><strong>Tasks</strong><span class="muted">${can("tasks") ? "assign + edit" : "your assigned tasks"}</span></div></div>
     </div>`;
-  region.querySelector("#restoreStarterContent")?.addEventListener("click", (event) => restoreStarterContent(event.currentTarget));
 }
 
-async function restoreStarterContent(button) {
-  button.disabled = true;
-  const label = button.textContent;
-  button.textContent = "Restoring…";
+async function restoreStarterContent({ quiet = false } = {}) {
   let added = 0;
   try {
+    if (role !== "owner" || !isConfigured) return 0;
     const { db } = await sdk();
+    const tombstoneSnapshot = await dbMod.getDocs(dbMod.collection(db, "content_tombstones"));
+    const deletedKeys = new Set(tombstoneSnapshot.docs.map((doc) => `${doc.get("section")}/${doc.get("contentId")}`));
     for (const [collectionName, rows] of Object.entries(STARTER_CONTENT)) {
       if (!rows.length) continue;
       let presentIds = new Set();
@@ -554,7 +563,8 @@ async function restoreStarterContent(button) {
         presentGalleryImages = new Set(currentGallery.docs.map((doc) => doc.get("imageUrl")).filter(Boolean));
       }
       const candidates = rows.map((row, index) => ({ row, index })).filter(({ row }) =>
-        row.id && !presentIds.has(row.id) && !(collectionName === "gallery" && presentGalleryImages.has(row.imageUrl))
+        row.id && !deletedKeys.has(`${collectionName}/${row.id}`) && !presentIds.has(row.id)
+        && !(collectionName === "gallery" && presentGalleryImages.has(row.imageUrl))
       );
       if (!candidates.length) continue;
       const count = await dbMod.runTransaction(db, async (transaction) => {
@@ -576,14 +586,18 @@ async function restoreStarterContent(button) {
       added += count;
     }
     statsCache = null;
-    toast(added ? `Restored ${added} missing starter record${added === 1 ? "" : "s"}. Existing content was preserved.` : "Starter content is already present; nothing was changed.", "ok");
-    await renderOverview();
+    if (added) {
+      if (PAGE === "overview") await renderOverview();
+      else if (STARTER_CONTENT[PAGE]) await route();
+      loadStats();
+    }
+    if (!quiet && added) toast(`Restored ${added} missing starter record${added === 1 ? "" : "s"}. Existing content was preserved.` , "ok");
+    return added;
   } catch (err) {
-    console.error("Starter content restore failed", err);
-    toast(`Content restore stopped after ${added} addition(s): ${err.message}`, "err");
-    await renderOverview();
-  } finally {
-    if (button.isConnected) { button.disabled = false; button.textContent = label; }
+    console.error("Automatic starter-content sync failed", err);
+    if (!quiet) toast(`Automatic content sync failed: ${err.message}`, "err");
+    else toast("Automatic content sync could not finish. Check Firestore permissions and rules deployment.", "err");
+    return added;
   }
 }
 
@@ -676,6 +690,263 @@ async function renderWebsiteSettings() {
   }
 }
 
+function closeMailBridge() {
+  if (!mailBridgeState) return;
+  window.removeEventListener("message", mailBridgeState.onMessage);
+  mailBridgeState.pending.forEach(({ reject, timer }) => { clearTimeout(timer); reject(new Error("Mail workspace was closed.")); });
+  mailBridgeState = null;
+}
+
+function isGoogleScriptOrigin(origin) {
+  try {
+    const host = new URL(origin).hostname;
+    return host === "script.google.com" || host === "script.googleusercontent.com" || host.endsWith(".script.googleusercontent.com");
+  } catch { return false; }
+}
+
+function parseMailAddresses(value) {
+  return String(value || "").split(/[;,\n]+/).map((part) => part.trim().toLowerCase()).filter(Boolean);
+}
+
+function bytesToBase64(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  for (let offset = 0; offset < bytes.length; offset += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(offset, Math.min(offset + 0x8000, bytes.length)));
+  }
+  return btoa(binary);
+}
+
+function formatBytes(bytes) {
+  return bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+async function renderMailWorkspace() {
+  const region = $("#pageRegion");
+  if (!canView("mail")) {
+    region.innerHTML = `<section class="card admin-mail-denied"><h2>No access</h2><p class="muted">Ask the owner to grant Official mail permission under Admins &amp; roles.</p></section>`;
+    return;
+  }
+  closeMailBridge();
+  const gatewayUrl = String(mailWorkspace?.url || "").trim();
+  const safeGatewayUrl = /^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec(?:\?.*)?$/.test(gatewayUrl) ? gatewayUrl : "";
+  region.innerHTML = `
+    ${!safeGatewayUrl ? `<div class="admin-mail-setup card" role="status"><strong>Mail gateway needs one-time setup</strong><p>After the Apps Script project is authorized and deployed as a web app, add its <code>/exec</code> URL to <code>mailWorkspace.url</code> in <code>public/js/config.js</code>. Mail sends are safely disabled until then.</p><ol><li>Run <code>npm run apps-script:setup</code> and then <code>npm run apps-script:deploy-mail</code> from <code>backend-bundle/scripts</code>.</li><li>Authorize each coordinator’s Google account once; the authenticated coordinator is the sender.</li><li>Add the deployment URL to config and publish Hosting.</li></ol></div>` : ""}
+    <section class="admin-mail-grid">
+      <section class="admin-mail-panel card">
+        <div class="admin-mail-panel-head"><div><p class="eyebrow">Authenticated sender</p><h2>Your college mailbox</h2></div><span class="admin-mail-status-pill" id="mailConnectionPill">Not connected</span></div>
+        <div class="admin-mail-sender"><span class="admin-mail-avatar" aria-hidden="true">${esc((me.split("@")[0] || "E").slice(0, 1).toUpperCase())}</span><div><strong id="mailSenderAddress">${esc(me)}</strong><span id="mailSenderRole">${esc(ROLES[role]?.label || role || "Admin")}</span></div></div>
+        <p class="muted">Messages are sent from the Google mailbox authorized for this signed-in coordinator. The visible sender cannot be overridden.</p>
+        ${safeGatewayUrl ? `<div class="admin-mail-connect-actions"><a class="btn btn-ghost btn-sm" href="${esc(safeGatewayUrl + (safeGatewayUrl.includes("?") ? "&" : "?") + "authorize=1")}" target="_blank" rel="noopener noreferrer">Authorize Google mailbox ↗</a><button class="btn btn-primary btn-sm" id="verifyMailSender" type="button" disabled>Verify sender</button></div>` : ""}
+        <p class="admin-mail-status" id="mailStatus" role="status" aria-live="polite">${safeGatewayUrl ? "Authorize your college Google mailbox once, then verify it here." : ""}</p>
+      </section>
+
+      <section class="admin-mail-panel card admin-mail-directory">
+        <div class="admin-mail-panel-head"><div><p class="eyebrow">Coordinator directory</p><h2>Choose recipients</h2></div><span class="muted" id="mailDirectoryCount">Loading…</span></div>
+        <p class="muted">Coordinator mail addresses come from the Admin directory. You can also type any additional email address manually below.</p>
+        <label class="admin-mail-target-label" for="mailDirectoryTarget">Add directory selection to</label>
+        <select id="mailDirectoryTarget"><option value="to">To</option><option value="cc">CC</option><option value="bcc">BCC</option></select>
+        <div class="admin-mail-contacts" id="mailDirectory"><p class="muted">Loading authorized administrators…</p></div>
+      </section>
+
+      <section class="admin-mail-panel card admin-mail-composer">
+        <div class="admin-mail-panel-head"><div><p class="eyebrow">Official communication</p><h2>Compose message</h2></div><span class="admin-mail-brand-chip">EMBEDX · SRM TRP</span></div>
+        <form id="officialMailForm" novalidate>
+          <div class="admin-mail-recipient-grid">
+            <div class="field"><label for="mailTo">To <span class="req">*</span></label><textarea id="mailTo" name="to" rows="2" placeholder="name@college.edu, another@college.edu" autocomplete="off" required></textarea><small>Separate addresses with commas, semicolons, or new lines.</small></div>
+            <div class="field"><label for="mailCc">CC</label><textarea id="mailCc" name="cc" rows="2" placeholder="Optional visible copies" autocomplete="off"></textarea></div>
+            <div class="field"><label for="mailBcc">BCC</label><textarea id="mailBcc" name="bcc" rows="2" placeholder="Optional private copies" autocomplete="off"></textarea><small>BCC addresses are never shown to other recipients.</small></div>
+          </div>
+          <div class="field"><label for="mailSubject">Subject <span class="req">*</span></label><input id="mailSubject" name="subject" maxlength="160" autocomplete="off" placeholder="Workshop schedule, report, announcement…" required /><small id="mailSubjectCount">0 / 160</small></div>
+          <div class="field"><label for="mailBody">Message <span class="req">*</span></label><textarea id="mailBody" name="body" rows="10" maxlength="12000" placeholder="Write a clear, official EMBEDX message. Paragraph breaks are preserved in the email." required></textarea><small id="mailBodyCount">0 / 12,000</small></div>
+          <div class="admin-mail-attachments"><div><strong>Attachments</strong><p class="muted">Add reports, event brochures, or other files. Up to 8 files and 15 MB total.</p></div><label class="btn btn-ghost btn-sm" for="mailFiles">Add files</label><input id="mailFiles" type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg,.gif,.webp,.txt,.csv" multiple hidden /></div>
+          <ul class="admin-mail-file-list" id="mailFileList" aria-live="polite"></ul>
+          <div class="admin-mail-submit-row"><p class="muted" id="mailRecipientSummary">No recipients added.</p><button class="btn btn-primary" id="sendOfficialMail" type="submit" disabled>Send official email</button></div>
+        </form>
+      </section>
+    </section>
+    ${safeGatewayUrl ? `<iframe id="mailWorkspaceBridge" class="admin-mail-bridge" title="Secure Gmail authorization bridge" referrerpolicy="strict-origin" aria-hidden="true"></iframe>` : ""}`;
+
+  const senderPill = $("#mailConnectionPill");
+  const mailStatus = $("#mailStatus");
+  const sendButton = $("#sendOfficialMail");
+  const setMailStatus = (message, kind = "") => {
+    if (!mailStatus) return;
+    mailStatus.textContent = message;
+    mailStatus.dataset.kind = kind;
+  };
+  let verifiedSender = "";
+  let selectedFiles = [];
+  let sendRequestId = "";
+
+  const { db, auth } = await sdk();
+  const currentUser = auth.currentUser;
+  try {
+    const [snapshot] = await Promise.all([dbMod.getDocs(dbMod.collection(db, "admin_roles"))]);
+    const directory = [{ email: OWNER_EMAIL, name: "EMBEDX Owner", role: "owner" }];
+    snapshot.docs.forEach((document) => {
+      const email = document.id.toLowerCase();
+      const data = document.data();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) || data.emailVerificationRequired === true || data.mustChangePassword === true) return;
+      if (!directory.some((person) => person.email.toLowerCase() === email)) directory.push({ email, name: String(data.name || "").trim(), role: data.role || "admin" });
+    });
+    directory.sort((a, b) => a.role === "owner" ? (b.role === "owner" ? 0 : -1) : b.role === "owner" ? 1 : (a.name || a.email).localeCompare(b.name || b.email));
+    $("#mailDirectoryCount").textContent = `${directory.length} contact${directory.length === 1 ? "" : "s"}`;
+    $("#mailDirectory").innerHTML = directory.map((person) => `<article class="admin-mail-contact"><div class="admin-mail-contact-copy"><strong>${esc(person.name || person.email.split("@")[0])}</strong><span>${esc(person.email)}</span><small>${esc(ROLES[person.role]?.label || person.role)}</small></div><button class="btn btn-ghost btn-sm" type="button" data-mail-add="${esc(person.email)}" aria-label="Add ${esc(person.email)} to recipients">Add</button></article>`).join("") || `<p class="muted">No coordinator accounts are listed yet.</p>`;
+  } catch (error) {
+    $("#mailDirectoryCount").textContent = "Unavailable";
+    $("#mailDirectory").innerHTML = `<p class="muted">Could not load the coordinator directory: ${esc(error.message)}. Ask the owner to deploy the mail permission rules.</p>`;
+  }
+
+  const updateRecipientSummary = () => {
+    const count = ["mailTo", "mailCc", "mailBcc"].reduce((sum, id) => sum + parseMailAddresses($("#" + id).value).length, 0);
+    $("#mailRecipientSummary").textContent = count ? `${count} recipient${count === 1 ? "" : "s"} across To, CC, and BCC.` : "No recipients added.";
+  };
+  ["mailTo", "mailCc", "mailBcc"].forEach((id) => $("#" + id).addEventListener("input", () => { sendRequestId = ""; updateRecipientSummary(); }));
+  $("#mailDirectory").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-mail-add]");
+    if (!button) return;
+    const field = $("#mail" + $("#mailDirectoryTarget").value[0].toUpperCase() + $("#mailDirectoryTarget").value.slice(1));
+    const existing = parseMailAddresses(field.value);
+    if (!existing.includes(button.dataset.mailAdd.toLowerCase())) field.value = [...existing, button.dataset.mailAdd].join(", ");
+    updateRecipientSummary();
+    field.focus();
+  });
+  $("#mailSubject").addEventListener("input", (event) => { sendRequestId = ""; $("#mailSubjectCount").textContent = `${event.target.value.length} / 160`; });
+  $("#mailBody").addEventListener("input", (event) => { sendRequestId = ""; $("#mailBodyCount").textContent = `${event.target.value.length} / 12,000`; });
+
+  const renderFiles = () => {
+    $("#mailFileList").innerHTML = selectedFiles.map((file, index) => `<li><span>${esc(file.name)} <small>${formatBytes(file.size)}</small></span><button type="button" class="btn btn-ghost btn-sm" data-file-remove="${index}" aria-label="Remove ${esc(file.name)}">Remove</button></li>`).join("");
+  };
+  $("#mailFiles").addEventListener("change", (event) => {
+    const next = [...event.target.files];
+    const total = selectedFiles.reduce((sum, file) => sum + file.size, 0) + next.reduce((sum, file) => sum + file.size, 0);
+    if (selectedFiles.length + next.length > 8) { setMailStatus("You can attach up to 8 files.", "error"); event.target.value = ""; return; }
+    if (total > 15 * 1024 * 1024) { setMailStatus("Attachments must total 15 MB or less.", "error"); event.target.value = ""; return; }
+    selectedFiles.push(...next);
+    sendRequestId = "";
+    event.target.value = "";
+    renderFiles();
+    setMailStatus("");
+  });
+  $("#mailFileList").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-file-remove]");
+    if (!button) return;
+    selectedFiles.splice(Number(button.dataset.fileRemove), 1);
+    sendRequestId = "";
+    renderFiles();
+  });
+
+  let bridgeFrame = null;
+  if (safeGatewayUrl) {
+    bridgeFrame = $("#mailWorkspaceBridge");
+    mailBridgeState = { frame: bridgeFrame, origin: "", ready: false, pending: new Map(), onMessage: null };
+    mailBridgeState.onMessage = (event) => {
+      const state = mailBridgeState;
+      if (!state || event.source !== state.frame.contentWindow) return;
+      if (!isGoogleScriptOrigin(event.origin)) return;
+      const message = event.data || {};
+      if (message.source !== "embedx-mail-bridge") return;
+      if (message.type === "ready") {
+        state.origin = event.origin;
+        state.ready = true;
+        $("#verifyMailSender").disabled = false;
+        setMailStatus("Secure mail bridge ready. Verify your Google mailbox to enable sending.");
+        return;
+      }
+      if (message.type === "result" && state.origin === event.origin) {
+        const pending = state.pending.get(message.requestId);
+        if (!pending) return;
+        clearTimeout(pending.timer);
+        state.pending.delete(message.requestId);
+        if (message.ok) pending.resolve(message.result || {});
+        else pending.reject(new Error(message.error || "The mail request failed."));
+      }
+    };
+    window.addEventListener("message", mailBridgeState.onMessage);
+    bridgeFrame.src = safeGatewayUrl;
+  }
+
+  const requestBridge = async (action, payload = {}) => {
+    const state = mailBridgeState;
+    if (!state?.ready || !state.origin) throw new Error("Mail bridge is not ready yet. Reload the page or authorize the gateway first.");
+    if (!currentUser) throw new Error("Your Admin session expired. Sign in again.");
+    const idToken = await currentUser.getIdToken();
+    const requestId = (globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`).replace(/[^A-Za-z0-9_-]/g, "");
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => { state.pending.delete(requestId); reject(new Error("Mail service timed out. Check Gmail Sent before retrying to avoid sending twice.")); }, 60000);
+      state.pending.set(requestId, { resolve, reject, timer });
+      try { state.frame.contentWindow.postMessage({ source: "embedx-admin-mail", type: "call", action, requestId, idToken, payload }, state.origin); }
+      catch (error) { clearTimeout(timer); state.pending.delete(requestId); reject(error); }
+    });
+  };
+
+  if (safeGatewayUrl) {
+    $("#verifyMailSender").addEventListener("click", async (event) => {
+      const button = event.currentTarget;
+      button.disabled = true;
+      setMailStatus("Verifying Firebase role and Google sender account…");
+      try {
+        const context = await requestBridge("context");
+        if (context.senderEmail.toLowerCase() !== me.toLowerCase()) throw new Error("Google mailbox must match your signed-in EMBEDX Admin email.");
+        verifiedSender = context.senderEmail;
+        $("#mailSenderAddress").textContent = `${context.senderName || context.senderEmail} · ${context.senderEmail}`;
+        $("#mailSenderRole").textContent = `${ROLES[context.role]?.label || context.role} · Google Gmail authorized`;
+        senderPill.textContent = "Connected";
+        senderPill.dataset.state = "ready";
+        sendButton.disabled = false;
+        setMailStatus(`Ready to send as ${context.senderEmail}. Messages will appear in that mailbox’s Sent folder.`, "success");
+      } catch (error) {
+        verifiedSender = "";
+        senderPill.textContent = "Authorization required";
+        senderPill.dataset.state = "error";
+        sendButton.disabled = true;
+        setMailStatus(error.message || "Could not authorize Gmail. Open the authorization page, approve Gmail access, then verify again.", "error");
+      } finally { button.disabled = false; }
+    });
+
+    $("#officialMailForm").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (!verifiedSender) { setMailStatus("Verify your Google mailbox before sending.", "error"); return; }
+      const groups = [parseMailAddresses($("#mailTo").value), parseMailAddresses($("#mailCc").value), parseMailAddresses($("#mailBcc").value)];
+      const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+      const seen = new Set();
+      const normalized = groups.map((items) => items.filter((email) => {
+        if (!emailPattern.test(email)) return true;
+        if (seen.has(email)) return false;
+        seen.add(email); return true;
+      }));
+      const invalid = groups.flat().filter((email) => !emailPattern.test(email));
+      const recipientCount = normalized.reduce((sum, list) => sum + list.length, 0);
+      if (!normalized[0].length) { setMailStatus("Add at least one valid To address.", "error"); $("#mailTo").focus(); return; }
+      if (invalid.length) { setMailStatus(`Check these invalid addresses: ${invalid.slice(0, 3).join(", ")}`, "error"); return; }
+      if (recipientCount > 50) { setMailStatus("A message can have at most 50 unique recipients across To, CC, and BCC.", "error"); return; }
+      const subject = $("#mailSubject").value.trim();
+      const body = $("#mailBody").value.trim();
+      if (subject.length < 3 || subject.length > 160 || /[\r\n]/.test(subject)) { setMailStatus("Enter a subject between 3 and 160 characters, on one line.", "error"); $("#mailSubject").focus(); return; }
+      if (body.length < 2 || body.length > 12000) { setMailStatus("Write a message between 2 and 12,000 characters.", "error"); $("#mailBody").focus(); return; }
+      const submit = event.submitter || sendButton;
+      submit.disabled = true; submit.textContent = "Sending securely…";
+      const previousPill = senderPill.textContent;
+      senderPill.textContent = "Sending";
+      setMailStatus("Checking authorization, recipients, files, and Gmail quota…");
+      try {
+        const attachments = await Promise.all(selectedFiles.map(async (file) => ({ name: file.name, mimeType: file.type || "application/octet-stream", size: file.size, data: bytesToBase64(await file.arrayBuffer()) })));
+        if (!sendRequestId) sendRequestId = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        const result = await requestBridge("send", { requestId: sendRequestId, to: normalized[0], cc: normalized[1], bcc: normalized[2], subject, body, attachments });
+        sendRequestId = "";
+        setMailStatus(`Sent from ${result.senderEmail} to ${result.recipientCount} recipient${result.recipientCount === 1 ? "" : "s"}. Check Sent if you need the exact BCC list.`, "success");
+        senderPill.textContent = "Connected";
+        $("#mailSubject").value = ""; $("#mailBody").value = ""; selectedFiles = []; renderFiles();
+        $("#mailSubjectCount").textContent = "0 / 160"; $("#mailBodyCount").textContent = "0 / 12,000";
+      } catch (error) {
+        setMailStatus(`${error.message || "Email could not be sent."} If the request timed out, check Sent before retrying.`, "error");
+        senderPill.textContent = previousPill;
+      } finally { submit.disabled = !verifiedSender; submit.textContent = "Send official email"; }
+    });
+  }
+}
+
 function siteSettingField(name, label, value, placeholder, type) {
   return `<div class="field"><label for="site-${name}">${esc(label)}</label><input id="site-${name}" name="${name}" type="${type}" value="${esc(value || "")}" placeholder="${esc(placeholder)}" autocomplete="off" /></div>`;
 }
@@ -735,7 +1006,7 @@ async function renderForms() {
         ${sheetUrl ? `<a class="btn btn-ghost btn-sm" href="${esc(sheetUrl)}" target="_blank" rel="noopener noreferrer">Open response sheet</a>` : ""}
       </section>
       <section class="admin-event-assignment card"><div class="admin-event-assignment-head"><div><h2>Event registration forms</h2><p class="muted">${unassignedEventCount} event(s) have no registration form. Assign a dedicated form in Events → Edit; forms can be created and edited below. Unassigned events no longer open the EMBEDNOVA form by mistake.</p></div><a class="btn btn-ghost btn-sm" href="/admin/events">Manage events</a></div><div class="admin-event-assignment-list">${eventAssignmentRows || `<p class="muted">No events are published yet.</p>`}</div></section>
-      <section class="admin-form-toolbar"><div><h2>Managed forms</h2><p class="muted">Open, close, seed, and share forms. Closed forms reject new responses. Custom forms support star ratings and exportable responses. Responses auto-refresh every 30 seconds.</p></div><div class="admin-form-toolbar-actions"><button class="btn btn-ghost btn-sm" id="refreshForms">Refresh</button>${can("forms") ? `<button class="btn btn-ghost btn-sm" id="seedForms">Seed standard forms</button><button class="btn btn-primary btn-sm" id="newManagedForm">+ Create form</button>` : ""}</div></section>
+      <section class="admin-form-toolbar"><div><h2>Managed forms</h2><p class="muted">Standard forms sync automatically when the owner opens Admin. Closed forms reject new responses. Custom forms support star ratings and exportable responses. Responses auto-refresh every 30 seconds.</p></div><div class="admin-form-toolbar-actions"><button class="btn btn-ghost btn-sm" id="refreshForms">Refresh</button>${can("forms") ? `<button class="btn btn-primary btn-sm" id="newManagedForm">+ Create form</button>` : ""}</div></section>
       <div class="admin-managed-forms">${forms.length ? forms.map((form) => `
         <article class="admin-managed-form card">
           <div class="admin-managed-form-copy"><div class="admin-form-title-line"><strong>${esc(form.title || form.id)}</strong><span class="chip ${form.status === "open" ? "chip-accent" : ""}">${esc(form.status || "draft")}</span>${form.builtin ? `<span class="chip">Built in</span>` : ""}</div><p class="muted">${esc(form.description || "")}</p><small>${(form.fields || []).length} field(s) · ${esc(form.kind || "custom")}</small><p class="muted form-assignment-note">${esc(formAssignmentText(form.id))}</p></div>
@@ -744,12 +1015,11 @@ async function renderForms() {
             ${can("forms") ? `<button class="btn btn-ghost btn-sm" data-form-edit="${esc(form.id)}">${form.builtin ? "Edit settings" : "Edit"}</button><button class="btn btn-ghost btn-sm" data-form-toggle="${esc(form.id)}">${form.status === "open" ? "Close" : "Open"}</button>${!form.builtin ? `<button class="btn btn-danger btn-sm" data-form-delete="${esc(form.id)}">Delete</button>` : ""}` : ""}
             <button class="btn btn-ghost btn-sm" data-form-copy="${esc(form.id)}">Copy link</button>
           </div>
-        </article>`).join("") : `<p class="muted">No forms yet. Seed the standard forms or create a new one.</p>`}</div>
+        </article>`).join("") : `<p class="muted">No forms yet. Standard forms sync automatically when the owner opens Admin; you can also create a custom form.</p>`}</div>
       <section class="admin-legacy-submissions"><div class="admin-form-toolbar"><div><h2>Recent join applications</h2><p class="muted">${joinSnap.size} total · newest first</p></div><button class="btn btn-ghost btn-sm" id="exportJoin">Export CSV</button></div>${renderLegacyPreview(lastJoin, "members_applications")}</section>
       <section class="admin-legacy-submissions"><div class="admin-form-toolbar"><div><h2>Recent enquiries</h2><p class="muted">${enquirySnap.size} total · newest first</p></div><button class="btn btn-ghost btn-sm" id="exportEnquiries">Export CSV</button></div>${renderLegacyPreview(lastEnquiry, "contact_messages")}</section>
       <div id="formEditorMount"></div><div id="formResponseMount"></div>`;
     region.querySelector("#refreshForms")?.addEventListener("click", () => renderForms());
-    region.querySelector("#seedForms")?.addEventListener("click", () => seedStarterForms());
     region.querySelector("#newManagedForm")?.addEventListener("click", () => showManagedFormEditor(null));
     region.querySelectorAll("[data-form-edit]").forEach((b) => b.addEventListener("click", () => showManagedFormEditor(forms.find((f) => f.id === b.dataset.formEdit))));
     region.querySelectorAll("[data-form-toggle]").forEach((b) => b.addEventListener("click", () => toggleManagedForm(forms.find((f) => f.id === b.dataset.formToggle))));
@@ -773,27 +1043,6 @@ function renderLegacyPreview(rows, collectionName) {
   return `<div class="admin-response-list">${rows.map((row) => `<article class="admin-response-card card"><div><strong>${esc(row.name || "Unnamed")}</strong><span class="muted">${esc(row.email || "")} · ${esc((row.createdAt || "").slice(0, 19).replace("T", " "))}</span><p>${esc(row.message || row.interest || row.subject || "")}</p></div><button class="btn btn-danger btn-sm" data-collection="${collectionName}" data-delete-legacy="${esc(row.id)}">Delete</button></article>`).join("")}</div>`;
 }
 
-async function seedStarterForms() {
-  const button = $("#seedForms");
-  if (button) { button.disabled = true; button.textContent = "Seeding…"; }
-  try {
-    const { db } = await sdk();
-    let added = 0;
-    for (const form of starterForms) {
-      const created = await dbMod.runTransaction(db, async (transaction) => {
-        const ref = dbMod.doc(db, "forms", form.id);
-        const snap = await transaction.get(ref);
-        if (snap.exists()) return false;
-        const { id, ...data } = form;
-        transaction.set(ref, data);
-        return true;
-      });
-      if (created) added++;
-    }
-    toast(added ? `${added} standard form(s) added without overwriting existing settings.` : "Standard forms are already seeded; no settings changed.", "ok");
-    await renderForms();
-  } catch (err) { toast(`Could not seed forms: ${err.message}`, "err"); if (button) { button.disabled = false; button.textContent = "Seed standard forms"; } }
-}
 
 function showManagedFormEditor(form) {
   if (!can("forms")) return;
@@ -973,15 +1222,25 @@ async function renderGalleryTools() {
   const list = $("#listRegion");
   if (!region || !list) return;
   let requests = [];
+  let deletedIds = new Set();
   try { const { db } = await sdk(); requests = await getGalleryDeletionRequests(db); }
   catch (error) { console.warn("GitHub image deletion status is not available", error); }
+  try {
+    const { db } = await sdk();
+    const tombstones = await dbMod.getDocs(dbMod.query(dbMod.collection(db, "content_tombstones"), dbMod.where("section", "==", "gallery")));
+    deletedIds = new Set(tombstones.docs.map((doc) => String(doc.get("contentId") || "")));
+  } catch (error) { console.warn("Gallery deletion history is not available", error); }
   const activeIds = new Set(requests.filter((request) => ACTIVE_ASSET_DELETE_STATUSES.has(request.status || "pending")).map((request) => request.galleryId));
-  const missing = starterGallery.filter((item) => !isStarterGalleryPresent(item) && !activeIds.has(item.id));
   const toolbar = document.createElement("section");
-  toolbar.className = "admin-seed-toolbar admin-gallery-sync card";
-  toolbar.innerHTML = `<div class="admin-gallery-sync-copy"><strong>Bundled website gallery · ${starterGallery.length} starter photos</strong><p class="muted">Import missing starter photos to publish them again. Deleting a bundled photo removes it from the live gallery and queues a reviewed GitHub pull request for the repository file.</p><div class="admin-starter-thumbs">${starterGallery.map((photo) => { const present = isStarterGalleryPresent(photo); const removing = activeIds.has(photo.id); return `<div class="admin-starter-thumb ${present ? "is-published" : removing ? "is-pending-delete" : "is-missing"}" title="${esc(photo.caption)}"><img src="${esc(asset(photo.imageUrl))}" alt="${esc(photo.caption)}" loading="lazy" /><span>${present ? "Published" : removing ? "GitHub PR pending" : "Not in Firestore"}</span></div>`; }).join("")}</div></div><button class="btn btn-primary btn-sm" id="restoreGallery" ${missing.length ? "" : "disabled"}>${missing.length ? `Import ${missing.length} missing photo${missing.length === 1 ? "" : "s"}` : "No photos to import"}</button>`;
+  toolbar.className = "admin-gallery-sync card";
+  toolbar.innerHTML = `<div class="admin-gallery-sync-copy"><strong>Bundled website gallery · ${starterGallery.length} starter photos</strong><p class="muted">Missing starter photos sync automatically when the owner opens Admin. Deleted entries stay removed. The Firestore record is deleted immediately; the public gallery hides it while Firestore is reachable. Its bundled file and fallback row are removed through a reviewed GitHub pull request.</p><div class="admin-starter-thumbs">${starterGallery.map((photo) => {
+    const present = isStarterGalleryPresent(photo);
+    const removing = activeIds.has(photo.id);
+    const removed = deletedIds.has(photo.id);
+    const state = removed ? "Removed" : present ? "Published" : removing ? "GitHub PR pending" : "Waiting for owner sync";
+    return `<div class="admin-starter-thumb ${present ? "is-published" : removing ? "is-pending-delete" : removed ? "is-deleted" : "is-missing"}" title="${esc(photo.caption)}">${removed ? "" : `<img src="${esc(asset(photo.imageUrl))}" alt="${esc(photo.caption)}" loading="lazy" />`}<span>${state}</span></div>`;
+  }).join("")}</div></div>`;
   region.insertBefore(toolbar, list);
-  toolbar.querySelector("#restoreGallery").addEventListener("click", (event) => restoreStarterGallery(event.currentTarget));
 
   if (requests.length) {
     const statuses = { pending: "Queued", queued_for_pr: "Preparing GitHub PR", pr_open: "PR awaiting review", blocked: "Blocked — image still referenced", completed: "Completed" };
@@ -1007,39 +1266,6 @@ async function renderCollection(sec) {
   loadStats();
 }
 
-async function restoreStarterGallery(button) {
-  button.disabled = true;
-  try {
-    const { db } = await sdk();
-    const requests = await getGalleryDeletionRequests(db);
-    const activeIds = new Set(requests.filter((request) => ACTIVE_ASSET_DELETE_STATUSES.has(request.status || "pending")).map((request) => request.galleryId));
-    const candidates = starterGallery.filter((item) => !isStarterGalleryPresent(item) && !activeIds.has(item.id));
-    if (!candidates.length) {
-      toast("There are no safe starter photos to import right now. Pending GitHub deletions cannot be restored.", "info");
-      return;
-    }
-    const added = await dbMod.runTransaction(db, async (transaction) => {
-      const refs = candidates.map((item) => dbMod.doc(db, "gallery", item.id));
-      const snapshots = [];
-      for (const ref of refs) snapshots.push(await transaction.get(ref));
-      let count = 0;
-      snapshots.forEach((snapshot, index) => {
-        if (snapshot.exists()) return;
-        const { id, ...data } = candidates[index];
-        transaction.set(refs[index], data);
-        count++;
-      });
-      return count;
-    });
-    toast(added ? `Restored ${added} missing starter photo${added === 1 ? "" : "s"}.` : "Starter photos already exist; nothing was changed.", "ok");
-    await renderCollection("gallery");
-  } catch (err) {
-    console.error("Gallery restore failed", err);
-    toast(`Could not restore starter photos: ${err.message}`, "err");
-  } finally {
-    if (button.isConnected) button.disabled = false;
-  }
-}
 
 async function loadList(sec) {
   if (PAGE !== sec) return;
@@ -1371,12 +1597,18 @@ async function saveForm(e) {
   }
 }
 
+function addContentTombstone(batch, db, section, contentId) {
+  const ref = dbMod.doc(dbMod.collection(db, "content_tombstones"));
+  batch.set(ref, { section, contentId: String(contentId), deletedBy: me, deletedAt: dbMod.serverTimestamp() });
+}
+
 async function removeItem(id) {
   const sec = PAGE;
   if (!can(sec)) { toast("Your role can't delete here.", "err"); return; }
   const item = items.find((row) => row.id === id);
   const imageUrl = sec === "gallery" ? String(item?.imageUrl || "") : "";
   const repoImage = repositoryImagePath(imageUrl);
+  const starterOwned = Boolean(STARTER_CONTENT[sec]?.some((row) => row.id === id));
   const warning = repoImage
     ? `Remove this photo from the live gallery and queue a reviewed GitHub pull request to delete ${repoImage}? The repository file remains until the pull request is approved and merged.`
     : `Delete this ${SCHEMAS[sec].label}? This cannot be undone.`;
@@ -1387,9 +1619,16 @@ async function removeItem(id) {
       const batch = dbMod.writeBatch(db);
       const requestRef = dbMod.doc(dbMod.collection(db, "asset_delete_requests"));
       batch.delete(dbMod.doc(db, sec, id));
+      if (starterOwned) addContentTombstone(batch, db, sec, id);
       batch.set(requestRef, { galleryId: id, imageUrl: repoImage, requestedBy: me, requestedAt: dbMod.serverTimestamp() });
       await batch.commit();
       toast("Removed from the live gallery. A GitHub deletion pull request has been queued for review.", "ok");
+    } else if (starterOwned) {
+      const batch = dbMod.writeBatch(db);
+      batch.delete(dbMod.doc(db, sec, id));
+      addContentTombstone(batch, db, sec, id);
+      await batch.commit();
+      toast("Deleted from Firestore and the live website. It will not be restored from starter content.", "ok");
     } else {
       await dbMod.deleteDoc(dbMod.doc(db, sec, id));
       toast("Deleted.", "ok");
@@ -1398,7 +1637,13 @@ async function removeItem(id) {
     if (sec === "gallery") await renderCollection(sec);
     else await loadList(sec);
     loadStats();
-  } catch (err) { toast(`Delete failed: ${err.message}`, "err"); }
+  } catch (err) {
+    console.error(`Delete failed for ${sec}/${id}`, err);
+    const permissionHint = err.code === "permission-denied"
+      ? `Check that your Admin account has edit permission for ${SCHEMAS[sec]?.label || sec} and that the matching Firestore rules are deployed. No deletion was confirmed.`
+      : "";
+    toast(`Delete failed${err.code ? ` [${err.code}]` : ""}: ${err.message}${permissionHint ? ` — ${permissionHint}` : ""}`, "err");
+  }
 }
 
 /* ---------------- task assignment email (Apps Script web app hook) ---------------- */

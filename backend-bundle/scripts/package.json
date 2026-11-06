@@ -9,6 +9,9 @@
     "apps-script:setup": "node apps-script.mjs setup",
     "apps-script:create": "node apps-script.mjs create",
     "apps-script:push": "node apps-script.mjs push",
+    "apps-script:deploy-mail": "node apps-script.mjs deploy-mail",
+    "apps-script:mail-push": "node apps-script.mjs mail-push",
+    "test:mail": "node test-mail-workspace.mjs",
     "apps-script:login": "node apps-script.mjs login"
   },
   "dependencies": {

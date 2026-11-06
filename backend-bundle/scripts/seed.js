@@ -2,7 +2,8 @@
 /**
  * EMBEDX — idempotent, non-destructive Firestore content seeder.
  * Sources mirror the public static fallback modules. Existing Firestore documents
- * are left untouched; only missing documents with stable IDs are created.
+ * are left untouched; only missing documents with stable IDs are created. Permanent
+ * content_tombstones also suppress intentionally deleted starter records.
  *
  * Usage:
  *   cd scripts && npm install
@@ -42,7 +43,7 @@ function validateRows(collection, rows) {
   });
 }
 
-async function seedMissing(db, collection, rows) {
+async function seedMissing(db, collection, rows, deletedKeys) {
   const records = validateRows(collection, rows);
   if (!records.length) {
     console.log(`• ${collection}: no starter documents (left empty intentionally)`);
@@ -54,7 +55,8 @@ async function seedMissing(db, collection, rows) {
     ? new Set(existing.docs.map((doc) => doc.get("imageUrl")).filter(Boolean))
     : new Set();
   const missing = records.filter(({ id, data }) =>
-    !existingIds.has(id) && !(collection === "gallery" && existingGalleryImages.has(data.imageUrl))
+    !existingIds.has(id) && !deletedKeys.has(`${collection}/${id}`)
+      && !(collection === "gallery" && existingGalleryImages.has(data.imageUrl))
   );
   const skipped = records.length - missing.length;
   for (let offset = 0; offset < missing.length; offset += 450) {
@@ -81,9 +83,11 @@ async function main() {
   admin.initializeApp({ credential: admin.credential.applicationDefault(), projectId });
   const data = await loadSiteData();
   const db = admin.firestore();
+  const tombstones = await db.collection("content_tombstones").get();
+  const deletedKeys = new Set(tombstones.docs.map((doc) => `${doc.get("section")}/${doc.get("contentId")}`));
   const totals = { created: 0, skipped: 0 };
   for (const name of COLLECTIONS) {
-    const result = await seedMissing(db, name, data[name]);
+    const result = await seedMissing(db, name, data[name], deletedKeys);
     totals.created += result.created;
     totals.skipped += result.skipped;
   }

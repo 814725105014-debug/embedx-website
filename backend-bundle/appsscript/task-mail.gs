@@ -8,9 +8,10 @@
  *  - Recipient addresses are restricted to the college domain.
  *  - Repeated delivery requests for a task are idempotent.
  *
- * Setup: paste into Apps Script, deploy as Web app (execute as Me; access Anyone).
- * Then update taskMail.url in public/js/config.js with the /exec URL and deploy Hosting.
- * The public client sends only {idToken, taskId}; never place a mail token/password here.
+ * Deploy this endpoint separately from the coordinator mail bridge: execute as the
+ * project owner and allow Anyone to reach the web app. Firebase ID-token and task
+ * permission checks remain mandatory on every request. Never place a shared
+ * mail token/password in the website.
  */
 const PROJECT_ID = "embedx-club-eee";
 const FIREBASE_API_KEY = "AIzaSyBwNaduceEdAcJX0uCRv2nLNVZca2OWSgA";

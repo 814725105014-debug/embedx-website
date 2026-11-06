@@ -1,10 +1,10 @@
 // EMBEDX — Page controller. Dispatches renderers by body[data-page].
-import "./layout.js?v=20261106-logo-mobile-fix";
+import "./layout.js?v=20261106-attached-college-logo";
 import "./forms.js?v=20261106-event-forms";
 import { initAll } from "./ui.js?v=20261106-cursor-animation";
 import { icon } from "./icons.js";
 import { esc, asset, externalUrl, skeletons, projectCard, eventCard, teamCard, domainCard, resourceCard, achievementCard, announcementCard, galleryButton } from "./render.js?v=20261106-content";
-import { getProjects, getEvents, getTeam, getGallery, getAnnouncements, getResources, getAchievements } from "./store.js?v=20261106-college-logo-mobile";
+import { getProjects, getEvents, getTeam, getGallery, getAnnouncements, getResources, getAchievements } from "./store.js?v=20261106-attached-college-logo";
 import { domains, tools, careers } from "./data/domains.js";
 
 const $ = (s) => document.querySelector(s);

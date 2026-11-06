@@ -12,8 +12,8 @@ No Cloud Functions are required.
 - `data/`: seed-source modules (kept in sync with `public/js/data/`).
 - `scripts/seed.js`: adds missing starter documents in seven public content collections plus standard form definitions; never overwrites existing documents.
 - `scripts/create-admin.js`, `grant-admin.js`, `reset-password.js`, `update-admin.js`: trusted Admin SDK owner tools.
-- `appsscript/task-mail.gs`: optional, token-verified task-email web app source.
-- `appsscript/forms-sync.gs` + `appsscript/appsscript.json`: owner-authorized Firestore-to-Sheets sync, spreadsheet creation, response notifications, and applicant confirmations.
+- `appsscript/task-mail.gs` + `appsscript/forms-sync.gs` + `appsscript/appsscript.json`: owner-authorized Sheets sync and a separate Firebase-token-verified task-email endpoint.
+- `appsscript-mail/Code.gs` + `appsscript-mail/appsscript.json`: isolated, least-privilege, coordinator-authorized official-mail bridge.
 - `scripts/process-image-deletion-requests.mjs`: validates Admin Gallery asset deletions and stages safe repository removals for a GitHub PR; `.github/workflows/gallery-image-deletions.yml` runs it with a private Firebase service-account secret.
 
 ## Seed content
@@ -22,8 +22,10 @@ The seeder adds missing docs in seven public content collections and the `forms`
 configuration collection (`join`, `enquiry`, `embednova`, `feedback`). It never seeds
 form responses, `admin_roles`, or tasks. Announcements are intentionally empty until
 real notices are written. The gallery source refers to images already deployed under
-`public/assets/images/`. The Admin → Overview restore action adds missing starter
-docs without overwriting existing edits or requiring Storage.
+`public/assets/images/`. On owner sign-in, the portal automatically adds missing
+starter docs without overwriting existing edits or requiring Storage. Permanent
+Firestore deletion tombstones keep intentionally deleted starter items from being
+resurrected by portal sync or the trusted CLI seeder.
 
 To seed from a trusted machine (Admin SDK bypasses Firestore rules):
 
@@ -114,8 +116,58 @@ sheet only with trusted reviewers.
 
 ## Task-email source
 
-Task notifications are disabled in `public/js/config.js` until the current Apps Script
-source is deployed. Disable the older deployment that used the exposed shared token,
-then publish `appsscript/task-mail.gs` as a web app. Configure the replacement URL
-only after confirming the new deployment. Never place a shared token or service
-credential in the website.
+Task notifications remain a separate, optional Apps Script web-app deployment from the
+coordinator mail bridge. Disable any older deployment that used an exposed shared
+token, then deploy the checked-in project as a Web app that executes as the project
+owner and is available to Anyone. The endpoint still verifies the Firebase ID token,
+active Admin role, task permission, recipient and daily limits on every request. Set
+only that deployment's `/exec` URL in `EMBEDX_TASK_MAIL_WEB_APP_URL`; no shared mail
+token or service credential belongs in the website.
+
+## Official mail workspace
+
+The Admin → Official mail page supports To, CC and BCC, the coordinator directory,
+additional addresses, and optional official file attachments. It sends through the
+signed-in coordinator's own Google mailbox, with a branded EMBEDX / SRM TRP HTML
+message. The Apps Script server independently verifies the Firebase ID token, active
+Admin role, explicit/legacy `mail` permission, matching Google sender, recipient and
+attachment limits, and daily quota. Google credentials and OAuth tokens are never
+stored in Hosting or Firestore. HOD, President, and coordinator role presets include
+`mail`; for older Admin records that already have an explicit `perms` array, the owner
+must check **Official mail** in Admins & roles. Each coordinator must sign into their
+college Google account and approve the Apps Script Gmail authorization once.
+
+After the reviewed website and rules changes are published, run the dependency-free
+mail security checks locally, then create the dedicated, least-privilege mail project
+from `backend-bundle/scripts/`:
+
+```bash
+npm run test:mail
+npm run apps-script:deploy-mail
+```
+
+On first run, `apps-script:deploy-mail` uses `clasp` to create a separate standalone
+**EMBEDX Official Mail Workspace** Apps Script project, push only `appsscript-mail/`,
+create a version, and deploy it. Sign in with a college-domain Google account and
+enable the Apps Script API if prompted. The dedicated manifest requests only external
+HTTP, Gmail send, mail quota, and user-email scopes; it does not expose the Forms/Sheets
+project to coordinators. Confirm the generated deployment is a Web app, runs as **User
+accessing the web app**, and is restricted to the college domain. Never change this
+mail deployment to execute as the owner, because that would send coordinators' mail
+from the owner's mailbox. Copy its generated `/exec` URL into
+`EMBEDX_MAIL_WEB_APP_URL` in `public/js/config.js`, then publish the website update.
+
+For later Apps Script source updates, pull the reviewed repository change, run
+`npm run apps-script:mail-push`, then use Apps Script → Deploy → Manage deployments to
+edit the existing mail deployment to a new version. Keep its execution/access settings
+and URL so `public/js/config.js` does not need another change. Do not reuse that URL for
+task notices: task mail remains a separate owner-executed deployment, configured only
+through `EMBEDX_TASK_MAIL_WEB_APP_URL`.
+
+
+Each coordinator opens Admin → Official mail → **Authorize Google mailbox**, signs in
+with the same college email used for EMBEDX Admin, and approves Gmail access. The
+workspace verifies the Google identity against their Firebase Admin email before
+re-enabling Send. The Apps Script project owner separately continues to run
+`setupEmbedxSheets()` once for Forms & responses; that owner-authorized time trigger
+continues to run as its installer.

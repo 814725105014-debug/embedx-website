@@ -77,13 +77,14 @@ export async function getAnnouncements() {
 
 const LEGACY_COLLEGE_LOGO_URLS = new Set([
   "https://trp.srmtrichy.edu.in/wp-content/uploads/2026/03/TRP.png",
-  "/assets/images/srm-logo.webp"
+  "/assets/images/srm-logo.webp",
+  "/assets/images/srm-trp-college-wordmark.webp"
 ]);
 export const DEFAULT_SITE_SETTINGS = Object.freeze({
-  collegeLogoUrl: "/assets/images/srm-trp-college-wordmark.webp",
-  collegeWebsiteUrl: "https://www.trpengg.ac.in",
-  collegeWebsiteLabel: "www.trpengg.ac.in",
-  contactEmail: "eee@srmtrpr.edu.in",
+  collegeLogoUrl: "/assets/images/srm-trp-college-attached.png",
+  collegeWebsiteUrl: "https://trp.srmtrichy.edu.in",
+  collegeWebsiteLabel: "trp.srmtrichy.edu.in",
+  contactEmail: "hod.eee@trp.srmtrichy.edu.in",
   phoneDisplay: "0431-2908050",
   phoneHref: "tel:04312908050",
   linkedinUrl: "https://www.linkedin.com/school/srm-trp-engineering-college",
@@ -98,6 +99,13 @@ export function normalizeSiteSettings(overrides = {}) {
   const logoUrl = String(settings.collegeLogoUrl || "").trim();
   if (!logoUrl || LEGACY_COLLEGE_LOGO_URLS.has(logoUrl.split(/[?#]/, 1)[0])) {
     settings.collegeLogoUrl = DEFAULT_SITE_SETTINGS.collegeLogoUrl;
+  }
+  if (String(settings.collegeWebsiteUrl || "").replace(/\/$/, "") === "https://www.trpengg.ac.in") {
+    settings.collegeWebsiteUrl = DEFAULT_SITE_SETTINGS.collegeWebsiteUrl;
+    settings.collegeWebsiteLabel = DEFAULT_SITE_SETTINGS.collegeWebsiteLabel;
+  }
+  if (String(settings.contactEmail || "").toLowerCase() === "eee@srmtrpr.edu.in") {
+    settings.contactEmail = DEFAULT_SITE_SETTINGS.contactEmail;
   }
   return settings;
 }
