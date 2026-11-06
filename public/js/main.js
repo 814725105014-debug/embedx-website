@@ -1,10 +1,10 @@
 // EMBEDX — Page controller. Dispatches renderers by body[data-page].
 import "./layout.js?v=20261106-logo-artwork";
-import "./forms.js?v=20261106-forms";
+import "./forms.js?v=20261106-event-forms";
 import { initAll } from "./ui.js?v=20261106";
 import { icon } from "./icons.js";
 import { esc, asset, externalUrl, skeletons, projectCard, eventCard, teamCard, domainCard, resourceCard, achievementCard, announcementCard, galleryButton } from "./render.js?v=20261106-content";
-import { getProjects, getEvents, getTeam, getGallery, getAnnouncements, getResources, getAchievements } from "./store.js?v=20261106";
+import { getProjects, getEvents, getTeam, getGallery, getAnnouncements, getResources, getAchievements } from "./store.js?v=20261106-event-forms";
 import { domains, tools, careers } from "./data/domains.js";
 
 const $ = (s) => document.querySelector(s);
@@ -139,6 +139,7 @@ async function eventsPage() {
   skeletons(grid, 3, 320);
   const list = await getEvents();
   const em = list.find((e) => e.id === "embednova") || list[0];
+  const emRegistrationTarget = em ? eventRegistrationTarget(em) : null;
   if (!em) {
     if (feat) feat.innerHTML = '<p class="card center muted">Event information will be published here soon.</p>';
     if (tracks) tracks.innerHTML = "";
@@ -158,7 +159,7 @@ async function eventsPage() {
         <li>${icon("shield")}<span>${esc(em.registrationStatus)}</span></li>
       </ul>
       <div class="hero-cta">
-        <a class="btn btn-primary" href="/pages/event-detail.html?id=embednova#register">Register Now ${icon("arrow-right")}</a>
+        ${emRegistrationTarget ? `<a class="btn btn-primary" href="${esc(emRegistrationTarget.href)}" ${emRegistrationTarget.external ? 'target="_blank" rel="noopener noreferrer"' : ""}>Register Now ${icon("arrow-right")}</a>` : ""}
         <button class="btn btn-ghost" data-lightbox="${esc(asset(em.imageUrl))}" data-caption="EMBEDNOVA official poster">${icon("image")} View Event Poster</button>
       </div>
     </div>
@@ -178,6 +179,17 @@ async function eventsPage() {
   }
 }
 
+/* ---------- event registration target ---------- */
+function eventRegistrationTarget(event) {
+  const formId = String(event.registrationFormId || (event.id === "embednova" ? "embednova" : "")).trim();
+  if (formId && /^[A-Za-z0-9_-]{1,120}$/.test(formId)) {
+    const query = new URLSearchParams({ form: formId, event: String(event.id || ""), eventTitle: String(event.title || "Event") });
+    return { href: `/pages/form.html?${query.toString()}`, external: false };
+  }
+  const external = externalUrl(event.registrationLink);
+  return external ? { href: external, external: true } : null;
+}
+
 /* ---------- event detail ---------- */
 async function eventDetail() {
   const c = $("#eventDetailContainer");
@@ -190,6 +202,7 @@ async function eventDetail() {
     return;
   }
   document.title = `${e.title} | EMBEDX Events | SRM TRP Engineering College`;
+  const registrationTarget = eventRegistrationTarget(e);
   c.innerHTML = `
     <div class="detail-hero">
       <div>
@@ -208,7 +221,7 @@ async function eventDetail() {
         ${(e.whyParticipate || []).length ? `<h3 style="margin-top:1.2rem">Why Participate</h3>
         <div class="grid grid-2">${e.whyParticipate.map((w) => `<div class="card"><div class="icon-tile">${icon(w.icon || "sparkles")}</div><h4 style="margin-bottom:.3rem">${esc(w.title)}</h4><p class="muted" style="font-size:.88rem;margin:0">${esc(w.desc)}</p></div>`).join("")}</div>` : ""}
         ${(e.skillsDeveloped || []).length ? `<h3 style="margin-top:1.4rem">Skills Developed</h3><div class="card-tags">${e.skillsDeveloped.map((s) => `<span class="chip">${esc(s)}</span>`).join("")}</div>` : ""}
-        ${e.registrationLink !== "" || e.id === "embednova" ? `<div class="hero-cta"><button class="btn btn-primary" data-modal-open="#registerModal">Official Registration ${icon("arrow-right")}</button></div>` : ""}
+        ${registrationTarget ? `<div class="hero-cta"><a class="btn btn-primary" href="${esc(registrationTarget.href)}" ${registrationTarget.external ? 'target="_blank" rel="noopener noreferrer"' : ""}>${registrationTarget.external ? "Official Registration" : "Register for this event"} ${icon("arrow-right")}</a></div>` : `<p class="muted event-registration-unassigned">Registration form not assigned yet. Please check back later.</p>`}
       </div>
       <div>
         <div class="event-poster"><img src="${esc(asset(e.imageUrl))}" alt="${esc(e.title)} poster" /></div>
@@ -243,8 +256,14 @@ async function eventDetail() {
     ${(e.faqs || []).length ? `
     <h2 style="margin-top:2.4rem">Frequently Asked Questions</h2>
     <div class="faq">${e.faqs.map((f) => `<details><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p></details>`).join("")}</div>` : ""}`;
+  c.querySelectorAll(".event-poster img").forEach((img) => img.addEventListener("error", () => {
+    const fallback = document.createElement("div"); fallback.className = "event-poster-fallback"; fallback.setAttribute("role", "img"); fallback.setAttribute("aria-label", `${e.title} poster unavailable`);
+    const title = document.createElement("strong"); title.textContent = e.title;
+    const caption = document.createElement("span"); caption.textContent = "Event poster unavailable — an admin can replace it in Events.";
+    fallback.append(title, caption); img.replaceWith(fallback);
+  }, { once: true }));
   initAll();
-  if (location.hash === "#register") document.querySelector('[data-modal-open="#registerModal"]')?.click();
+  if (location.hash === "#register" && registrationTarget) location.replace(registrationTarget.href);
 }
 
 /* ---------- team ---------- */

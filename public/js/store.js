@@ -52,7 +52,7 @@ export async function getProjects() {
 }
 export async function getEvents() {
   try { return await loadCollection("events"); }
-  catch { const m = await import("./data/events.js"); return m.events; }
+  catch { const m = await import("./data/events.js?v=20261106-event-forms"); return m.events; }
 }
 export async function getTeam() {
   try { return await loadCollection("team"); }
