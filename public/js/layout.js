@@ -49,7 +49,7 @@ function injectChrome() {
         <button class="icon-btn" id="searchOpen" aria-label="Search the site (Ctrl+K)" title="Search (Ctrl+K)">${icon("search")}</button>
         <button class="icon-btn" id="themeToggle" aria-label="Toggle light / dark theme">${icon("moon")}</button>
         <a class="btn btn-primary btn-sm nav-join" href="/pages/join.html">Join EMBEDX</a>
-        <button class="icon-btn nav-burger" id="burger" aria-label="Open menu" aria-expanded="false">${icon("menu")}</button>
+        <button class="icon-btn nav-burger" id="burger" aria-label="Open menu" aria-expanded="false" aria-controls="mobileMenu">${icon("menu")}</button>
       </div>
     </div>`;
   document.body.prepend(header);
@@ -58,6 +58,8 @@ function injectChrome() {
   mobile.className = "mobile-menu";
   mobile.id = "mobileMenu";
   mobile.setAttribute("aria-label", "Mobile");
+  mobile.setAttribute("aria-hidden", "true");
+  mobile.inert = true;
   mobile.innerHTML = mlinks;
   header.after(mobile);
 
@@ -120,15 +122,28 @@ function injectChrome() {
   document.body.append(toTop);
   toTop.addEventListener("click", () => scrollTo({ top: 0, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }));
 
-  // nav behaviour
+  // Keep the mobile menu in sync visually, for keyboard users and assistive technology.
   const burger = header.querySelector("#burger");
-  burger.addEventListener("click", () => {
-    const open = mobile.classList.toggle("open");
+  const setMobileMenu = (open) => {
+    mobile.classList.toggle("open", open);
+    mobile.setAttribute("aria-hidden", String(!open));
+    mobile.inert = !open;
     burger.setAttribute("aria-expanded", String(open));
+    burger.setAttribute("aria-label", open ? "Close menu" : "Open menu");
     burger.innerHTML = icon(open ? "x" : "menu");
-  });
+  };
+  burger.addEventListener("click", () => setMobileMenu(!mobile.classList.contains("open")));
   mobile.addEventListener("click", (e) => {
-    if (e.target.closest("a")) { mobile.classList.remove("open"); burger.setAttribute("aria-expanded", "false"); burger.innerHTML = icon("menu"); }
+    if (e.target.closest("a")) setMobileMenu(false);
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && mobile.classList.contains("open")) {
+      setMobileMenu(false);
+      burger.focus();
+    }
+  });
+  document.addEventListener("click", (e) => {
+    if (mobile.classList.contains("open") && !header.contains(e.target) && !mobile.contains(e.target)) setMobileMenu(false);
   });
   let scrollFrame = 0;
   const onScroll = () => {

@@ -1,5 +1,5 @@
 // EMBEDX — Page controller. Dispatches renderers by body[data-page].
-import "./layout.js?v=20261106-smooth-render";
+import "./layout.js?v=20261106-mobile-ux";
 import "./forms.js?v=20261106-smooth-render";
 import { initAll } from "./ui.js?v=20261106-smooth-render";
 import { icon } from "./icons.js";

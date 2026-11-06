@@ -124,3 +124,77 @@ body { text-rendering: optimizeLegibility; }
   .cursor-click-ripple { display: none !important; }
   [data-reveal] { opacity: 1; transform: none; }
 }
+
+/* Mobile layout refinement: clear reading rhythm, no clipped content, and a real vertical journey. */
+.grid > *, .hero-grid > *, .detail-hero > *, .event-featured > *, .footer-grid > * { min-width: 0; }
+.prose, .card, .page-head, .section-head { min-width: 0; overflow-wrap: anywhere; }
+.spec-list li { min-width: 0; overflow-wrap: anywhere; }
+.community-card { padding: var(--sp-4); }
+.journey-head { margin-top: 3rem; }
+.mobile-menu {
+  visibility: hidden;
+  transition: transform .4s cubic-bezier(.2, .8, .2, 1), visibility 0s linear .4s;
+}
+.mobile-menu.open { visibility: visible; transition: transform .4s cubic-bezier(.2, .8, .2, 1), visibility 0s; }
+
+@media (max-width: 600px) {
+  .wrap { width: min(var(--wrap), calc(100% - 2rem)); }
+  .section { padding-block: clamp(2.6rem, 9vw, 3.4rem); }
+  .page-head { padding-top: calc(var(--nav-h) + 2rem); padding-bottom: 1.4rem; }
+  .section-head { margin-bottom: 1.5rem; }
+  .section-head h2, .page-head h1, .card h3 { text-wrap: balance; }
+  .community-card { padding: 1.15rem; }
+  .journey-head { margin-top: 2rem; }
+
+  /* One clear, connected progression instead of tiny disconnected dots on mobile. */
+  .timeline { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .timeline .step { min-width: 0; padding: 0 0 1.25rem 2.65rem; }
+  .timeline .step::before {
+    display: block;
+    top: 1.2rem; bottom: -.1rem; left: .65rem; right: auto;
+    width: 2px; height: auto;
+    background: linear-gradient(180deg, var(--cyan), rgba(212, 175, 55, .38));
+  }
+  .timeline .step:last-child::before { display: none; }
+  .timeline .step::after {
+    top: .05rem; left: 0; width: 1.35rem; height: 1.35rem;
+    border-width: 2px; background: var(--bg-2);
+  }
+  .timeline h4 { margin: 0 0 .3rem; font-size: 1rem; line-height: 1.4; }
+  .timeline p { max-width: 62ch; font-size: .92rem; line-height: 1.6; }
+
+  .nav-actions .icon-btn { width: 40px; height: 40px; min-width: 40px; }
+  .mobile-menu a { min-height: 48px; display: flex; align-items: center; }
+  .lightbox { padding: .75rem; }
+  .lightbox img { max-width: 100%; max-height: 78dvh; object-fit: contain; }
+  .lightbox figcaption { max-width: 100%; font-size: .85rem; overflow-wrap: anywhere; }
+}
+
+@media (max-width: 380px) {
+  .wrap { width: min(var(--wrap), calc(100% - 1.5rem)); }
+  .community-card { padding: 1rem; }
+  .nav-inner { gap: .35rem; }
+  .nav-actions { gap: .2rem; }
+  .nav-actions .icon-btn { width: 38px; height: 38px; min-width: 38px; }
+  .hero-stats .stat span { font-size: .64rem; line-height: 1.35; letter-spacing: 0; }
+}
+
+@media (hover: none) {
+  .hero-visual:hover .hero-image, .card:hover .card-img img, .gallery button:hover img { transform: none; }
+  .gallery button:hover::after { opacity: 0; }
+}
+
+/* The join-page selection process is a vertical flow at every viewport size. */
+.timeline-join { grid-template-columns: minmax(0, 1fr); gap: 0; }
+.timeline-join .step { min-width: 0; padding: 0 0 1.25rem 2.65rem; }
+.timeline-join .step::before {
+  display: block;
+  top: 1.2rem; bottom: -.1rem; left: .65rem; right: auto;
+  width: 2px; height: auto;
+  background: linear-gradient(180deg, var(--cyan), rgba(212, 175, 55, .38));
+}
+.timeline-join .step:last-child::before { display: none; }
+.timeline-join .step::after {
+  top: .05rem; left: 0; width: 1.35rem; height: 1.35rem;
+  border-width: 2px; background: var(--bg-2);
+}
