@@ -1,7 +1,7 @@
 // EMBEDX — Admin portal: multi-page, role-based CMS.
 // One page per section (/admin/, /admin/events, /admin/admins, …) sharing this module.
 // Real security lives in firestore.rules / storage.rules (roles from `admin_roles` collection).
-import { firebaseConfig, isConfigured, mailWorkspace, taskMail } from "./config.js?v=20261106-mail-workspace";
+import { firebaseConfig, isConfigured, mailWorkspace, taskMail } from "./config.js?v=20261106-mail-gateway-url";
 import { toast } from "./ui.js?v=20261106-cursor-animation";
 import { esc, asset } from "./render.js?v=20261106-admin-controls";
 import { announcements as starterAnnouncements } from "./data/announcements.js?v=20261106-admin-controls";
