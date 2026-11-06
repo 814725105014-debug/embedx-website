@@ -11,7 +11,6 @@ export const firebaseConfig = {
 
 export const isConfigured = Boolean(firebaseConfig.apiKey && firebaseConfig.projectId);
 
-// Task assignment emails (optional): deploy backend-bundle/appsscript/task-mail.gs as a
-// Leave disabled until the Apps Script deployment has been replaced with the
-// Firebase-ID-token version in backend-bundle/appsscript/task-mail.gs.
+// Task assignment emails stay disabled until the old public-token deployment is
+// replaced with the Firebase-ID-token version in backend-bundle/appsscript/task-mail.gs.
 export const taskMail = { url: "" };

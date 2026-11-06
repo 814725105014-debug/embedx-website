@@ -31,12 +31,23 @@ service cloud.firestore {
     }
     function rolePath() { return /databases/$(database)/documents/admin_roles/$(request.auth.token.email); }
     function hasRole() { return signedIn() && exists(rolePath()); }
+    function roleNeedsEmailVerification() {
+      let roleData = get(rolePath()).data;
+      return ('emailVerificationRequired' in roleData) && roleData.emailVerificationRequired == true;
+    }
+    function verifiedRole() {
+      return hasRole() && (!roleNeedsEmailVerification() || request.auth.token.email_verified == true);
+    }
     function myRole() { return get(rolePath()).data.role; }
+    function isOpenForm(formId) {
+      let formRef = /databases/$(database)/documents/forms/$(formId);
+      return exists(formRef) && get(formRef).data.status == 'open';
+    }
 
     // per-admin custom permissions: owner ticks sections in the portal (admin_roles/{email}.perms).
     // Docs created before custom perms fall back to their role preset.
     function legacyPerms(r) {
-      return r == 'president'         ? ['announcements', 'team', 'achievements', 'tasks']
+      return r == 'president'         ? ['announcements', 'team', 'achievements', 'forms', 'tasks']
         :    r == 'event_coordinator' ? ['events']
         :    r == 'social_media'      ? ['gallery', 'announcements']
         :    r == 'technical'         ? ['projects', 'resources', 'achievements']
@@ -45,7 +56,12 @@ service cloud.firestore {
     function permsOf() {
       return get(rolePath()).data.perms != null ? get(rolePath()).data.perms : legacyPerms(get(rolePath()).data.role);
     }
-    function canWrite(sec) { return isOwner() || (hasRole() && sec in permsOf()); }
+    function canWrite(sec) { return isOwner() || (verifiedRole() && sec in permsOf()); }
+    function isTaskAssignee(task) {
+      return signedIn() && request.auth.token.email_verified == true
+        && (task.assigneeEmail == request.auth.token.email
+            || (verifiedRole() && task.assigneeRole == myRole()));
+    }
 
     // ---- content collections: public read, role-scoped write ----
     match /events/{id}        { allow read: if true; allow create, update, delete: if canWrite('events'); }
@@ -75,27 +91,47 @@ service cloud.firestore {
 
     // ---- tasks: task managers read/manage all; assignees see only their own tasks ----
     match /tasks/{id} {
-      allow read: if canWrite('tasks')
-        || (signedIn()
-            && (resource.data.assigneeEmail == request.auth.token.email
-                || (hasRole() && resource.data.assigneeRole == myRole())));
+      allow read: if canWrite('tasks') || isTaskAssignee(resource.data);
       allow create, delete: if canWrite('tasks');
       allow update: if canWrite('tasks')
         || (signedIn()
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
             && request.resource.data.status in ['open', 'in_progress', 'done']
-            && (request.auth.token.email == resource.data.assigneeEmail
-                || (hasRole() && resource.data.assigneeRole == myRole())));
+            && isTaskAssignee(resource.data));
     }
 
-    // ---- club membership applications: create-only ----
-    match /members_applications/{applicationId} {
-      allow read: if false;
-      allow update: if false;
+    // ---- owner-managed forms and public responses ----
+    match /forms/{formId} {
+      allow read: if true;
+      allow create, update, delete: if canWrite('forms');
+    }
+    match /site_settings/{settingId} {
+      allow read: if canWrite('forms');
+      allow create, update: if isOwner();
       allow delete: if false;
+    }
+    match /form_responses/{responseId} {
+      allow read, update, delete: if canWrite('forms');
+      allow create: if
+        request.resource.data.keys().hasAll(['formId', 'formTitle', 'answers', 'submittedAt'])
+        && request.resource.data.keys().hasOnly(['formId', 'formTitle', 'answers', 'submittedAt'])
+        && isStr(request.resource.data.formId, 1, 120)
+        && isStr(request.resource.data.formTitle, 1, 160)
+        && request.resource.data.answers is map
+        && request.resource.data.answers.size() <= 30
+        && isIsoDate(request.resource.data.submittedAt)
+        && isOpenForm(request.resource.data.formId);
+    }
+
+    // ---- club membership applications: public create, admin monitor/delete ----
+    match /members_applications/{applicationId} {
+      allow read: if canWrite('forms');
+      allow update: if false;
+      allow delete: if canWrite('forms');
       allow create: if
         request.resource.data.keys().hasAll(['name', 'email', 'regNo', 'department', 'year', 'interest', 'message', 'createdAt'])
-        && request.resource.data.keys().hasOnly(['name', 'email', 'regNo', 'department', 'year', 'interest', 'message', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['name', 'email', 'regNo', 'department', 'year', 'interest', 'message', 'createdAt', 'formId'])
+        && (!('formId' in request.resource.data) || (isStr(request.resource.data.formId, 1, 120) && isOpenForm(request.resource.data.formId)))
         && isStr(request.resource.data.name, 2, 80)
         && isEmail(request.resource.data.email)
         && isStr(request.resource.data.regNo, 0, 40)
@@ -106,14 +142,15 @@ service cloud.firestore {
         && isIsoDate(request.resource.data.createdAt);
     }
 
-    // ---- contact form messages: create-only ----
+    // ---- contact form messages: public create, admin monitor/delete ----
     match /contact_messages/{messageId} {
-      allow read: if false;
+      allow read: if canWrite('forms');
       allow update: if false;
-      allow delete: if false;
+      allow delete: if canWrite('forms');
       allow create: if
         request.resource.data.keys().hasAll(['name', 'email', 'subject', 'message', 'createdAt'])
-        && request.resource.data.keys().hasOnly(['name', 'email', 'subject', 'message', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['name', 'email', 'subject', 'message', 'createdAt', 'formId'])
+        && (!('formId' in request.resource.data) || (isStr(request.resource.data.formId, 1, 120) && isOpenForm(request.resource.data.formId)))
         && isStr(request.resource.data.name, 2, 80)
         && isEmail(request.resource.data.email)
         && isStr(request.resource.data.subject, 0, 160)

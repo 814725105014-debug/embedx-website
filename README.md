@@ -34,10 +34,10 @@ public/                  ← Firebase Hosting root (the new site)
   assets/images/         ← WebP-optimized images, logos, favicon
   sitemap.xml, robots.txt
 firebase.json            ← hosting + cache headers + clean URLs + firestore pointers
-.firebaserc              ← default project id (replace placeholder!)
+.firebaserc              ← default Firebase project ID (`embedx-club-eee`)
 firestore.rules          ← security rules
 firestore.indexes.json   ← composite indexes
-scripts/seed.js          ← one-time Firestore seed (firebase-admin)
+scripts/seed.js          ← add-missing-only seed for public content and form definitions
 scripts/check-site.mjs   ← no-dependency HTML/link/module/config QA
 backend-bundle/          ← deployable rules + owner scripts + Apps Script mailer
 .github/workflows/       ← GitHub Hosting deploy workflows (need a configured service-account secret)
@@ -69,7 +69,7 @@ node scripts/check-site.mjs
 2. Paste the `firebaseConfig` object into **`public/js/config.js`**.
 3. Put the project id in **`.firebaserc`** (`projects.default`) and update the production URLs in the sitemap, robots file, canonical links, and task-mail script.
 4. Enable **Cloud Firestore** and **Firebase Authentication → Email/Password** in the console.
-5. Deploy the checked Firestore and Storage rules before enabling production forms/admin.
+5. Deploy the checked Firestore rules before enabling production forms/admin. Firebase Storage is optional for this Spark deployment; do not enable billing just to create a bucket. The admin supports static or HTTPS image URLs while Storage is unavailable.
 
 Until step 2 is done the site runs in *static fallback mode*: every section renders
 from `public/js/data/*.js` and forms show a friendly "backend not connected" toast.
@@ -80,8 +80,10 @@ from `public/js/data/*.js` and forms show a friendly "backend not connected" toa
 npm i -g firebase-tools
 firebase login
 firebase use <PROJECT_ID>
-firebase deploy --only firestore:rules,firestore:indexes,storage
+firebase deploy --only firestore:rules,firestore:indexes
 firebase deploy --only hosting
+# Only after Firebase Storage is initialized on the chosen plan:
+# firebase deploy --only storage
 ```
 
 Live URL: **https://<PROJECT_ID>.web.app** (plus *.firebaseapp.com).
@@ -95,8 +97,14 @@ export FIREBASE_PROJECT_ID=<PROJECT_ID>
 node seed.js
 ```
 
-Writes `events`, `projects`, `team` with stable document IDs (idempotent — safe to
-re-run after editing `public/js/data/*.js`). Form collections stay empty by design.
+Seeds seven public content collections (`announcements`, `events`, `projects`,
+`team`, `gallery`, `resources`, `achievements`) plus starter form definitions using
+stable document IDs. It only creates missing IDs and preserves existing Firestore
+documents, so rerunning it will not overwrite admin edits. `announcements` is
+intentionally empty until real notices are written. Form responses, admin roles, and
+tasks are never seeded. Owner-only **Restore missing content** and **Seed standard
+forms** controls can initialize content from the admin portal without a service
+account. Gallery images use bundled assets, not Firebase Storage.
 
 > Alternative: add/edit documents manually in **Firebase Console → Firestore**.
 
@@ -108,16 +116,21 @@ re-run after editing `public/js/data/*.js`). Form collections stay empty by desi
 | `projects` | `title, description/shortDesc, tags[], imageUrl, githubUrl, demoUrl, order, category, status, featured, highlight, hardware[], software[], outcomes[], gallery[]` | `featured: true` shows on the home page. |
 | `team` | `name, role, year, photoUrl, linkedin, github, order, group ("faculty" / "student"), focus, bio, department` | `group` splits the team page sections. |
 | `gallery` | `imageUrl, caption, order` | written by the admin portal; home-page gallery + lightbox |
-| `resources` | `title, category, level, tags[], desc` | written by the admin portal; Learning Hub |
-| `achievements` | `badge, title, subtitle, description, image, team, institution, projectId` | written by the admin portal; Hall of Achievers |
+| `resources` | `title, category, level, tags[], desc, url, order` | written by the admin portal; Learning Hub; optional HTTPS resource links |
+| `achievements` | `badge, title, subtitle, description, image, team, institution, projectId, highlights[], order` | written by the admin portal; Hall of Achievers |
 | `announcements` | `title, kind, body, pinned, createdAt` | written by the admin portal; home notice board (pinned first) |
-| `members_applications` | written by the Join + EMBEDNOVA forms | create-only; read via Console export |
-| `contact_messages` | written by the Contact form | create-only |
+| `forms` | owner-managed form definitions, seeded with join/enquiry/EMBEDNOVA/feedback starters | public can read open/closed definitions; role-scoped admin writes |
+| `form_responses` | custom registrations, surveys, and feedback (including 1–5 star ratings) | public create only while a form is open; assigned Forms admins monitor/export/delete |
+| `members_applications` | written by Join + EMBEDNOVA forms | public create; assigned Forms admins monitor/export/delete |
+| `contact_messages` | written by Contact form | public create; assigned Forms admins monitor/export/delete |
+| `site_settings/forms` | Google Sheets sync URL and last-run health | Forms admins can read; owner/Apps Script owner writes |
 
-Image URLs in Firestore should be **root-absolute** (`/assets/images/foo.webp`).
-If Firestore is unreachable, the site falls back to the bundled static data. An
-intentionally empty Firestore collection remains empty and displays an empty state
-(rather than resurrecting deleted seed content).
+Image URLs should be **root-absolute local paths** (`/assets/images/foo.webp`) or
+HTTPS URLs. The admin image editor accepts either; file upload/crop is available
+only when a Firebase Storage bucket exists and the project can use it. Keep this
+Spark setup on static/HTTPS image references until then. If Firestore is unreachable,
+the site falls back to bundled static data; an intentionally empty collection stays
+empty rather than resurrecting deleted content.
 
 ## 5b. Admin portal (`/admin`)
 
@@ -140,6 +153,25 @@ address. For verified existing accounts or recovery, use the trusted Admin SDK
 scripts in `backend-bundle/scripts/` from a machine holding the service account.
 Those scripts reject unverified accounts when granting privileges.
 
+### Managing an assigned admin
+
+The owner can change an admin's display name, role, section permissions, and password
+reset or revoke access from **Admins & roles**. A sign-in email is the Firebase Auth
+account key, so the browser intentionally cannot rewrite another user's credential.
+Use the trusted Admin SDK tool from an owner machine to move an existing account:
+
+```bash
+cd backend-bundle/scripts && npm install
+export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
+export FIREBASE_PROJECT_ID=embedx-club-eee
+node update-admin.js old@trp.srmtrichy.edu.in new@trp.srmtrichy.edu.in "New Display Name"
+```
+
+It preserves the role/permissions, carries over tasks assigned directly to the old
+email, generates a verification link for the owner to send privately, and keeps portal
+access locked until that address is verified. Keep the service-account file and
+verification link private; never commit or paste them into chat.
+
 ### Task email setup
 
 The optional Apps Script source is `backend-bundle/appsscript/task-mail.gs`.
@@ -154,7 +186,8 @@ published token must be treated as exposed.
 ### Security and behavior
 
 * Firestore rules are the authority: roles and per-user `perms` are checked on
-  each write; Storage uploads are limited to JPEG/PNG/WebP images under 5 MB.
+  each write. When Storage is initialized, uploads are limited to JPEG/PNG/WebP
+  images under 5 MB and further scoped to the admin's section.
 * Hosting adds `no-store` for `/admin/**`, frame/content-type/referrer/permissions
   headers; the admin HTML also has a restrictive Content Security Policy.
 * Public join/contact writes are schema-validated and create-only. Client-side
@@ -165,8 +198,32 @@ published token must be treated as exposed.
   restrict the API key to approved website referrers and configure/enforce Firebase
   App Check for the web app before relying on client-side public form writes.
 
-Form submissions (`members_applications`, `contact_messages`) remain create-only
-and are **not** readable from the portal; export them from the Firebase Console.
+### Forms, registrations, and Google Sheets
+
+The Admin → **Forms & responses** page seeds and manages the built-in Join,
+Enquiry, EMBEDNOVA registration, and Feedback forms, plus custom forms. Owners and
+admins explicitly assigned the `forms` permission can edit custom questions,
+open/close intake, review submissions, export CSV, and delete custom forms or
+responses. Feedback forms support accessible 1–5 star rating questions. Join and
+enquiry submissions stay in their existing Firestore collections and are now
+visible to authorized Forms admins; public users cannot read submissions.
+
+To create and connect the spreadsheet, deploy the owner-only Apps Script bridge:
+
+1. In a standalone Google Apps Script project, enable **Show `appsscript.json`**.
+2. Copy `backend-bundle/appsscript/forms-sync.gs` into the project and replace its
+   manifest with `backend-bundle/appsscript/appsscript.json`.
+3. Sign in as `814725105014@trp.srmtrichy.edu.in`, run `setupEmbedxSheets()` once,
+   and approve the requested Firestore, Sheets, mail, and trigger permissions.
+4. The script creates the spreadsheet and response tabs, syncs every five minutes,
+   and publishes the sheet URL and sync health to Admin → Forms & responses.
+
+Deploy Firestore rules first. The Apps Script reads Firestore as the allowlisted
+owner and stores only the response archive; Firestore remains the live source for
+portal monitoring. Notifications and applicant confirmations are sent by the
+script when a new response is synchronized. This requires no web-app URL, shared
+token, Cloud Function, or Firebase billing upgrade. Share the generated sheet only
+with trusted reviewers.
 
 ## 6. GitHub auto-deploy
 
@@ -177,8 +234,10 @@ secret is set in GitHub, deploy manually from a trusted machine:
 ```bash
 cd ~/embedx-website-main
 git pull
+firebase deploy --only firestore:rules,firestore:indexes
 firebase deploy --only hosting
-firebase deploy --only firestore:rules,firestore:indexes,storage
+# Storage rules only after a bucket exists and plan requirements are confirmed:
+# firebase deploy --only storage
 ```
 
 Never paste service-account JSON into chat or commit it. Configure the secret only
