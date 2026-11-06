@@ -2,22 +2,15 @@
 /** Create and sync the checked-in Apps Script sources with Google clasp. */
 import { existsSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
-import { homedir } from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const appDir = path.resolve(here, "../appsscript");
-const mailAppDir = path.resolve(here, "../appsscript-mail");
 const linkFile = path.join(appDir, ".clasp.json");
-const mailLinkFile = path.join(mailAppDir, ".clasp.json");
-const credentialsFile = path.join(homedir(), ".clasprc.json");
 const DEFAULT_SCRIPT_ID = "1oArp0lQZiDrvz7ZqNVWZbhjLds_kRpleJNRA6OpB0WAzj30bWX5pH-mc";
 const DEFAULT_PROJECT_TITLE = "EMBEDX CLUB NEW WEBSITE";
-// Keep this title whitespace-free: npm.cmd on Windows can split clasp arguments
-// passed through `npm exec` unless shell quoting is carefully escaped.
-const MAIL_PROJECT_TITLE = "EMBEDX-Official-Mail-Workspace";
 const action = process.argv[2] || "setup";
 const npm = process.platform === "win32" ? "npm.cmd" : "npm";
 
@@ -46,41 +39,15 @@ async function linkOrCreate() {
   if (!existsSync(linkFile)) throw new Error("clasp created the project but did not write appsscript/.clasp.json; check the clasp output.");
 }
 
-function linkOrCreateMail() {
-  if (existsSync(mailLinkFile)) {
-    console.log(`Using the isolated coordinator-mail Apps Script project linked in appsscript-mail/.clasp.json`);
-    return;
-  }
-  console.log(`Creating a dedicated ${MAIL_PROJECT_TITLE} Apps Script project...`);
-  clasp(["create", "--type", "standalone", "--title", MAIL_PROJECT_TITLE], mailAppDir);
-  if (!existsSync(mailLinkFile)) throw new Error("clasp created the mail project but did not write appsscript-mail/.clasp.json; check the clasp output.");
-}
-
 try {
-  const supported = ["setup", "login", "create", "push", "deploy-mail", "mail-push"];
+  const supported = ["setup", "login", "create", "push"];
   if (!supported.includes(action)) throw new Error(`Usage: node apps-script.mjs [${supported.join("|")}]`);
   if (action === "login") {
     clasp(["login"]);
     process.exit(0);
   }
 
-  if (["deploy-mail", "mail-push"].includes(action)) {
-    if (!existsSync(credentialsFile)) clasp(["login"], mailAppDir);
-    linkOrCreateMail();
-    console.log("Uploading the isolated official-mail sources and least-privilege manifest...");
-    clasp(["push", "--force"], mailAppDir);
-    if (action === "deploy-mail") {
-      console.log("Creating the official-mail web-app deployment from the manifest. Copy the /exec URL from clasp output.");
-      clasp(["version", "EMBEDX-official-mail-workspace"], mailAppDir);
-      clasp(["deploy", "--description", "EMBEDX-official-mail-workspace"], mailAppDir);
-      console.log("Confirm the deployment is User accessing the web app and restricted to the college Google Workspace domain.");
-    } else {
-      console.log("Mail source is pushed. In Apps Script → Deploy → Manage deployments, edit the existing mail deployment to use a new version; keep its execution/access settings and URL.");
-    }
-    process.exit(0);
-  }
-
-  if (action === "setup" && !existsSync(credentialsFile)) clasp(["login"]);
+  if (action === "setup" && !existsSync(linkFile)) clasp(["login"]);
   if (action === "create" && existsSync(linkFile)) throw new Error("This Apps Script folder is already linked. Use `npm run apps-script:push` to update it.");
   if (action === "setup" || action === "create") await linkOrCreate();
   if (action === "push" && !existsSync(linkFile)) throw new Error("No project is linked yet. Run `npm run apps-script:setup` first.");

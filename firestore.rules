@@ -48,11 +48,10 @@ service cloud.firestore {
     // per-admin custom permissions: owner ticks sections in the portal (admin_roles/{email}.perms).
     // Docs created before custom perms fall back to their role preset.
     function legacyPerms(r) {
-      return r == 'president'         ? ['announcements', 'team', 'achievements', 'forms', 'tasks', 'mail']
-        :    r == 'event_coordinator' ? ['events', 'mail']
-        :    r == 'social_media'      ? ['gallery', 'announcements', 'mail']
-        :    r == 'technical'         ? ['projects', 'resources', 'achievements', 'mail']
-        :    r == 'hod'               ? ['mail']
+      return r == 'president'         ? ['announcements', 'team', 'achievements', 'forms', 'tasks']
+        :    r == 'event_coordinator' ? ['events']
+        :    r == 'social_media'      ? ['gallery', 'announcements']
+        :    r == 'technical'         ? ['projects', 'resources', 'achievements']
         :    [];
     }
     function permsOf() {
@@ -79,8 +78,7 @@ service cloud.firestore {
     match /admin_roles/{email} {
       allow read: if isOwner()
         || (signedIn() && request.auth.token.email == email)
-        || canWrite('tasks')
-        || canWrite('mail');
+        || canWrite('tasks');
       allow create, delete: if isOwner();
       allow update: if isOwner()
         || (signedIn()
