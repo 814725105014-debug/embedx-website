@@ -650,13 +650,16 @@ details.perm-edit summary { padding: .55rem 0; min-height: 44px; display: flex; 
 .admin-directory-tools input, .admin-directory-tools select { min-width:0; width:100%; min-height:44px; }
 .admin-count { font-size:.82rem; margin:.25rem 0 .7rem; }
 .admin-user-card { min-width:0; display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:.85rem 1.2rem; padding:1rem 1.15rem; }
+.admin-user-card:not(.admin-owner-card) { grid-template-columns:minmax(0,1fr); }
 .admin-user-identity { min-width:0; display:flex; align-items:center; gap:.8rem; }
 .admin-avatar { width:42px; height:42px; flex:0 0 42px; display:grid; place-items:center; border-radius:50%; background:var(--grad-soft); color:var(--violet); font-weight:800; font-family:var(--font-head); }
-.admin-user-copy { min-width:0; display:grid; gap:.22rem; }
-.admin-user-copy strong { overflow-wrap:anywhere; line-height:1.35; }
-.admin-user-copy .muted { font-size:.82rem; line-height:1.45; overflow-wrap:anywhere; }
+.admin-user-copy { min-width:0; flex:1 1 auto; display:grid; gap:.22rem; }
+.admin-user-email { display:block; max-width:100%; overflow-wrap:break-word; word-break:normal; line-height:1.35; }
+.admin-user-copy .muted { font-size:.82rem; line-height:1.45; overflow-wrap:break-word; }
 .admin-owner-badge { justify-self:end; }
-.admin-user-actions { min-width:0; display:flex; align-items:end; justify-content:flex-end; gap:.55rem; flex-wrap:wrap; }
+.admin-user-status { min-width:0; display:flex; align-items:center; flex-wrap:wrap; gap:.45rem; }
+.admin-user-status .chip { max-width:100%; white-space:normal; }
+.admin-user-actions { min-width:0; display:flex; align-items:end; justify-content:flex-start; gap:.55rem; flex-wrap:wrap; }
 .admin-role-control { display:grid; gap:.25rem; min-width:155px; color:var(--text-muted); font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
 .admin-role-control select { min-width:0; width:100%; min-height:40px; padding:.45rem 2rem .45rem .7rem; border:1px solid var(--border); border-radius:999px; color:var(--text); background:var(--bg-3); font:inherit; font-size:.82rem; text-transform:none; letter-spacing:normal; }
 .admin-user-actions .btn { min-height:40px; }
@@ -683,9 +686,9 @@ details.perm-edit summary { padding: .55rem 0; min-height: 44px; display: flex; 
   .admin-directory-head { align-items:stretch; }
   .admin-directory-tools { width:100%; grid-template-columns:1fr; }
   .admin-user-card { padding:.9rem; gap:.7rem; }
-  .admin-user-identity { align-items:flex-start; flex-wrap:wrap; }
-  .admin-user-copy { flex:1 1 calc(100% - 58px); }
-  .admin-password-due { margin-left:50px; }
+  .admin-user-identity { align-items:flex-start; flex-wrap:nowrap; }
+  .admin-user-copy { flex:1 1 0; }
+  .admin-password-due { margin-left:0; }
   .admin-user-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); width:100%; gap:.5rem; }
   .admin-role-control { grid-column:1 / -1; min-width:0; }
   .admin-user-actions .btn { width:100%; min-height:44px; white-space:normal; line-height:1.2; padding:.45rem .5rem; }

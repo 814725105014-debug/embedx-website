@@ -953,10 +953,12 @@ async function loadAdmins() {
     <section class="admin-user-card card" data-search="${esc(`${a.email} ${a.name || ""}`.toLowerCase())}" data-role="${esc(a.role || "")}">
       <div class="admin-user-identity">
         <span class="admin-avatar" aria-hidden="true">${esc((a.name || a.email).trim().charAt(0).toUpperCase())}</span>
-        <div class="admin-user-copy"><strong title="${esc(a.email)}">${esc(a.email)}</strong><span class="muted">${esc(a.name || "Name not set")}${a.addedAt ? ` · Added ${(a.addedAt || "").slice(0, 10)}` : ""}</span></div>
+        <div class="admin-user-copy"><strong class="admin-user-email" title="${esc(a.email)}">${esc(a.email)}</strong><span class="muted">${esc(a.name || "Name not set")}${a.addedAt ? ` · Added ${(a.addedAt || "").slice(0, 10)}` : ""}</span></div>
+      </div>
+      ${(a.emailVerificationRequired || a.mustChangePassword) ? `<div class="admin-user-status">
         ${a.emailVerificationRequired ? `<span class="chip admin-password-due" title="Email must be verified before portal access">✉ Verify email</span>` : ""}
         ${a.mustChangePassword ? `<span class="chip admin-password-due" title="Must change temporary password at next login">🔑 Change password due</span>` : ""}
-      </div>
+      </div>` : ""}
       <div class="admin-user-actions">
         <label class="admin-role-control"><span>Role</span><select data-rolefor="${esc(a.email)}">
           ${Object.entries(ROLES).filter(([r]) => r !== "owner").map(([r, m]) => `<option value="${r}" ${a.role === r ? "selected" : ""}>${m.label}</option>`).join("")}
