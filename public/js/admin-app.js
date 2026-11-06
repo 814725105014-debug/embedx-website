@@ -391,9 +391,10 @@ async function boot() {
     renderShell();
     renderMain();
     route();
-    if (role === "owner" && starterContentSyncUser !== me) {
+    if ((role === "owner" || can("gallery")) && starterContentSyncUser !== me) {
       starterContentSyncUser = me;
-      void restoreStarterContent({ quiet: true });
+      const sections = role === "owner" ? Object.keys(STARTER_CONTENT) : ["gallery"];
+      void restoreStarterContent({ quiet: true, sections });
     }
   });
 
@@ -539,15 +540,20 @@ async function renderOverview() {
     </div>`;
 }
 
-async function restoreStarterContent({ quiet = false } = {}) {
+async function restoreStarterContent({ quiet = false, sections = Object.keys(STARTER_CONTENT) } = {}) {
   let added = 0;
   try {
-    if (role !== "owner" || !isConfigured) return 0;
+    if (!isConfigured || !sections.length || !sections.every((section) => can(section))) return 0;
     const { db } = await sdk();
-    const tombstoneSnapshot = await dbMod.getDocs(dbMod.collection(db, "content_tombstones"));
-    const deletedKeys = new Set(tombstoneSnapshot.docs.map((doc) => `${doc.get("section")}/${doc.get("contentId")}`));
-    for (const [collectionName, rows] of Object.entries(STARTER_CONTENT)) {
+    for (const collectionName of sections) {
+      const rows = STARTER_CONTENT[collectionName] || [];
       if (!rows.length) continue;
+      const tombstoneQuery = dbMod.query(
+        dbMod.collection(db, "content_tombstones"),
+        dbMod.where("section", "==", collectionName)
+      );
+      const tombstoneSnapshot = await dbMod.getDocs(tombstoneQuery);
+      const deletedIds = new Set(tombstoneSnapshot.docs.map((doc) => String(doc.get("contentId") || "")));
       let presentIds = new Set();
       let presentGalleryImages = new Set();
       if (collectionName === "gallery") {
@@ -556,7 +562,7 @@ async function restoreStarterContent({ quiet = false } = {}) {
         presentGalleryImages = new Set(currentGallery.docs.map((doc) => doc.get("imageUrl")).filter(Boolean));
       }
       const candidates = rows.map((row, index) => ({ row, index })).filter(({ row }) =>
-        row.id && !deletedKeys.has(`${collectionName}/${row.id}`) && !presentIds.has(row.id)
+        row.id && !deletedIds.has(row.id) && !presentIds.has(row.id)
         && !(collectionName === "gallery" && presentGalleryImages.has(row.imageUrl))
       );
       if (!candidates.length) continue;
@@ -969,11 +975,11 @@ async function renderGalleryTools() {
   const activeIds = new Set(requests.filter((request) => ACTIVE_ASSET_DELETE_STATUSES.has(request.status || "pending")).map((request) => request.galleryId));
   const toolbar = document.createElement("section");
   toolbar.className = "admin-gallery-sync card";
-  toolbar.innerHTML = `<div class="admin-gallery-sync-copy"><strong>Bundled website gallery · ${starterGallery.length} starter photos</strong><p class="muted">Missing starter photos sync automatically when the owner opens Admin. Deleted entries stay removed. The Firestore record is deleted immediately; the public gallery hides it while Firestore is reachable. Its bundled file and fallback row are removed through a reviewed GitHub pull request.</p><div class="admin-starter-thumbs">${starterGallery.map((photo) => {
+  toolbar.innerHTML = `<div class="admin-gallery-sync-copy"><strong>Bundled website gallery · ${starterGallery.length} starter photos</strong><p class="muted">Missing starter photos sync automatically when a gallery editor opens Admin. Deleted entries stay removed. The Firestore record is deleted immediately; the public gallery hides it while Firestore is reachable. Its bundled file and fallback row are removed through a reviewed GitHub pull request.</p><div class="admin-starter-thumbs">${starterGallery.map((photo) => {
     const present = isStarterGalleryPresent(photo);
     const removing = activeIds.has(photo.id);
     const removed = deletedIds.has(photo.id);
-    const state = removed ? "Removed" : present ? "Published" : removing ? "GitHub PR pending" : "Waiting for owner sync";
+    const state = removed ? "Removed" : present ? "Published" : removing ? "GitHub PR pending" : "Waiting for gallery sync";
     return `<div class="admin-starter-thumb ${present ? "is-published" : removing ? "is-pending-delete" : removed ? "is-deleted" : "is-missing"}" title="${esc(photo.caption)}">${removed ? "" : `<img src="${esc(asset(photo.imageUrl))}" alt="${esc(photo.caption)}" loading="lazy" decoding="async" />`}<span>${state}</span></div>`;
   }).join("")}</div></div>`;
   region.insertBefore(toolbar, list);

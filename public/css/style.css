@@ -500,6 +500,7 @@ button { font: inherit; cursor: pointer; }
 .detail-hero { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4); align-items: start; }
 @media (max-width: 900px) { .detail-hero { grid-template-columns: 1fr; } }
 .spec-list li { display: flex; gap: .6rem; padding: .45rem 0; border-bottom: 1px dashed var(--border); color: var(--text-muted); font-size: .94rem; }
+.spec-list li > strong { flex: 0 0 auto; white-space: nowrap; }
 .spec-list li::before { content: "▸"; color: var(--cyan); }
 .spec-list li:last-child { border-bottom: 0; }
 .faq details { border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--surface); padding: .9rem 1.1rem; margin-bottom: .7rem; }
