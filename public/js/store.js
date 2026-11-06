@@ -75,8 +75,12 @@ export async function getAnnouncements() {
   catch { const m = await import("./data/announcements.js"); return m.announcements; }
 }
 
+const LEGACY_COLLEGE_LOGO_URLS = new Set([
+  "https://trp.srmtrichy.edu.in/wp-content/uploads/2026/03/TRP.png",
+  "/assets/images/srm-logo.webp"
+]);
 export const DEFAULT_SITE_SETTINGS = Object.freeze({
-  collegeLogoUrl: "https://trp.srmtrichy.edu.in/wp-content/uploads/2026/03/TRP.png",
+  collegeLogoUrl: "/assets/images/srm-trp-college-wordmark.webp",
   collegeWebsiteUrl: "https://www.trpengg.ac.in",
   collegeWebsiteLabel: "www.trpengg.ac.in",
   contactEmail: "eee@srmtrpr.edu.in",
@@ -88,14 +92,24 @@ export const DEFAULT_SITE_SETTINGS = Object.freeze({
   whatsappUrl: "https://chat.whatsapp.com/C0lGhoQ6D9MK79OXroCPuF"
 });
 
+export function normalizeSiteSettings(overrides = {}) {
+  const source = overrides && typeof overrides === "object" ? overrides : {};
+  const settings = { ...DEFAULT_SITE_SETTINGS, ...source };
+  const logoUrl = String(settings.collegeLogoUrl || "").trim();
+  if (!logoUrl || LEGACY_COLLEGE_LOGO_URLS.has(logoUrl.split(/[?#]/, 1)[0])) {
+    settings.collegeLogoUrl = DEFAULT_SITE_SETTINGS.collegeLogoUrl;
+  }
+  return settings;
+}
+
 export async function getSiteSettings() {
-  if (!isConfigured) return { ...DEFAULT_SITE_SETTINGS };
+  if (!isConfigured) return normalizeSiteSettings();
   try {
     const app = await getApp();
     const { getFirestore, doc, getDoc } = await import(`${SDK}/firebase-firestore.js`);
     const snap = await getDoc(doc(getFirestore(app), "site_settings", "site"));
-    return snap.exists() ? { ...DEFAULT_SITE_SETTINGS, ...snap.data() } : { ...DEFAULT_SITE_SETTINGS };
-  } catch (err) { console.warn("Using bundled site settings", err); return { ...DEFAULT_SITE_SETTINGS }; }
+    return normalizeSiteSettings(snap.exists() ? snap.data() : {});
+  } catch (err) { console.warn("Using bundled site settings", err); return normalizeSiteSettings(); }
 }
 
 // --- public form API ---
