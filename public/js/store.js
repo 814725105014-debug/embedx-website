@@ -2,7 +2,21 @@
 import { firebaseConfig, isConfigured } from "./config.js?v=20261106";
 
 const SDK = "https://www.gstatic.com/firebasejs/10.12.5";
+const PUBLIC_READ_TIMEOUT_MS = 1800;
 let appPromise = null;
+
+function withDeadline(task, timeout = PUBLIC_READ_TIMEOUT_MS) {
+  let timer;
+  const deadline = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error("Firebase read timed out")), timeout);
+  });
+  return Promise.race([Promise.resolve().then(task), deadline]).finally(() => clearTimeout(timer));
+}
+
+async function readOrFallback(read, fallback) {
+  try { return await withDeadline(read); }
+  catch { return fallback(); }
+}
 
 async function getApp() {
   if (!appPromise) {
@@ -45,34 +59,27 @@ async function addDocument(name, data) {
   return addDoc(collection(getFirestore(app), name), data);
 }
 
-// --- public read API with fallbacks ---
-export async function getProjects() {
-  try { return await loadCollection("projects"); }
-  catch { const m = await import("./data/projects.js"); return m.projects; }
+// --- public reads resolve from Firestore quickly, then fall back to bundled data on slow/offline links ---
+export function getProjects() {
+  return readOrFallback(() => loadCollection("projects"), async () => (await import("./data/projects.js")).projects);
 }
-export async function getEvents() {
-  try { return await loadCollection("events"); }
-  catch { const m = await import("./data/events.js?v=20261106-event-forms"); return m.events; }
+export function getEvents() {
+  return readOrFallback(() => loadCollection("events"), async () => (await import("./data/events.js?v=20261106-event-forms")).events);
 }
-export async function getTeam() {
-  try { return await loadCollection("team"); }
-  catch { const m = await import("./data/team.js"); return m.team; }
+export function getTeam() {
+  return readOrFallback(() => loadCollection("team"), async () => (await import("./data/team.js")).team);
 }
-export async function getGallery() {
-  try { return await loadCollection("gallery"); }
-  catch { const m = await import("./data/gallery.js"); return m.gallery; }
+export function getGallery() {
+  return readOrFallback(() => loadCollection("gallery"), async () => (await import("./data/gallery.js")).gallery);
 }
-export async function getResources() {
-  try { return await loadCollection("resources", null); }
-  catch { const m = await import("./data/resources.js"); return m.resources; }
+export function getResources() {
+  return readOrFallback(() => loadCollection("resources", null), async () => (await import("./data/resources.js")).resources);
 }
-export async function getAchievements() {
-  try { return await loadCollection("achievements", null); }
-  catch { const m = await import("./data/achievements.js"); return m.achievements; }
+export function getAchievements() {
+  return readOrFallback(() => loadCollection("achievements", null), async () => (await import("./data/achievements.js")).achievements);
 }
-export async function getAnnouncements() {
-  try { return await loadCollection("announcements", "createdAt", "desc"); }
-  catch { const m = await import("./data/announcements.js"); return m.announcements; }
+export function getAnnouncements() {
+  return readOrFallback(() => loadCollection("announcements", "createdAt", "desc"), async () => (await import("./data/announcements.js")).announcements);
 }
 
 const LEGACY_COLLEGE_LOGO_URLS = new Set([
@@ -110,14 +117,14 @@ export function normalizeSiteSettings(overrides = {}) {
   return settings;
 }
 
-export async function getSiteSettings() {
-  if (!isConfigured) return normalizeSiteSettings();
-  try {
+export function getSiteSettings() {
+  if (!isConfigured) return Promise.resolve(normalizeSiteSettings());
+  return readOrFallback(async () => {
     const app = await getApp();
     const { getFirestore, doc, getDoc } = await import(`${SDK}/firebase-firestore.js`);
     const snap = await getDoc(doc(getFirestore(app), "site_settings", "site"));
     return normalizeSiteSettings(snap.exists() ? snap.data() : {});
-  } catch (err) { console.warn("Using bundled site settings", err); return normalizeSiteSettings(); }
+  }, () => normalizeSiteSettings());
 }
 
 // --- public form API ---

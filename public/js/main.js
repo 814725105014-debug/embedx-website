@@ -1,10 +1,10 @@
 // EMBEDX — Page controller. Dispatches renderers by body[data-page].
-import "./layout.js?v=20261106-attached-college-logo";
-import "./forms.js?v=20261106-event-forms";
-import { initAll } from "./ui.js?v=20261106-cursor-animation";
+import "./layout.js?v=20261106-smooth-render";
+import "./forms.js?v=20261106-smooth-render";
+import { initAll } from "./ui.js?v=20261106-smooth-render";
 import { icon } from "./icons.js";
-import { esc, asset, externalUrl, skeletons, projectCard, eventCard, teamCard, domainCard, resourceCard, achievementCard, announcementCard, galleryButton } from "./render.js?v=20261106-content";
-import { getProjects, getEvents, getTeam, getGallery, getAnnouncements, getResources, getAchievements } from "./store.js?v=20261106-attached-college-logo";
+import { esc, asset, externalUrl, skeletons, projectCard, eventCard, teamCard, domainCard, resourceCard, achievementCard, announcementCard, galleryButton } from "./render.js?v=20261106-smooth-render";
+import { getProjects, getEvents, getTeam, getGallery, getAnnouncements, getResources, getAchievements } from "./store.js?v=20261106-smooth-render";
 import { domains, tools, careers } from "./data/domains.js";
 
 const $ = (s) => document.querySelector(s);
@@ -31,10 +31,10 @@ async function home() {
   const ag = $("#achieversGrid");
   const dg = $("#domainsGrid");
 
-  if (gg) skeletons(gg, 8, 170);
+  if (gg) skeletons(gg, 4, 170);
   if (ag) skeletons(ag, 2, 320);
-  if (pg) skeletons(pg, 4);
-  if (eg) skeletons(eg, 3, 320);
+  if (pg) skeletons(pg, 3);
+  if (eg) skeletons(eg, 2, 320);
   if (dg) dg.innerHTML = domains.slice(0, 6).map(domainCard).join("") +
     `<div class="card center" style="display:grid;place-content:center;gap:.6rem">${icon("circuit")}<a class="btn btn-ghost btn-sm" href="/pages/domains.html">Explore All 12 Technical Domains</a></div>`;
 
@@ -44,27 +44,23 @@ async function home() {
     if (list.length) {
       an.closest("section").hidden = false;
       an.innerHTML = list.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0)).slice(0, 3).map(announcementCard).join("");
-      initAll();
     }
   }));
   if (gg) jobs.push(getGallery().then((shots) => {
     gg.innerHTML = shots.length ? shots.map(galleryButton).join("") : '<p class="card center muted">Gallery photos will appear here soon.</p>';
-    initAll();
   }));
   if (ag) jobs.push(getAchievements().then((rows) => {
     ag.innerHTML = rows.length ? rows.slice(0, 2).map(achievementCard).join("") : '<p class="card center muted">New achievements will appear here.</p>';
-    initAll();
   }));
   if (pg) jobs.push(getProjects().then((rows) => {
     const featured = rows.filter((p) => p.featured).slice(0, 4);
     pg.innerHTML = featured.length ? featured.map(projectCard).join("") : '<p class="card center muted">Featured projects will appear here soon.</p>';
-    initAll();
   }));
   if (eg) jobs.push(getEvents().then((rows) => {
     eg.innerHTML = rows.length ? rows.map(eventCard).join("") : '<p class="card center muted">There are no events to display right now.</p>';
-    initAll();
   }));
   await Promise.all(jobs);
+  initAll();
 }
 /* ---------- projects ---------- */
 async function projectsPage() {
@@ -125,7 +121,7 @@ async function projectDetail() {
       </div>
     </div>
     <h2 style="margin-top:2.6rem">Project Gallery</h2>
-    <div class="gallery">${(p.gallery || []).map((g, i) => `<button data-lightbox="${esc(asset(g))}" data-caption="${esc(p.title)} — view ${i + 1}" aria-label="Enlarge ${esc(p.title)} image ${i + 1}"><img src="${esc(asset(g))}" alt="${esc(p.title)} gallery image ${i + 1}" loading="lazy" /></button>`).join("")}</div>
+    <div class="gallery">${(p.gallery || []).map((g, i) => `<button data-lightbox="${esc(asset(g))}" data-caption="${esc(p.title)} — view ${i + 1}" aria-label="Enlarge ${esc(p.title)} image ${i + 1}"><img src="${esc(asset(g))}" alt="${esc(p.title)} gallery image ${i + 1}" loading="lazy" decoding="async" /></button>`).join("")}</div>
     <h2 style="margin-top:2.6rem">More Projects</h2>
     <div class="grid grid-3">${list.filter((x) => x.id !== p.id).slice(0, 3).map(projectCard).join("")}</div>`;
   initAll();
@@ -163,13 +159,13 @@ async function eventsPage() {
         <button class="btn btn-ghost" data-lightbox="${esc(asset(em.imageUrl))}" data-caption="EMBEDNOVA official poster">${icon("image")} View Event Poster</button>
       </div>
     </div>
-    <div class="event-poster"><img src="${esc(asset(em.imageUrl))}" alt="EMBEDNOVA official event poster" loading="lazy" /></div>`;
+    <div class="event-poster"><img src="${esc(asset(em.imageUrl))}" alt="EMBEDNOVA official event poster" loading="lazy" decoding="async" /></div>`;
   if (tracks) tracks.innerHTML = (em.tracks || []).map((t) => `
     <article class="card tilt" data-reveal>
       <span class="track-num">${esc(t.number)}</span>
       <h3>${esc(t.name)}</h3>
       <p class="card-sub">${esc(t.tagline)} — ${esc(t.motto)}</p>
-      <img src="${esc(asset(t.image))}" alt="${esc(t.name)} track illustration" loading="lazy" style="border-radius:var(--r-sm);margin:.6rem 0" />
+      <img src="${esc(asset(t.image))}" alt="${esc(t.name)} track illustration" loading="lazy" decoding="async" style="border-radius:var(--r-sm);margin:.6rem 0" />
       <p class="muted" style="font-size:.92rem">${esc(t.description)}</p>
       <a class="card-link" href="/pages/event-detail.html?id=embednova#track-${esc(t.number)}">Track Rules &amp; Specs ${icon("arrow-right")}</a>
     </article>`).join("");
@@ -239,7 +235,7 @@ async function eventDetail() {
     ${e.tracks.map((t) => `
       <section class="card" id="track-${esc(t.number)}" style="margin-bottom:1.4rem" data-reveal>
         <div style="display:flex;gap:1.2rem;flex-wrap:wrap;align-items:flex-start">
-          <img src="${esc(asset(t.image))}" alt="${esc(t.name)} illustration" loading="lazy" style="width:180px;border-radius:var(--r-sm)" />
+          <img src="${esc(asset(t.image))}" alt="${esc(t.name)} illustration" loading="lazy" decoding="async" style="width:180px;border-radius:var(--r-sm)" />
           <div style="flex:1;min-width:240px">
             <span class="track-num">${esc(t.number)}</span>
             <h3 style="display:inline-block;margin-left:.6rem">${esc(t.name)}</h3>
