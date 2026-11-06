@@ -12,7 +12,7 @@ import { gallery as starterGallery } from "./data/gallery.js?v=20261106-admin-co
 import { resources as starterResources } from "./data/resources.js?v=20261106-admin-controls";
 import { achievements as starterAchievements } from "./data/achievements.js?v=20261106-admin-controls";
 import { forms as starterForms } from "./data/forms.js?v=20261106-admin-controls";
-import { DEFAULT_SITE_SETTINGS, getSiteSettings } from "./store.js?v=20261106-site-settings";
+import { DEFAULT_SITE_SETTINGS, getSiteSettings, normalizeSiteSettings } from "./store.js?v=20261106-college-logo-mobile";
 
 const STARTER_CONTENT = {
   announcements: starterAnnouncements,
@@ -441,7 +441,7 @@ async function boot() {
 function renderShell() {
   $("#adminTop").innerHTML = `
     <div class="wrap admin-top-inner">
-      <a class="brand admin-brand" href="/" aria-label="EMBEDX — Department of EEE, SRM TRP Engineering College"><img src="/assets/images/embedx-emblem.webp" alt="" width="38" height="38" /><span class="brand-copy"><span class="brand-name">EMBED<span>X</span></span><span class="brand-sub">Department of EEE</span><span class="brand-institution">SRM TRP Engineering College · Admin</span></span><span class="admin-college-logo-frame"><img class="admin-college-mark" src="https://trp.srmtrichy.edu.in/wp-content/uploads/2026/03/TRP.png" alt="SRM TRP Engineering College logo" /></span></a>
+      <a class="brand admin-brand" href="/" aria-label="EMBEDX — Department of EEE, SRM TRP Engineering College"><img src="/assets/images/embedx-emblem.webp" alt="" width="38" height="38" /><span class="brand-copy"><span class="brand-name">EMBED<span>X</span></span><span class="brand-sub">Department of EEE</span><span class="brand-institution">SRM TRP Engineering College · Admin</span></span><span class="admin-college-logo-frame"><img class="admin-college-mark" src="/assets/images/srm-trp-college-wordmark.webp" alt="SRM TRP Engineering College logo" /></span></a>
       <div class="admin-top-actions">
         <span class="chip chip-accent" title="Signed in as">${esc(me)}</span>
         <span class="chip" title="Your role">${esc(ROLES[role].label)}</span>
@@ -450,6 +450,7 @@ function renderShell() {
       </div>
     </div>`;
   const adminCollegeLogo = $("#adminTop .admin-college-mark");
+  adminCollegeLogo?.addEventListener("error", () => { adminCollegeLogo.src = DEFAULT_SITE_SETTINGS.collegeLogoUrl; }, { once: true });
   getSiteSettings().then((settings) => {
     if (!adminCollegeLogo) return;
     const url = String(settings.collegeLogoUrl || "");
@@ -621,7 +622,7 @@ async function renderWebsiteSettings() {
   try {
     const { db } = await sdk();
     const snap = await dbMod.getDoc(dbMod.doc(db, "site_settings", "site"));
-    const settings = snap.exists() ? { ...DEFAULT_SITE_SETTINGS, ...snap.data() } : { ...DEFAULT_SITE_SETTINGS };
+    const settings = normalizeSiteSettings(snap.exists() ? snap.data() : {});
     if (PAGE !== "site" || !region.isConnected) return;
     region.innerHTML = `<section class="admin-site-settings card"><div class="admin-form-toolbar"><div><h2>Public contact &amp; social links</h2><p class="muted">Edit these once here; the public footer and Contact page use the saved values after reload.</p></div></div>
       <div class="admin-site-logo-preview"><img id="siteLogoPreview" src="${esc(settings.collegeLogoUrl)}" alt="College logo preview" /><div><strong>College logo</strong><p class="muted">Transparent artwork displays on a white tile. Use an /assets/images/ path or an HTTPS URL on trp.srmtrichy.edu.in.</p></div></div>
