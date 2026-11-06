@@ -31,6 +31,14 @@
   --shadow: 0 18px 50px -18px rgba(0, 0, 0, .7);
   --grid-line: rgba(168, 139, 250, .08);
   --nav-bg: rgba(8, 6, 12, .78);
+  --glass-filter: blur(24px) brightness(.94) saturate(1.55);
+  --glass-surface: linear-gradient(135deg, rgba(255,255,255,.085), rgba(255,255,255,.025) 48%, rgba(168,85,247,.035)), var(--surface);
+  --glass-sheen: linear-gradient(135deg, rgba(255,255,255,.09), transparent 42%, rgba(168,85,247,.025));
+  --glass-edge: rgba(255,255,255,.16);
+  --glass-chrome: rgba(14,11,21,.88);
+  --glass-shadow: 0 .75px .75px rgba(255,255,255,.07), .7px .8px 1.2px -0.4px rgba(3,2,8,.2), 2px 2.4px 4px -1.2px rgba(3,2,8,.24), 0 14px 34px -22px rgba(0,0,0,.78);
+  --glass-bevel: inset 1px 1px .8px rgba(255,255,255,.24), inset 4px 4px 3px -5px rgba(255,255,255,.12), inset 0 0 0 .5px rgba(255,255,255,.04);
+  --glass-hover-shadow: 0 22px 60px -22px rgba(0,0,0,.76), 0 0 0 1px rgba(168,85,247,.22), 0 0 42px -18px var(--glow-cyan);
   --ok: #34d399;
   --err: #f87171;
   --warn: #fbbf24;
@@ -76,6 +84,14 @@
   --shadow: 0 18px 44px -20px rgba(23, 18, 31, .3);
   --grid-line: rgba(23, 18, 31, .06);
   --nav-bg: rgba(247, 245, 250, .82);
+  --glass-filter: blur(20px) brightness(1.02) saturate(1.12);
+  --glass-surface: linear-gradient(135deg, rgba(255,255,255,.94), rgba(255,255,255,.72) 54%, rgba(124,58,237,.035)), var(--surface);
+  --glass-sheen: linear-gradient(135deg, rgba(255,255,255,.8), transparent 44%, rgba(124,58,237,.025));
+  --glass-edge: rgba(23,18,31,.13);
+  --glass-chrome: rgba(247,245,250,.9);
+  --glass-shadow: 0 .75px .75px rgba(255,255,255,.95), .7px .8px 1.2px -0.4px rgba(23,18,31,.08), 2px 2.4px 4px -1.2px rgba(23,18,31,.09), 0 14px 34px -22px rgba(23,18,31,.24);
+  --glass-bevel: inset 1px 1px .8px rgba(255,255,255,.98), inset 4px 4px 3px -5px rgba(23,18,31,.08), inset 0 0 0 .5px rgba(23,18,31,.035);
+  --glass-hover-shadow: 0 22px 48px -24px rgba(23,18,31,.28), 0 0 0 1px rgba(124,58,237,.13), 0 0 30px -20px rgba(124,58,237,.18);
 }
 
 /* ---------- 2. Base ---------- */
@@ -153,21 +169,33 @@ button { font: inherit; cursor: pointer; }
 .center .section-head { margin-inline: auto; }
 
 /* ---------- 3. Glass primitives ---------- */
-.glass {
-  background: var(--surface);
-  border: 1px solid var(--border);
+.glass3d, .glass {
+  position: relative;
+  isolation: isolate;
+  background: var(--glass-surface);
+  border: 1px solid var(--glass-edge);
   border-radius: var(--r-md);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  box-shadow: var(--shadow);
+  backdrop-filter: var(--glass-filter);
+  -webkit-backdrop-filter: var(--glass-filter);
+  box-shadow: var(--glass-shadow);
+}
+/* Reusable rim highlight for surfaces that don't need their own ::before. */
+.glass3d::before {
+  content: ""; position: absolute; inset: 0; border-radius: inherit;
+  background: var(--glass-sheen); pointer-events: none; z-index: -1;
+}
+.glass3d::after, .glass::after, .card::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit;
+  box-shadow: var(--glass-bevel); pointer-events: none;
 }
 .card {
   position: relative;
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: var(--glass-surface);
+  border: 1px solid var(--glass-edge);
   border-radius: var(--r-md);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: var(--glass-filter);
+  -webkit-backdrop-filter: var(--glass-filter);
+  box-shadow: var(--glass-shadow);
   padding: var(--sp-3);
   transition: transform .35s cubic-bezier(.2, .7, .3, 1), border-color .35s, box-shadow .35s, background .35s;
   overflow: hidden;
@@ -180,7 +208,7 @@ button { font: inherit; cursor: pointer; }
 .card:hover, .card:focus-within {
   transform: translateY(-6px);
   border-color: var(--border-strong);
-  box-shadow: 0 22px 60px -22px rgba(0, 0, 0, .7), 0 0 0 1px rgba(168, 85, 247, .22), 0 0 42px -18px var(--glow-cyan);
+  box-shadow: var(--glass-hover-shadow);
 }
 .card:hover::before { opacity: 1; }
 
@@ -218,8 +246,8 @@ button { font: inherit; cursor: pointer; }
   position: fixed; top: 0; left: 0; right: 0; z-index: 100;
   background: var(--nav-bg);
   border-bottom: 1px solid var(--border);
-  backdrop-filter: blur(18px) saturate(1.4);
-  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  backdrop-filter: var(--glass-filter);
+  -webkit-backdrop-filter: var(--glass-filter);
   transition: box-shadow .3s, background .3s;
 }
 .nav.scrolled { box-shadow: 0 10px 40px -18px rgba(0, 0, 0, .6); }
@@ -248,7 +276,7 @@ button { font: inherit; cursor: pointer; }
 .nav-burger { display: none; }
 .mobile-menu {
   position: fixed; inset: var(--nav-h) 0 auto 0; z-index: 99;
-  background: var(--nav-bg); backdrop-filter: blur(22px);
+  background: var(--nav-bg); backdrop-filter: var(--glass-filter); -webkit-backdrop-filter: var(--glass-filter);
   border-bottom: 1px solid var(--border);
   padding: 1rem 1.4rem 1.6rem; display: grid; gap: .2rem;
   transform: translateY(-110%); transition: transform .4s cubic-bezier(.2, .8, .2, 1);
@@ -432,7 +460,8 @@ button { font: inherit; cursor: pointer; }
 .modal-backdrop.open { opacity: 1; pointer-events: auto; }
 .modal {
   width: min(620px, 100%); max-height: 86dvh; overflow-y: auto;
-  background: var(--bg-2); border: 1px solid var(--border-strong); border-radius: var(--r-lg);
+  background: var(--glass-surface); border: 1px solid var(--glass-edge); border-radius: var(--r-lg);
+  backdrop-filter: var(--glass-filter); -webkit-backdrop-filter: var(--glass-filter); box-shadow: var(--glass-shadow);
   padding: var(--sp-4); position: relative; transform: translateY(20px) scale(.97); transition: transform .3s;
 }
 .modal-backdrop.open .modal { transform: none; }
@@ -773,3 +802,52 @@ details.perm-edit summary { padding: .55rem 0; min-height: 44px; display: flex; 
 .admin-college-logo-frame { width:102px; height:56px; padding:.2rem .35rem; border-radius:.55rem; }
 .admin-brand .admin-college-mark { width:100%; height:100%; display:block; object-fit:contain; padding:0; background:transparent; }
 @media(max-width:650px) { .admin-brand .admin-college-logo-frame { display:none; } .college-logo-frame { width:144px; height:54px; } }
+
+
+/* ---------- 24. Site-wide 3D glass finish ---------- */
+/* Glass is kept local and lightweight: no remote texture dependency. */
+.nav, .mobile-menu, .footer, .faq details, .admin-top, .cmd-box {
+  background-image: var(--glass-sheen);
+  border-color: var(--glass-edge);
+  backdrop-filter: var(--glass-filter);
+  -webkit-backdrop-filter: var(--glass-filter);
+  box-shadow: var(--glass-shadow);
+}
+.nav { background-color: var(--nav-bg); }
+.mobile-menu { background-color: var(--nav-bg); }
+.footer, .admin-top, .cmd-box { background-color: var(--glass-chrome); }
+.faq details { background-color: var(--surface); position: relative; }
+.cmd-box { background-color: var(--bg-3); position: relative; }
+.modal::after, .faq details::after, .cmd-box::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit;
+  box-shadow: var(--glass-bevel); pointer-events: none;
+}
+
+/* Optional stronger veil for cards placed directly over bright or moving footage. */
+.glass3d[data-glass-context="video"],
+.glass[data-glass-context="video"],
+.card[data-glass-context="video"] {
+  --glass-filter: blur(28px) brightness(.84) saturate(1.4);
+  --glass-surface: linear-gradient(135deg, rgba(8,6,12,.78), rgba(8,6,12,.54)), var(--surface);
+  --glass-edge: rgba(255,255,255,.27);
+}
+[data-theme="light"] :is(.glass3d, .glass, .card)[data-glass-context="video"] {
+  --glass-filter: blur(22px) brightness(.94) saturate(1.1);
+  --glass-surface: linear-gradient(135deg, rgba(255,255,255,.9), rgba(255,255,255,.75)), var(--surface);
+  --glass-edge: rgba(23,18,31,.2);
+}
+
+@media (max-width: 720px) {
+  :is(.glass3d, .glass, .card, .nav, .mobile-menu, .footer, .modal, .faq details, .admin-top, .cmd-box) {
+    --glass-filter: blur(15px) brightness(.96) saturate(1.3);
+  }
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass3d, .glass, .card { background: var(--bg-2); }
+  .nav, .mobile-menu, .footer, .modal, .faq details, .admin-top, .cmd-box { background-image: none; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .glass3d, .glass, .card, .nav, .mobile-menu, .footer, .modal, .faq details, .admin-top, .cmd-box {
+    backdrop-filter: none; -webkit-backdrop-filter: none;
+  }
+}
