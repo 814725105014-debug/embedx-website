@@ -1,19 +1,34 @@
 // EMBEDX — Form handling: validation, honeypot, rate limiting, Firestore writes, toasts.
-import { submitApplication, submitContact, isConfigured } from "./store.js";
-import { toast } from "./ui.js";
+import { submitApplication, submitContact, isConfigured } from "./store.js?v=20261106";
+import { toast } from "./ui.js?v=20261106";
 
 const RATE_KEY = "embedx_rate";
 const RATE_MAX = 3;
 const RATE_WINDOW = 10 * 60 * 1000;
 
+function storageGet(storageName, key, fallback = null) {
+  try { return window[storageName].getItem(key) ?? fallback; } catch { return fallback; }
+}
+function storageSet(storageName, key, value) {
+  try { window[storageName].setItem(key, value); return true; } catch { return false; }
+}
+function storageRemove(storageName, key) {
+  try { window[storageName].removeItem(key); } catch { /* storage may be disabled */ }
+}
+
 function rateLimited(formId) {
   const now = Date.now();
-  const log = JSON.parse(localStorage.getItem(RATE_KEY) || "{}");
-  const hits = (log[formId] || []).filter((t) => now - t < RATE_WINDOW);
+  let log = {};
+  try {
+    const raw = storageGet("localStorage", RATE_KEY, "{}");
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) log = parsed;
+  } catch { /* a corrupt client-side limiter must not break form submission */ }
+  const hits = (Array.isArray(log[formId]) ? log[formId] : []).filter((t) => Number.isFinite(t) && now - t < RATE_WINDOW);
   if (hits.length >= RATE_MAX) return true;
   hits.push(now);
   log[formId] = hits;
-  localStorage.setItem(RATE_KEY, JSON.stringify(log));
+  storageSet("localStorage", RATE_KEY, JSON.stringify(log));
   return false;
 }
 
@@ -54,9 +69,9 @@ function wire(formId, { build, submit, successMsg, draftKey }) {
   const form = document.getElementById(formId);
   if (!form) return;
 
-  if (draftKey && sessionStorage.getItem("embedx_join_submitted") !== "1") {
+  if (draftKey && storageGet("sessionStorage", "embedx_join_submitted") !== "1") {
     try {
-      const draft = JSON.parse(localStorage.getItem(draftKey) || "{}");
+      const draft = JSON.parse(storageGet("sessionStorage", draftKey, "{}"));
       form.querySelectorAll("input,select,textarea").forEach((el) => {
         if (el.type === "checkbox") {
           el.checked = Array.isArray(draft[el.name]) ? draft[el.name].includes(el.value) : Boolean(draft[el.name]);
@@ -65,12 +80,13 @@ function wire(formId, { build, submit, successMsg, draftKey }) {
     } catch { /* ignore corrupt draft */ }
     form.addEventListener("input", () => {
       const d = readForm(form);
-      localStorage.setItem(draftKey, JSON.stringify(d));
+      storageSet("sessionStorage", draftKey, JSON.stringify(d));
     });
   }
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
+    if (form.dataset.sending === "1") return;
     const d = readForm(form);
 
     // honeypot — bots fill this, humans never see it
@@ -85,23 +101,24 @@ function wire(formId, { build, submit, successMsg, draftKey }) {
     }
 
     const btn = form.querySelector("[type=submit]");
-    btn.disabled = true;
-    const label = btn.innerHTML;
-    btn.innerHTML = "Sending…";
+    form.dataset.sending = "1";
+    if (btn) { btn.disabled = true; btn.setAttribute("aria-busy", "true"); }
+    const label = btn?.innerHTML || "Submit";
+    if (btn) btn.textContent = "Sending…";
     try {
       await submit(build.payload(d));
       toast(successMsg, "ok");
       form.reset();
-      if (draftKey) localStorage.removeItem(draftKey);
-      if (formId === "joinForm") sessionStorage.setItem("embedx_join_submitted", "1");
+      if (draftKey) storageRemove("sessionStorage", draftKey);
+      if (formId === "joinForm") storageSet("sessionStorage", "embedx_join_submitted", "1");
     } catch (err) {
       console.error(err);
       toast(isConfigured
         ? "Submission failed. Please check your connection and retry."
-        : "Backend not connected yet — your details are safe locally; forms activate once Firebase config is added.", "err");
+        : "This form is temporarily unavailable. Please try again later or contact the department.", "err");
     } finally {
-      btn.disabled = false;
-      btn.innerHTML = label;
+      form.dataset.sending = "0";
+      if (btn) { btn.disabled = false; btn.removeAttribute("aria-busy"); btn.innerHTML = label; }
     }
   });
 }

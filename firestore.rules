@@ -32,7 +32,6 @@ service cloud.firestore {
     function rolePath() { return /databases/$(database)/documents/admin_roles/$(request.auth.token.email); }
     function hasRole() { return signedIn() && exists(rolePath()); }
     function myRole() { return get(rolePath()).data.role; }
-    function isStaff() { return isOwner() || hasRole(); }
 
     // per-admin custom permissions: owner ticks sections in the portal (admin_roles/{email}.perms).
     // Docs created before custom perms fall back to their role preset.
@@ -57,21 +56,29 @@ service cloud.firestore {
     match /resources/{id}     { allow read: if true; allow create, update, delete: if canWrite('resources'); }
     match /achievements/{id}  { allow read: if true; allow create, update, delete: if canWrite('achievements'); }
 
-    // ---- portal roles: staff can read the directory, only owner manages it ----
-    // (exception: a user may clear their own "must change password" flag after choosing a new one)
+    // ---- portal roles: owner manages the directory; users read their own role; task managers resolve role assignments ----
+    // (exception: a user may clear their own password/verification flags after completing those steps)
     match /admin_roles/{email} {
-      allow read: if isStaff();
+      allow read: if isOwner()
+        || (signedIn() && request.auth.token.email == email)
+        || canWrite('tasks');
       allow create, delete: if isOwner();
       allow update: if isOwner()
         || (signedIn()
             && resource.id == request.auth.token.email
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['mustChangePassword'])
-            && request.resource.data.mustChangePassword == false);
+            && ((request.resource.data.diff(resource.data).affectedKeys().hasOnly(['mustChangePassword'])
+                 && request.resource.data.mustChangePassword == false)
+                || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['emailVerificationRequired'])
+                    && request.resource.data.emailVerificationRequired == false
+                    && request.auth.token.email_verified == true)));
     }
 
-    // ---- tasks: staff read; owner/president manage; assignees may flip their own status ----
+    // ---- tasks: task managers read/manage all; assignees see only their own tasks ----
     match /tasks/{id} {
-      allow read: if isStaff();
+      allow read: if canWrite('tasks')
+        || (signedIn()
+            && (resource.data.assigneeEmail == request.auth.token.email
+                || (hasRole() && resource.data.assigneeRole == myRole())));
       allow create, delete: if canWrite('tasks');
       allow update: if canWrite('tasks')
         || (signedIn()

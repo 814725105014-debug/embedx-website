@@ -3,8 +3,20 @@ import { icon } from "./icons.js";
 
 export const esc = (s = "") => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
-// Data files store root-relative-without-slash paths; make them absolute so /pages/* resolve.
-export const asset = (u = "") => (u.startsWith("/") || u.startsWith("http") ? u : "/" + u);
+// Data files store root-relative-without-slash paths; allow only local paths or HTTPS asset URLs.
+export const asset = (value = "") => {
+  const u = String(value || "").trim();
+  if (/^https:\/\//i.test(u)) return u;
+  if (u.startsWith("/") && !u.startsWith("//")) return u;
+  return "/" + u.replace(/^\/+/, "");
+};
+
+export const externalUrl = (value = "") => {
+  try {
+    const url = new URL(String(value || ""));
+    return url.protocol === "https:" ? url.href : "";
+  } catch { return ""; }
+};
 
 export function skeletons(el, n = 3, h = 280) {
   el.innerHTML = Array.from({ length: n }, () => `<div class="skeleton" style="min-height:${h}px" aria-hidden="true"></div>`).join("");
@@ -43,9 +55,11 @@ export function eventCard(e) {
 }
 
 export function teamCard(m) {
+  const linkedin = externalUrl(m.linkedin);
+  const github = externalUrl(m.github);
   const socials = [
-    m.linkedin ? `<a class="icon-btn" href="${esc(m.linkedin)}" rel="noopener" aria-label="LinkedIn of ${esc(m.name)}">${icon("linkedin")}</a>` : "",
-    m.github ? `<a class="icon-btn" href="${esc(m.github)}" rel="noopener" aria-label="GitHub of ${esc(m.name)}">${icon("github")}</a>` : ""
+    linkedin ? `<a class="icon-btn" href="${esc(linkedin)}" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn of ${esc(m.name)}">${icon("linkedin")}</a>` : "",
+    github ? `<a class="icon-btn" href="${esc(github)}" target="_blank" rel="noopener noreferrer" aria-label="GitHub of ${esc(m.name)}">${icon("github")}</a>` : ""
   ].join("");
   return `
   <article class="card team-card tilt" data-reveal>
@@ -77,7 +91,7 @@ export function resourceCard(r) {
     </div>
     <h3 style="margin-top:.7rem">${esc(r.title)}</h3>
     <p class="muted" style="font-size:.92rem">${esc(r.desc)}</p>
-    <div class="card-tags">${r.tags.map((t) => `<span class="chip">${esc(t)}</span>`).join("")}</div>
+    <div class="card-tags">${(Array.isArray(r.tags) ? r.tags : []).map((t) => `<span class="chip">${esc(t)}</span>`).join("")}</div>
     <p class="card-link" style="cursor:default">${icon("check")} Curated Guide — available at club sessions</p>
   </article>`;
 }
@@ -91,7 +105,7 @@ export function achievementCard(a) {
     <p class="card-sub">${esc(a.subtitle)}</p>
     <p class="muted" style="font-size:.92rem">${esc(a.description)}</p>
     <p style="font-size:.85rem"><strong>Team:</strong> <span class="muted">${esc(a.team)} • ${esc(a.institution)}</span></p>
-    <ul class="spec-list" style="margin-top:.6rem">${a.highlights.map((h) => `<li>${esc(h)}</li>`).join("")}</ul>
+    <ul class="spec-list" style="margin-top:.6rem">${(Array.isArray(a.highlights) ? a.highlights : []).map((h) => `<li>${esc(h)}</li>`).join("")}</ul>
     <a class="card-link" href="/pages/project-detail.html?id=${encodeURIComponent(a.projectId)}">Read Project Specs ${icon("arrow-right")}</a>
   </article>`;
 }
@@ -111,6 +125,6 @@ export function announcementCard(a) {
 }
 
 export function galleryButton(g) {
-  const src = g.imageUrl && (g.imageUrl.startsWith("http") || g.imageUrl.startsWith("/")) ? g.imageUrl : "/" + g.imageUrl;
+  const src = asset(g.imageUrl);
   return `<button data-lightbox="${esc(src)}" data-caption="${esc(g.caption || "")}" aria-label="Enlarge: ${esc(g.caption || "club photo")}"><img src="${esc(src)}" alt="${esc(g.caption || "EMBEDX club photo")}" loading="lazy" /></button>`;
 }

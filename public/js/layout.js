@@ -1,6 +1,6 @@
 // EMBEDX — Shared chrome: navbar, mobile menu, footer, theme toggle.
 import { icon } from "./icons.js";
-import { initSearch } from "./search.js";
+import { initSearch } from "./search.js?v=20261106";
 
 const NAV = [
   ["Home", "/"],
@@ -126,7 +126,7 @@ function injectChrome() {
     burger.innerHTML = icon(open ? "x" : "menu");
   });
   mobile.addEventListener("click", (e) => {
-    if (e.target.tagName === "A") { mobile.classList.remove("open"); burger.setAttribute("aria-expanded", "false"); burger.innerHTML = icon("menu"); }
+    if (e.target.closest("a")) { mobile.classList.remove("open"); burger.setAttribute("aria-expanded", "false"); burger.innerHTML = icon("menu"); }
   });
   const onScroll = () => {
     header.classList.toggle("scrolled", scrollY > 30);
@@ -144,7 +144,7 @@ function injectChrome() {
   tBtn.addEventListener("click", () => {
     const next = document.documentElement.dataset.theme === "light" ? "dark" : "light";
     document.documentElement.dataset.theme = next;
-    localStorage.setItem("embedx-theme", next);
+    try { localStorage.setItem("embedx-theme", next); } catch { /* private browsing may disable storage */ }
     paint();
   });
   paint();

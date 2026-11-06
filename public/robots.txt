@@ -1,6 +1,8 @@
-# EMBEDX — robots.txt
+# EMBEDX public site; private portal routes are excluded from search indexing.
 User-agent: *
 Allow: /
+Disallow: /admin
+Disallow: /vi.html
+Disallow: /sms-send.html
 
-# TODO: after first deploy, replace the project-id placeholder with your live domain.
 Sitemap: https://embedx-club-eee.web.app/sitemap.xml

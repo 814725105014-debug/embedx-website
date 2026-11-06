@@ -1,10 +1,10 @@
 // EMBEDX — Page controller. Dispatches renderers by body[data-page].
-import "./layout.js?v=20261114";
-import "./forms.js";
-import { initAll } from "./ui.js";
+import "./layout.js?v=20261106";
+import "./forms.js?v=20261106";
+import { initAll } from "./ui.js?v=20261106";
 import { icon } from "./icons.js";
-import { esc, asset, skeletons, projectCard, eventCard, teamCard, domainCard, resourceCard, achievementCard, announcementCard, galleryButton } from "./render.js";
-import { getProjects, getEvents, getTeam, getGallery, getAnnouncements, getResources, getAchievements } from "./store.js";
+import { esc, asset, externalUrl, skeletons, projectCard, eventCard, teamCard, domainCard, resourceCard, achievementCard, announcementCard, galleryButton } from "./render.js?v=20261106";
+import { getProjects, getEvents, getTeam, getGallery, getAnnouncements, getResources, getAchievements } from "./store.js?v=20261106";
 import { domains, tools, careers } from "./data/domains.js";
 
 const $ = (s) => document.querySelector(s);
@@ -24,51 +24,48 @@ function filterBar(el, labels, onPick) {
 
 /* ---------- home ---------- */
 async function home() {
-  // notice board (announcements) — pinned first
   const an = $("#announcementsGrid");
-  if (an) {
-    const list = await getAnnouncements();
-    if (list.length) {
-      an.closest("section").hidden = false;
-      an.innerHTML = list
-        .sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0))
-        .slice(0, 3)
-        .map(announcementCard).join("");
-    }
-  }
-  // gallery — Firestore first, static fallback
   const gg = $("#galleryGrid");
-  if (gg) {
-    gg.innerHTML = Array.from({ length: 8 }, () => '<div class="skeleton" style="min-height:170px"></div>').join("");
-    const shots = await getGallery();
-    gg.innerHTML = shots.map(galleryButton).join("");
-    initAll();
-  }
   const pg = $("#projectsGrid");
   const eg = $("#eventsGrid");
   const ag = $("#achieversGrid");
   const dg = $("#domainsGrid");
+
+  if (gg) skeletons(gg, 8, 170);
+  if (ag) skeletons(ag, 2, 320);
+  if (pg) skeletons(pg, 4);
+  if (eg) skeletons(eg, 3, 320);
   if (dg) dg.innerHTML = domains.slice(0, 6).map(domainCard).join("") +
     `<div class="card center" style="display:grid;place-content:center;gap:.6rem">${icon("circuit")}<a class="btn btn-ghost btn-sm" href="/pages/domains.html">Explore All 12 Technical Domains</a></div>`;
-  if (ag) {
-    const ach = await getAchievements();
-    ag.innerHTML = ach.slice(0, 2).map(achievementCard).join("");
-    initAll();
-  }
-  if (pg) {
-    skeletons(pg, 4);
-    const list = await getProjects();
-    pg.innerHTML = list.filter((p) => p.featured).slice(0, 4).map(projectCard).join("");
-    initAll();
-  }
-  if (eg) {
-    skeletons(eg, 3, 320);
-    const list = await getEvents();
-    eg.innerHTML = list.map(eventCard).join("");
-    initAll();
-  }
-}
 
+  // Start independent Firestore reads together so a slow section never delays the rest.
+  const jobs = [];
+  if (an) jobs.push(getAnnouncements().then((list) => {
+    if (list.length) {
+      an.closest("section").hidden = false;
+      an.innerHTML = list.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0)).slice(0, 3).map(announcementCard).join("");
+      initAll();
+    }
+  }));
+  if (gg) jobs.push(getGallery().then((shots) => {
+    gg.innerHTML = shots.length ? shots.map(galleryButton).join("") : '<p class="card center muted">Gallery photos will appear here soon.</p>';
+    initAll();
+  }));
+  if (ag) jobs.push(getAchievements().then((rows) => {
+    ag.innerHTML = rows.length ? rows.slice(0, 2).map(achievementCard).join("") : '<p class="card center muted">New achievements will appear here.</p>';
+    initAll();
+  }));
+  if (pg) jobs.push(getProjects().then((rows) => {
+    const featured = rows.filter((p) => p.featured).slice(0, 4);
+    pg.innerHTML = featured.length ? featured.map(projectCard).join("") : '<p class="card center muted">Featured projects will appear here soon.</p>';
+    initAll();
+  }));
+  if (eg) jobs.push(getEvents().then((rows) => {
+    eg.innerHTML = rows.length ? rows.map(eventCard).join("") : '<p class="card center muted">There are no events to display right now.</p>';
+    initAll();
+  }));
+  await Promise.all(jobs);
+}
 /* ---------- projects ---------- */
 async function projectsPage() {
   const grid = $("#projectsGrid");
@@ -92,7 +89,13 @@ async function projectDetail() {
   const list = await getProjects();
   const id = new URLSearchParams(location.search).get("id");
   const p = list.find((x) => x.id === id) || list[0];
+  if (!p) {
+    c.innerHTML = '<div class="card center"><h1>Project not found</h1><p class="muted">This project may have been removed or is temporarily unavailable.</p><a class="btn btn-primary" href="/pages/projects.html">Browse projects</a></div>';
+    return;
+  }
   document.title = `${p.title} | EMBEDX Projects | SRM TRP Engineering College`;
+  const githubUrl = externalUrl(p.githubUrl);
+  const demoUrl = externalUrl(p.demoUrl);
   c.innerHTML = `
     <div class="detail-hero">
       <div>
@@ -105,8 +108,8 @@ async function projectDetail() {
         <h3>Proposed Solution</h3><p class="muted">${esc(p.proposedSolution)}</p>
         <h3>Working Principle</h3><p class="muted">${esc(p.workingPrinciple)}</p>
         <div class="card-tags">${(p.technologies || []).map((t) => `<span class="chip">${esc(t)}</span>`).join("")}</div>
-        ${p.githubUrl ? `<a class="btn btn-ghost btn-sm" href="${esc(p.githubUrl)}" rel="noopener">${icon("github")} Source Code</a>` : ""}
-        ${p.demoUrl ? `<a class="btn btn-ghost btn-sm" href="${esc(p.demoUrl)}" rel="noopener">${icon("external")} Live Demo</a>` : ""}
+        ${githubUrl ? `<a class="btn btn-ghost btn-sm" href="${esc(githubUrl)}" target="_blank" rel="noopener noreferrer">${icon("github")} Source Code</a>` : ""}
+        ${demoUrl ? `<a class="btn btn-ghost btn-sm" href="${esc(demoUrl)}" target="_blank" rel="noopener noreferrer">${icon("external")} Live Demo</a>` : ""}
       </div>
       <div>
         <div class="event-poster"><img src="${esc(asset(p.imageUrl))}" alt="${esc(p.title)} prototype" /></div>
@@ -136,6 +139,12 @@ async function eventsPage() {
   skeletons(grid, 3, 320);
   const list = await getEvents();
   const em = list.find((e) => e.id === "embednova") || list[0];
+  if (!em) {
+    if (feat) feat.innerHTML = '<p class="card center muted">Event information will be published here soon.</p>';
+    if (tracks) tracks.innerHTML = "";
+    if (grid) grid.innerHTML = '<p class="card center muted">There are no events to display right now.</p>';
+    return;
+  }
   if (feat) feat.innerHTML = `
     <div>
       <span class="chip chip-accent">${esc(em.type)}</span>
@@ -176,6 +185,10 @@ async function eventDetail() {
   const list = await getEvents();
   const id = new URLSearchParams(location.search).get("id");
   const e = list.find((x) => x.id === id) || list[0];
+  if (!e) {
+    c.innerHTML = '<div class="card center"><h1>Event not found</h1><p class="muted">This event may have ended or is temporarily unavailable.</p><a class="btn btn-primary" href="/pages/events.html">Browse events</a></div>';
+    return;
+  }
   document.title = `${e.title} | EMBEDX Events | SRM TRP Engineering College`;
   c.innerHTML = `
     <div class="detail-hero">
@@ -220,10 +233,10 @@ async function eventDetail() {
             <p class="card-sub">${esc(t.tagline)} ${esc(t.motto)}</p>
             <p class="muted">${esc(t.description)}</p>
             <h4>Covered Topics</h4>
-            <ul class="spec-list">${t.topics.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
+            <ul class="spec-list">${(t.topics || []).map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
             <h4 style="margin-top:.9rem">Format</h4><p class="muted" style="font-size:.92rem">${esc(t.format)}</p>
             <h4 style="margin-top:.9rem">Rules</h4>
-            <ul class="spec-list">${t.rules.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
+            <ul class="spec-list">${(t.rules || []).map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
           </div>
         </div>
       </section>`).join("")}` : ""}
@@ -243,8 +256,8 @@ async function teamPage() {
   const list = await getTeam();
   const faculty = list.filter((m) => m.group === "faculty");
   const students = list.filter((m) => m.group !== "faculty");
-  if (fg) fg.innerHTML = faculty.map(teamCard).join("");
-  if (sg) sg.innerHTML = students.map(teamCard).join("");
+  if (fg) fg.innerHTML = faculty.length ? faculty.map(teamCard).join("") : '<p class="card center muted">Faculty profiles will be added soon.</p>';
+  if (sg) sg.innerHTML = students.length ? students.map(teamCard).join("") : '<p class="card center muted">Team profiles will be added soon.</p>';
   initAll();
 }
 
@@ -278,7 +291,7 @@ async function achieversPage() {
   const grid = $("#achieversGrid");
   skeletons(grid, 4, 320);
   const list = await getAchievements();
-  grid.innerHTML = list.map(achievementCard).join("");
+  grid.innerHTML = list.length ? list.map(achievementCard).join("") : '<p class="card center muted">New achievements will be added here.</p>';
   initAll();
 }
 

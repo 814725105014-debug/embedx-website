@@ -38,7 +38,9 @@ firebase.json            ← hosting + cache headers + clean URLs + firestore po
 firestore.rules          ← security rules
 firestore.indexes.json   ← composite indexes
 scripts/seed.js          ← one-time Firestore seed (firebase-admin)
-.github/workflows/       ← auto-deploy: live on merge to main, preview per PR
+scripts/check-site.mjs   ← no-dependency HTML/link/module/config QA
+backend-bundle/          ← deployable rules + owner scripts + Apps Script mailer
+.github/workflows/       ← GitHub Hosting deploy workflows (need a configured service-account secret)
 ```
 
 ## 2. Local development (no build step)
@@ -49,20 +51,25 @@ cd public && python3 -m http.server 8080
 ```
 
 Any static server works. ES modules load natively; the Firebase SDK v10 is imported
-from the official CDN (`https://www.gstatic.com/firebasejs/10.12.5/`) **only when a
-config is present**.
+from the official CDN (`https://www.gstatic.com/firebasejs/10.12.5/`).
+
+Run the built-in static QA check (Node.js only; no install/build step):
+
+```bash
+node scripts/check-site.mjs
+```
 
 ## 3. Connect Firebase (one-time setup)
 
 > Already wired for the club project **`embedx-club-eee`** (config, `.firebaserc`,
-> sitemap, robots, CI). The steps below are only needed when cloning this setup
-> for a different project.
+> sitemap and robots). When cloning for another project, update the Firebase web
+> config, project ID, and canonical domain together.
 
 1. Create a Firebase project (Spark/free plan is enough) → add a **Web app**.
 2. Paste the `firebaseConfig` object into **`public/js/config.js`**.
-3. Put your project id in **`.firebaserc`** (`projects.default`) — or run `firebase use --add`.
-4. Replace the project-id placeholder in `public/sitemap.xml` and `public/robots.txt`.
-5. Enable **Cloud Firestore** (production mode) in the console.
+3. Put the project id in **`.firebaserc`** (`projects.default`) and update the production URLs in the sitemap, robots file, canonical links, and task-mail script.
+4. Enable **Cloud Firestore** and **Firebase Authentication → Email/Password** in the console.
+5. Deploy the checked Firestore and Storage rules before enabling production forms/admin.
 
 Until step 2 is done the site runs in *static fallback mode*: every section renders
 from `public/js/data/*.js` and forms show a friendly "backend not connected" toast.
@@ -73,7 +80,7 @@ from `public/js/data/*.js` and forms show a friendly "backend not connected" toa
 npm i -g firebase-tools
 firebase login
 firebase use <PROJECT_ID>
-firebase deploy --only firestore:rules,firestore:indexes
+firebase deploy --only firestore:rules,firestore:indexes,storage
 firebase deploy --only hosting
 ```
 
@@ -108,71 +115,75 @@ re-run after editing `public/js/data/*.js`). Form collections stay empty by desi
 | `contact_messages` | written by the Contact form | create-only |
 
 Image URLs in Firestore should be **root-absolute** (`/assets/images/foo.webp`).
-If Firestore is unreachable or a collection is empty, the site silently falls back
-to the static data modules — the site never breaks.
+If Firestore is unreachable, the site falls back to the bundled static data. An
+intentionally empty Firestore collection remains empty and displays an empty state
+(rather than resurrecting deleted seed content).
 
 ## 5b. Admin portal (`/admin`)
 
-A built-in CMS at **`https://<PROJECT_ID>.web.app/admin/`** (link in the site footer).
-Club admins can publish and edit, with instant effect on the live site:
+A built-in CMS at **`https://<PROJECT_ID>.web.app/admin/`** (linked in the site footer).
+It includes content editing, task assignment, media editing, and owner-managed
+per-admin section permissions. Navigation and URLs work without a full page reload.
 
-* **Announcements** — notice board on the home page (pinned first)
-* **Events** — create/edit/delete, upcoming & featured flags, poster upload
-* **Projects** — full card + detail content, tags, cover upload
-* **Team** — faculty/student members, photos, roles
-* **Gallery** — add/replace/delete photos with captions and ordering
-* **Resources & Achievers** — Learning Hub guides and Hall-of-Achievers cards
-* Live **content counters** per collection at the top of the dashboard
+### Creating an admin (one click)
 
-Photo workflow: pick a file → in-browser editor (rotate, crop aspect 1:1 / 4:3 /
-16:9 / 3:4, max-width resize) → exported as optimized **WebP** → uploaded to
-Firebase Storage (`images/<collection>/…`) → URL saved on the document.
+1. Owner opens **Admins & roles**, enters the college email, name, role preset,
+   temporary password, and checks the sections the new admin may access.
+2. Firebase creates a new login and sends an email-verification link. No portal
+   access is granted until the recipient verifies that mailbox.
+3. After verification, the user signs in with the temporary password and must
+   choose a new password. They only see the sections the owner granted.
 
-### Creating an admin (one-time, per person)
+An existing Auth login is **never automatically granted a role**: this prevents
+an attacker from pre-creating an unverified account for someone else’s college
+address. For verified existing accounts or recovery, use the trusted Admin SDK
+scripts in `backend-bundle/scripts/` from a machine holding the service account.
+Those scripts reject unverified accounts when granting privileges.
 
-1. Firebase Console → **Authentication → Users → Add user** (email + password).
-   Keep the Email/Password provider enabled; no other providers needed.
-2. Grant the custom claim (backend repo):
-   ```bash
-   cd ../embedx-backend/scripts && npm install
-   export GOOGLE_APPLICATION_CREDENTIALS=/path/service-account.json
-   export FIREBASE_PROJECT_ID=<PROJECT_ID>
-   node grant-admin.js admin@yourcollege.edu
-   ```
-3. The admin signs in at `/admin`. Security is enforced server-side:
-   `firestore.rules` and `storage.rules` require `request.auth.token.admin == true`
-   for every write — the portal UI is only a convenience layer.
+### Task email setup
+
+The optional Apps Script source is `backend-bundle/appsscript/task-mail.gs`.
+Task email is intentionally disabled in the current website config until the old
+public-token deployment is replaced. Deploy this source as a web app (Execute as
+Me, access Anyone), disable the old deployment, then set the new `/exec` URL in
+`public/js/config.js`. The browser sends a short-lived Firebase ID token and task
+ID—not a shared secret. Apps Script verifies identity, Tasks permission, task
+assignment, college-domain recipients, and duplicate/daily limits. The previously
+published token must be treated as exposed.
+
+### Security and behavior
+
+* Firestore rules are the authority: roles and per-user `perms` are checked on
+  each write; Storage uploads are limited to JPEG/PNG/WebP images under 5 MB.
+* Hosting adds `no-store` for `/admin/**`, frame/content-type/referrer/permissions
+  headers; the admin HTML also has a restrictive Content Security Policy.
+* Public join/contact writes are schema-validated and create-only. Client-side
+  rate limits are a usability measure, **not** server-side abuse protection.
+* The Firebase web API key is public by design; never put service-account keys,
+  passwords, Apps Script credentials, or other private values in `public/`.
+* Optional production hardening still requires Firebase Console configuration:
+  restrict the API key to approved website referrers and configure/enforce Firebase
+  App Check for the web app before relying on client-side public form writes.
 
 Form submissions (`members_applications`, `contact_messages`) remain create-only
 and are **not** readable from the portal; export them from the Firebase Console.
 
-### Security hardening shipped with the portal
-
-* **Content-Security-Policy** meta on every page (no inline scripts — the theme
-  bootstrap lives in `js/theme.js`; SDK only from `www.gstatic.com`).
-* Admin = Firebase Auth **plus** either the `admin` custom claim or the
-  bootstrap owner email allowlisted in `firestore.rules` / `storage.rules`
-  (`814725105014@trp.srmtrichy.edu.in`). Rotate that password regularly and
-  never share it — anyone with it + the email can publish content.
-* Storage writes: admin-only, images ≤5 MB; form collections create-only.
-* Site-wide search (Ctrl/⌘+K), scroll progress and back-to-top respect
-  `prefers-reduced-motion`.
-
 ## 6. GitHub auto-deploy
 
-`.github/workflows/firebase-hosting-merge.yml` deploys the **live channel** on every
-merge to `main`; `firebase-hosting-pull-request.yml` posts a **preview URL** on each PR.
-
-Finish the wiring (creates the service-account secret automatically):
+The repository contains live and PR-preview workflows, but they need the GitHub
+secret `FIREBASE_SERVICE_ACCOUNT_EMBEDX_CLUB_EEE` configured to deploy. Until that
+secret is set in GitHub, deploy manually from a trusted machine:
 
 ```bash
-firebase init hosting:github     # pick your project; accepts existing files
+cd ~/embedx-website-main
+git pull
+firebase deploy --only hosting
+firebase deploy --only firestore:rules,firestore:indexes,storage
 ```
 
-or manually: Google Cloud Console → IAM → create a service account with
-`Firebase Admin` role → download JSON → GitHub repo → Settings → Secrets →
-`FIREBASE_SERVICE_ACCOUNT_<PROJECT_ID>` (paste the whole JSON), then replace the
-placeholder strings in both workflow files.
+Never paste service-account JSON into chat or commit it. Configure the secret only
+through GitHub repository settings after creating/confirming the Firebase service
+account and limiting its permissions appropriately.
 
 ## 7. Custom domain + migrating from Neocities
 
@@ -203,9 +214,13 @@ type scale (`clamp()`), fonts (Sora + Inter). Theme preference persists in
 
 ## 10. Security notes
 
-* `firestore.rules`: public **read** on `events/projects/team`; **create-only** with
-  strict type/length validation on `members_applications` and `contact_messages`;
-  everything else denied. Admin/seed writes use the Admin SDK (bypasses rules).
-* Forms add a honeypot field, client validation, and a localStorage rate limit
-  (3 submissions / 10 min / device).
-* **Never commit** service-account JSON or `.env` files — both are gitignored.
+* `firestore.rules` makes public content read-only to the public, applies
+  per-admin write permissions, and validates create-only form payloads. Admin SDK
+  tools bypass rules and must stay on trusted owner machines.
+* The browser localStorage rate limit is per-device and can be bypassed; use App
+  Check enforcement (Firebase Console) for stronger public-write abuse controls.
+* Treat the previously published Apps Script token as compromised; the updated
+  source no longer uses it. Replace the deployed Apps Script code before turning
+  task notifications back on.
+* **Never commit** service-account JSON, private keys, passwords, or `.env` files.
+  The Firebase web config and project API key are public client configuration.
