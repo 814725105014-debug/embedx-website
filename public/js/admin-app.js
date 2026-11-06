@@ -1,9 +1,26 @@
 // EMBEDX — Admin portal: multi-page, role-based CMS.
 // One page per section (/admin/, /admin/events, /admin/admins, …) sharing this module.
 // Real security lives in firestore.rules / storage.rules (roles from `admin_roles` collection).
-import { firebaseConfig, isConfigured, taskMail } from "./config.js?v=20261106";
-import { toast } from "./ui.js?v=20261106";
-import { esc, asset } from "./render.js?v=20261106";
+import { firebaseConfig, isConfigured, taskMail } from "./config.js?v=20261106-admin-controls";
+import { toast } from "./ui.js?v=20261106-admin-controls";
+import { esc, asset } from "./render.js?v=20261106-admin-controls";
+import { announcements as starterAnnouncements } from "./data/announcements.js?v=20261106-admin-controls";
+import { events as starterEvents } from "./data/events.js?v=20261106-admin-controls";
+import { projects as starterProjects } from "./data/projects.js?v=20261106-admin-controls";
+import { team as starterTeam } from "./data/team.js?v=20261106-admin-controls";
+import { gallery as starterGallery } from "./data/gallery.js?v=20261106-admin-controls";
+import { resources as starterResources } from "./data/resources.js?v=20261106-admin-controls";
+import { achievements as starterAchievements } from "./data/achievements.js?v=20261106-admin-controls";
+
+const STARTER_CONTENT = {
+  announcements: starterAnnouncements,
+  events: starterEvents,
+  projects: starterProjects,
+  team: starterTeam,
+  gallery: starterGallery,
+  resources: starterResources,
+  achievements: starterAchievements
+};
 
 const SDK = "https://www.gstatic.com/firebasejs/10.12.5";
 let PAGE = document.body.dataset.adminPage || "overview";
@@ -97,6 +114,23 @@ async function countCollection(db, name) {
   catch { return (await dbMod.getDocs(ref)).size; }
 }
 
+function isSafeMediaReference(value) {
+  const url = String(value || "").trim();
+  if (!url) return true;
+  if (/^https:\/\//i.test(url)) {
+    try { return new URL(url).protocol === "https:"; } catch { return false; }
+  }
+  return !/^[a-z][a-z0-9+.-]*:/i.test(url)
+    && !url.startsWith("//")
+    && !url.split(/[?#]/, 1)[0].split("/").includes("..");
+}
+
+function safeHttpsUrl(value) {
+  const url = String(value || "").trim();
+  if (!url) return true;
+  try { return new URL(url).protocol === "https:"; } catch { return false; }
+}
+
 /* ---------------- schemas ---------------- */
 const SCHEMAS = {
   announcements: {
@@ -140,16 +174,31 @@ const SCHEMAS = {
     sort: ["order", "asc"],
     fields: [
       { k: "title", t: "text", req: true, label: "Title" },
-      { k: "domain", t: "text", label: "Domain" },
-      { k: "summary", t: "textarea", label: "Summary" },
-      { k: "imageUrl", t: "image", label: "Cover image" },
+      { k: "category", t: "text", label: "Technical domain / category" },
+      { k: "status", t: "text", label: "Project status" },
+      { k: "highlight", t: "text", label: "Highlight" },
+      { k: "shortDesc", t: "textarea", label: "Short description" },
+      { k: "cardDesc", t: "textarea", label: "Home-page card description" },
+      { k: "imageUrl", t: "image", label: "Cover image URL or upload" },
+      { k: "githubUrl", t: "text", label: "GitHub URL (HTTPS)" },
+      { k: "demoUrl", t: "text", label: "Demo URL (HTTPS)" },
+      { k: "tags", t: "list", label: "Tags (one per line)" },
+      { k: "team", t: "text", label: "Team / lab" },
+      { k: "problemStatement", t: "textarea", label: "Problem statement" },
+      { k: "proposedSolution", t: "textarea", label: "Proposed solution" },
+      { k: "workingPrinciple", t: "textarea", label: "Working principle" },
+      { k: "hardware", t: "list", label: "Hardware (one item per line)" },
+      { k: "software", t: "list", label: "Software (one item per line)" },
+      { k: "technologies", t: "list", label: "Technologies (one per line)" },
+      { k: "outcomes", t: "list", label: "Outcomes (one per line)" },
+      { k: "gallery", t: "list", label: "Gallery image paths / HTTPS URLs (one per line)" },
       { k: "featured", t: "check", label: "Featured on home page" },
       { k: "order", t: "num", label: "Sort order" }
     ],
-    defaults: { featured: false, order: 1 },
+    defaults: { featured: false, order: 1, status: "Active" },
     image: "imageUrl",
     title: (d) => d.title,
-    sub: (d) => d.domain || ""
+    sub: (d) => d.category || d.domain || ""
   },
   team: {
     label: "member",
@@ -171,13 +220,14 @@ const SCHEMAS = {
   },
   gallery: {
     label: "photo",
-    sort: ["createdAt", "desc"],
+    sort: ["order", "asc"],
     fields: [
       { k: "caption", t: "text", req: true, label: "Caption" },
-      { k: "imageUrl", t: "image", req: true, label: "Photo" },
-      { k: "event", t: "text", label: "Event name (optional)" }
+      { k: "imageUrl", t: "image", req: true, label: "Photo URL or upload" },
+      { k: "event", t: "text", label: "Event name (optional)" },
+      { k: "order", t: "num", label: "Display order" }
     ],
-    defaults: {},
+    defaults: { order: 1 },
     image: "imageUrl",
     title: (d) => d.caption,
     sub: (d) => d.event || ""
@@ -188,8 +238,10 @@ const SCHEMAS = {
     fields: [
       { k: "title", t: "text", req: true, label: "Title" },
       { k: "category", t: "text", label: "Category" },
-      { k: "description", t: "textarea", label: "Description" },
-      { k: "url", t: "text", label: "Link URL" },
+      { k: "level", t: "text", label: "Level" },
+      { k: "desc", t: "textarea", label: "Description" },
+      { k: "tags", t: "list", label: "Tags (one per line)" },
+      { k: "url", t: "text", label: "Resource URL (HTTPS)" },
       { k: "order", t: "num", label: "Sort order" }
     ],
     defaults: { order: 1 },
@@ -200,17 +252,21 @@ const SCHEMAS = {
     label: "achievement",
     sort: ["order", "asc"],
     fields: [
-      { k: "title", t: "text", req: true, label: "Title" },
-      { k: "member", t: "text", label: "Member / team name" },
-      { k: "detail", t: "textarea", label: "Detail" },
-      { k: "date", t: "text", label: "Date label" },
-      { k: "imageUrl", t: "image", label: "Image" },
+      { k: "title", t: "text", req: true, label: "Achievement title" },
+      { k: "badge", t: "text", label: "Award / badge" },
+      { k: "subtitle", t: "text", label: "Subtitle" },
+      { k: "description", t: "textarea", label: "Description" },
+      { k: "team", t: "text", label: "Member / team" },
+      { k: "institution", t: "text", label: "Institution" },
+      { k: "projectId", t: "text", label: "Related project ID" },
+      { k: "highlights", t: "list", label: "Highlights (one per line)" },
+      { k: "image", t: "image", label: "Image URL or upload" },
       { k: "order", t: "num", label: "Sort order" }
     ],
     defaults: { order: 1 },
-    image: "imageUrl",
+    image: "image",
     title: (d) => d.title,
-    sub: (d) => `${d.member || ""} • ${d.date || ""}`
+    sub: (d) => `${d.team || d.member || ""} • ${d.badge || d.date || ""}`
   },
   tasks: {
     label: "task",
@@ -432,6 +488,7 @@ async function renderOverview() {
     <div class="admin-cards">
       ${counts.map(([n, c]) => `<a class="admin-card card" href="/admin/${n}"><b>${c}</b><span>${n}</span></a>`).join("")}
     </div>
+    ${role === "owner" && isConfigured ? `<section class="admin-seed-toolbar card"><div><strong>Starter content</strong><p class="muted">Add missing bundled content across all public collections. Existing Firestore documents and admin edits are never overwritten.</p></div><button class="btn btn-ghost btn-sm" id="restoreStarterContent">Restore missing content</button></section>` : ""}
     <h2 style="margin:1.8rem 0 .6rem">My open tasks ${mine.length ? `(${mine.length})` : ""}</h2>
     ${mine.length ? mine.map(taskRow).join("") : `<p class="muted">Nothing assigned to you right now. ${role === "owner" || role === "president" ? "Assign work from the <a href='/admin/tasks'>Tasks</a> page." : ""}</p>`}
     <h2 style="margin:1.8rem 0 .6rem">Your access</h2>
@@ -440,6 +497,57 @@ async function renderOverview() {
         `<div class="admin-row card"><div class="admin-row-main"><strong>${esc(label)}</strong><span class="muted">${can(id) ? "read + write" : "read only"}</span></div></div>`).join("")}
       <div class="admin-row card"><div class="admin-row-main"><strong>Tasks</strong><span class="muted">${can("tasks") ? "assign + edit" : "your assigned tasks"}</span></div></div>
     </div>`;
+  region.querySelector("#restoreStarterContent")?.addEventListener("click", (event) => restoreStarterContent(event.currentTarget));
+}
+
+async function restoreStarterContent(button) {
+  button.disabled = true;
+  const label = button.textContent;
+  button.textContent = "Restoring…";
+  let added = 0;
+  try {
+    const { db } = await sdk();
+    for (const [collectionName, rows] of Object.entries(STARTER_CONTENT)) {
+      if (!rows.length) continue;
+      let presentIds = new Set();
+      let presentGalleryImages = new Set();
+      if (collectionName === "gallery") {
+        const currentGallery = await dbMod.getDocs(dbMod.collection(db, "gallery"));
+        presentIds = new Set(currentGallery.docs.map((doc) => doc.id));
+        presentGalleryImages = new Set(currentGallery.docs.map((doc) => doc.get("imageUrl")).filter(Boolean));
+      }
+      const candidates = rows.map((row, index) => ({ row, index })).filter(({ row }) =>
+        row.id && !presentIds.has(row.id) && !(collectionName === "gallery" && presentGalleryImages.has(row.imageUrl))
+      );
+      if (!candidates.length) continue;
+      const count = await dbMod.runTransaction(db, async (transaction) => {
+        if (candidates.length > 450) throw new Error(`${collectionName} has too many missing starter records to restore safely in one transaction.`);
+        const refs = candidates.map(({ row }) => dbMod.doc(db, collectionName, row.id));
+        const snapshots = [];
+        for (const ref of refs) snapshots.push(await transaction.get(ref));
+        let created = 0;
+        snapshots.forEach((snapshot, index) => {
+          if (snapshot.exists()) return;
+          const { row, index: order } = candidates[index];
+          const { id, ...data } = row;
+          if ((collectionName === "resources" || collectionName === "achievements") && !Number.isFinite(data.order)) data.order = order + 1;
+          transaction.set(refs[index], data);
+          created++;
+        });
+        return created;
+      });
+      added += count;
+    }
+    statsCache = null;
+    toast(added ? `Restored ${added} missing starter record${added === 1 ? "" : "s"}. Existing content was preserved.` : "Starter content is already present; nothing was changed.", "ok");
+    await renderOverview();
+  } catch (err) {
+    console.error("Starter content restore failed", err);
+    toast(`Content restore stopped after ${added} addition(s): ${err.message}`, "err");
+    await renderOverview();
+  } finally {
+    if (button.isConnected) { button.disabled = false; button.textContent = label; }
+  }
 }
 
 async function myTasks() {
@@ -480,7 +588,45 @@ async function renderCollection(sec) {
   const add = $("#addItem");
   if (add) { add.hidden = !can(sec); add.onclick = () => openForm(null); }
   await loadList(sec);
+  if (sec === "gallery" && can(sec) && $("#listRegion")) {
+    const toolbar = document.createElement("div");
+    toolbar.className = "admin-seed-toolbar card";
+    toolbar.innerHTML = `<div><strong>Starter gallery</strong><p class="muted">Restore any missing bundled photos without changing existing gallery entries. Use a local /assets/ path or HTTPS URL when adding images; file uploads need Firebase Storage.</p></div><button class="btn btn-ghost btn-sm" id="restoreGallery">Restore missing photos</button>`;
+    $("#pageRegion").prepend(toolbar);
+    $("#restoreGallery").addEventListener("click", (event) => restoreStarterGallery(event.currentTarget));
+  }
   loadStats();
+}
+
+async function restoreStarterGallery(button) {
+  button.disabled = true;
+  try {
+    const { db } = await sdk();
+    const presentImages = new Set(items.map((item) => item.imageUrl).filter(Boolean));
+    const candidates = starterGallery.filter((item) => !presentImages.has(item.imageUrl));
+    if (!candidates.length) {
+      toast("All starter photos are already in the gallery; nothing was changed.", "info");
+      return;
+    }
+    const added = await dbMod.runTransaction(db, async (transaction) => {
+      const refs = candidates.map((item) => dbMod.doc(db, "gallery", item.id));
+      const snapshots = [];
+      for (const ref of refs) snapshots.push(await transaction.get(ref));
+      let count = 0;
+      snapshots.forEach((snapshot, index) => {
+        if (snapshot.exists()) return;
+        const { id, ...data } = candidates[index];
+        transaction.set(refs[index], data);
+        count++;
+      });
+      return count;
+    });
+    toast(added ? `Restored ${added} missing starter photo${added === 1 ? "" : "s"}.` : "Starter photos already exist; nothing was changed.", "ok");
+    await loadList("gallery");
+  } catch (err) {
+    console.error("Gallery restore failed", err);
+    toast(`Could not restore starter photos: ${err.message}`, "err");
+  } finally { button.disabled = false; }
 }
 
 async function loadList(sec) {
@@ -537,7 +683,7 @@ function renderList(sec) {
   if (!items.length) { region.innerHTML = `<p class="muted">${can(sec) ? `No ${schema.label}s yet — use “+ New” to add one.` : `No ${schema.label}s to display.`}</p>`; return; }
   region.innerHTML = items.map((d) => `
     <div class="admin-row card">
-      ${schema.image && d[schema.image] ? `<img src="${esc(asset(d[schema.image]))}" alt="" loading="lazy" />` : '<span class="admin-noimg">◈</span>'}
+      ${schema.image && (d[schema.image] || (sec === "achievements" && d.imageUrl)) ? `<img src="${esc(asset(d[schema.image] || d.imageUrl))}" alt="" loading="lazy" />` : '<span class="admin-noimg">◈</span>'}
       <div class="admin-row-main">
         <strong>${esc(schema.title(d))}</strong>
         <span class="muted">${esc(schema.sub(d))}</span>
@@ -569,7 +715,7 @@ function renderList(sec) {
 function buildField(f, v) {
   const wrap = document.createElement("div");
   const id = `f-${f.k}`;
-  const full = ["textarea", "check", "image"].includes(f.t);
+  const full = ["textarea", "list", "check", "image"].includes(f.t);
   wrap.className = "field" + (full ? " full" : "");
   if (f.t === "check") {
     const label = document.createElement("label");
@@ -585,8 +731,9 @@ function buildField(f, v) {
   label.textContent = f.label + (f.req ? " *" : "");
   wrap.appendChild(label);
   let input;
-  if (f.t === "textarea") {
+  if (f.t === "textarea" || f.t === "list") {
     input = document.createElement("textarea"); input.value = v ?? "";
+    if (f.t === "list") input.placeholder = "Enter one item per line";
   } else if (f.t === "select") {
     input = document.createElement("select");
     (f.opts || []).forEach((o) => {
@@ -602,13 +749,23 @@ function buildField(f, v) {
     const picker = document.createElement("div"); picker.className = "img-picker";
     const prev = document.createElement("img"); prev.id = `prev-${f.k}`; prev.alt = "Current image preview";
     if (v) prev.src = asset(v); else prev.style.display = "none";
+    prev.addEventListener("error", () => { prev.alt = "Image preview unavailable"; });
+    const urlInput = document.createElement("input");
+    urlInput.type = "text"; urlInput.id = `url-${f.k}`; urlInput.value = v ?? "";
+    urlInput.placeholder = "/assets/images/photo.webp or https://…";
+    urlInput.setAttribute("aria-label", `${f.label} URL`);
+    urlInput.addEventListener("input", () => {
+      input.value = urlInput.value.trim();
+      if (input.value) { prev.src = asset(input.value); prev.style.display = ""; }
+      else { prev.removeAttribute("src"); prev.style.display = "none"; }
+    });
     const row = document.createElement("div");
     row.style.cssText = "display:flex;gap:.5rem;flex-wrap:wrap;align-items:center";
     const fileLabel = document.createElement("label");
     fileLabel.className = "btn btn-ghost btn-sm"; fileLabel.htmlFor = `file-${f.k}`;
-    fileLabel.textContent = "Upload / replace photo";
+    fileLabel.textContent = "Choose image file";
     const file = document.createElement("input");
-    file.id = `file-${f.k}`; file.type = "file"; file.accept = "image/*";
+    file.id = `file-${f.k}`; file.type = "file"; file.accept = "image/jpeg,image/png,image/webp";
     file.style.display = "none"; file.dataset.imgfield = f.k;
     row.append(fileLabel, file);
     if (v) {
@@ -617,7 +774,7 @@ function buildField(f, v) {
       editBtn.dataset.editimg = f.k; editBtn.textContent = "Edit current photo";
       row.appendChild(editBtn);
     }
-    picker.append(prev, row);
+    picker.append(prev, urlInput, row);
     wrap.append(picker);
   } else {
     input = document.createElement("input");
@@ -633,7 +790,25 @@ function openForm(id = null) {
   const sec = PAGE;
   const schema = SCHEMAS[sec];
   editingId = id;
-  const data = id ? items.find((x) => x.id === id) : { ...schema.defaults };
+  const source = id ? items.find((x) => x.id === id) : { ...schema.defaults };
+  const data = { ...(source || schema.defaults) };
+  if (sec === "projects") {
+    data.category = data.category || data.domain || "";
+    data.shortDesc = data.shortDesc || data.summary || data.description || "";
+  } else if (sec === "resources") {
+    data.desc = data.desc || data.description || "";
+  } else if (sec === "achievements") {
+    data.description = data.description || data.detail || "";
+    data.image = data.image || data.imageUrl || "";
+    data.team = data.team || data.member || "";
+  }
+  for (const field of schema.fields) {
+    if (field.t === "list" && Array.isArray(data[field.k])) data[field.k] = data[field.k].join("\n");
+  }
+  if (schema.fields.some((field) => field.k === "order")) {
+    if (!id) data.order = Math.max(0, ...items.map((row) => Number(row.order) || 0)) + 1;
+    else if (data.order == null || data.order === "") data.order = Math.max(1, items.findIndex((row) => row.id === id) + 1);
+  }
   $("#formModalTitle").textContent = (id ? "Edit " : "New ") + schema.label;
   const host = $("#entityFields");
   host.innerHTML = "";
@@ -701,8 +876,18 @@ async function saveForm(e) {
     const el = document.getElementById(`f-${f.k}`);
     if (f.t === "check") data[f.k] = el.checked;
     else if (f.t === "num") data[f.k] = Number(el.value || 0);
+    else if (f.t === "list") data[f.k] = String(el.value).split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
     else data[f.k] = String(el.value).trim();
-    if (f.req && !data[f.k]) { toast(`“${f.label}” is required.`, "err"); return; }
+    if (f.req && (!data[f.k] || (Array.isArray(data[f.k]) && !data[f.k].length))) { toast(`“${f.label}” is required.`, "err"); return; }
+  }
+  for (const field of schema.fields.filter((f) => f.t === "image")) {
+    if (!isSafeMediaReference(data[field.k])) { toast(`${field.label} must be a local site path or an HTTPS URL.`, "err"); return; }
+  }
+  if (Array.isArray(data.gallery) && !data.gallery.every(isSafeMediaReference)) {
+    toast("Gallery entries must be local site paths or HTTPS URLs.", "err"); return;
+  }
+  for (const key of ["githubUrl", "demoUrl", "url", "linkedin"]) {
+    if (data[key] && !safeHttpsUrl(data[key])) { toast(`${key} must be an HTTPS URL.`, "err"); return; }
   }
   if (sec === "tasks") {
     data.assigneeEmail = String(data.assigneeEmail || "").toLowerCase();
@@ -827,13 +1012,15 @@ async function applyEditor() {
     const url = await stMod.getDownloadURL(ref);
     const input = document.getElementById(`f-${pendingImageField}`);
     input.value = url;
+    const urlInput = document.getElementById(`url-${pendingImageField}`);
+    if (urlInput) urlInput.value = url;
     const prev = document.getElementById(`prev-${pendingImageField}`);
     prev.src = url; prev.style.display = "";
     closeModals();
     toast("Photo uploaded ✔", "ok");
   } catch (err) {
     console.error(err);
-    toast(`Upload failed: ${err.message}`, "err");
+    toast(`Upload failed: ${err.message}. If Firebase Storage is not enabled, use a deployed /assets/ path or HTTPS image URL instead.`, "err");
   }
 }
 
@@ -858,7 +1045,7 @@ async function renderAdmins() {
       </p>
     </div>
     <div class="admin-directory-head">
-      <div><h2 style="margin:0">Current admins</h2><p class="muted" style="margin:.2rem 0 0">Manage roles, password resets, access and section permissions.</p></div>
+      <div><h2 style="margin:0">Current admins</h2><p class="muted" style="margin:.2rem 0 0">Update display names, roles, password resets, access and section permissions. Sign-in email changes require the trusted owner tool and mailbox re-verification.</p></div>
       <div class="admin-directory-tools">
         <label class="sr-only" for="adminSearch">Search admins</label><input id="adminSearch" type="search" placeholder="Search by name or email" autocomplete="off" />
         <label class="sr-only" for="adminRoleFilter">Filter by role</label><select id="adminRoleFilter"><option value="">All roles</option>${Object.entries(ROLES).filter(([r]) => r !== "owner").map(([r, m]) => `<option value="${r}">${m.label}</option>`).join("")}</select>
@@ -950,7 +1137,7 @@ async function loadAdmins() {
       <span class="chip chip-accent admin-owner-badge">Owner</span>
     </section>
     ${rows.map((a) => `
-    <section class="admin-user-card card" data-search="${esc(`${a.email} ${a.name || ""}`.toLowerCase())}" data-role="${esc(a.role || "")}">
+    <section class="admin-user-card card" data-search="${esc(`${a.email} ${a.name || ""}`.toLowerCase())}" data-role="${esc(a.role || "")}" data-added="${esc((a.addedAt || "").slice(0, 10))}">
       <div class="admin-user-identity">
         <span class="admin-avatar" aria-hidden="true">${esc((a.name || a.email).trim().charAt(0).toUpperCase())}</span>
         <div class="admin-user-copy"><strong class="admin-user-email" title="${esc(a.email)}">${esc(a.email)}</strong><span class="muted">${esc(a.name || "Name not set")}${a.addedAt ? ` · Added ${(a.addedAt || "").slice(0, 10)}` : ""}</span></div>
@@ -966,6 +1153,14 @@ async function loadAdmins() {
         <button class="btn btn-ghost btn-sm" data-reset="${esc(a.email)}">Send reset email</button>
         <button class="btn btn-danger btn-sm" data-revoke="${esc(a.email)}">Revoke access</button>
       </div>
+      <details class="admin-profile-edit">
+        <summary><span>Profile &amp; sign-in</span><span class="muted">Display name is editable here; sign-in email requires verification</span></summary>
+        <div class="admin-profile-edit-content">
+          <label class="admin-name-control">Display name<input type="text" data-admin-name maxlength="80" value="${esc(a.name || "")}" autocomplete="off" /></label>
+          <button class="btn btn-ghost btn-sm" data-save-name="${esc(a.email)}">Save name</button>
+          <p class="muted admin-email-help">To change sign-in email safely, run <code>node update-admin.js current@trp.srmtrichy.edu.in new@trp.srmtrichy.edu.in "New Name"</code> from the trusted <code>backend-bundle/scripts</code> directory. The user must verify the new mailbox before portal access.</p>
+        </div>
+      </details>
       <details class="perm-edit">
         <summary><span>Section permissions</span><span class="muted">Choose what this admin can view and edit</span></summary>
         <div class="perm-edit-content"><div class="perm-grid">${SECTIONS.map((s) => `<label><input type="checkbox" data-p="${s}" ${((Array.isArray(a.perms) ? a.perms : LEGACY_PERMS[a.role]) || []).includes(s) ? "checked" : ""} /> ${s}</label>`).join("")}</div>
@@ -986,6 +1181,27 @@ async function loadAdmins() {
   $("#adminSearch").addEventListener("input", applyAdminFilters);
   $("#adminRoleFilter").addEventListener("change", applyAdminFilters);
   applyAdminFilters();
+  region.querySelectorAll("[data-save-name]").forEach((button) => button.addEventListener("click", async () => {
+    const card = button.closest(".admin-user-card");
+    const input = card.querySelector("[data-admin-name]");
+    const name = input.value.trim();
+    if (name.length < 2 || name.length > 80) { toast("Display name must be 2–80 characters.", "err"); input.focus(); return; }
+    button.disabled = true;
+    try {
+      const { db } = await sdk();
+      await dbMod.updateDoc(dbMod.doc(db, "admin_roles", button.dataset.saveName), {
+        name, nameUpdatedAt: new Date().toISOString(), nameUpdatedBy: me
+      });
+      card.dataset.search = `${button.dataset.saveName} ${name}`.toLowerCase();
+      const copy = card.querySelector(".admin-user-copy .muted");
+      if (copy) copy.textContent = `${name}${card.dataset.added ? ` · Added ${card.dataset.added}` : ""}`;
+      const avatar = card.querySelector(".admin-avatar");
+      if (avatar) avatar.textContent = name.charAt(0).toUpperCase();
+      applyAdminFilters();
+      toast(`Display name updated for ${button.dataset.saveName}.`, "ok");
+    } catch (err) { toast(`Name was not updated: ${err.message}`, "err"); }
+    finally { button.disabled = false; }
+  }));
   region.querySelectorAll("[data-saveperms]").forEach((b) => b.addEventListener("click", async () => {
     const chosen = [...b.parentElement.querySelectorAll("input[data-p]:checked")].map((c) => c.dataset.p);
     b.disabled = true;

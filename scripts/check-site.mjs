@@ -2,8 +2,9 @@
 /** No-dependency static QA for the published site. Run: node scripts/check-site.mjs */
 import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const pub = path.join(root, "public");
@@ -69,7 +70,7 @@ for (const file of jsFiles) {
 }
 
 // Configuration, rules mirrors and sitemap integrity.
-for (const name of ["firebase.json", "firestore.indexes.json", "public/manifest.webmanifest"]) {
+for (const name of ["firebase.json", "firestore.indexes.json", "public/manifest.webmanifest", "scripts/package.json", "backend-bundle/scripts/package.json"]) {
   try { JSON.parse(await readFile(path.join(root, name), "utf8")); }
   catch (err) { fail(`${name}: invalid JSON (${err.message})`); }
 }
@@ -91,6 +92,46 @@ for (const match of sitemap.matchAll(/<loc>(https:\/\/embedx-club-eee\.web\.app[
   let found = false;
   for (const candidate of candidates) if (await exists(candidate)) { found = true; break; }
   if (!found) fail(`sitemap.xml: missing page ${url.pathname}`);
+}
+
+// Ensure the complete public starter dataset stays in sync with both seeders.
+const seedCollections = ["announcements", "events", "projects", "team", "gallery", "resources", "achievements"];
+for (const seedFile of ["scripts/seed.js", "backend-bundle/scripts/seed.js"]) {
+  const source = await readFile(path.join(root, seedFile), "utf8");
+  const declared = source.match(/const COLLECTIONS = \[([^\]]*)\]/)?.[1] || "";
+  const actual = [...declared.matchAll(/["']([a-z_]+)["']/g)].map((m) => m[1]);
+  if (actual.join(",") !== seedCollections.join(",")) fail(`${seedFile}: must seed exactly ${seedCollections.join(", ")}`);
+}
+for (const name of seedCollections) {
+  const dataFile = path.join(pub, "js", "data", `${name}.js`);
+  const mirrorFile = path.join(root, "backend-bundle", "data", `${name}.js`);
+  if (!(await exists(dataFile)) || !(await exists(mirrorFile))) { fail(`Seed data missing for ${name}`); continue; }
+  const dataSource = await readFile(dataFile, "utf8");
+  if (dataSource !== await readFile(mirrorFile, "utf8")) fail(`Seed data mirror differs for ${name}`);
+  try {
+    const mod = await import(pathToFileURL(dataFile).href);
+    const rows = mod[name];
+    if (!Array.isArray(rows)) { fail(`${name}.js: named export ${name} must be an array`); continue; }
+    const ids = rows.map((row) => row && row.id).filter(Boolean);
+    if (new Set(ids).size !== ids.length) fail(`${name}.js: duplicate stable document IDs`);
+    const checkImage = (value, label) => {
+      if (typeof value !== "string" || !value || /^https:\/\//i.test(value)) return;
+      const pathname = cleanRef(value);
+      const target = path.resolve(pub, pathname.replace(/^\/+/, ""));
+      if (!target.startsWith(pub + path.sep) || !(existsSync(target))) fail(`${name}.js: missing/unsafe image path "${value}" (${label})`);
+    };
+    const inspect = (value, label = name, key = "") => {
+      if (Array.isArray(value)) {
+        for (const item of value) {
+          if (key === "gallery" && typeof item === "string") checkImage(item, label);
+          else inspect(item, label, key);
+        }
+      } else if (value && typeof value === "object") {
+        for (const [childKey, child] of Object.entries(value)) inspect(child, `${label}.${childKey}`, childKey);
+      } else if (/(?:image|photo|poster|logo)(?:url)?/i.test(key)) checkImage(value, label);
+    };
+    inspect(rows);
+  } catch (err) { fail(`${name}.js: could not load seed data (${err.message})`); }
 }
 
 if (failures.length) {

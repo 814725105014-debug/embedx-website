@@ -518,6 +518,10 @@ button { font: inherit; cursor: pointer; }
 .admin-row-actions { display: flex; gap: .5rem; }
 .img-picker { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
 .img-picker img { width: 120px; height: 84px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); }
+.img-picker > input[type="text"] { flex:1 1 100%; width:100%; min-width:0; }
+.admin-seed-toolbar { display:flex; align-items:center; justify-content:space-between; gap:1rem; margin-bottom:.8rem; padding:.9rem 1rem; }
+.admin-seed-toolbar .muted { max-width:58rem; margin:.2rem 0 0; font-size:.82rem; }
+@media (max-width:600px) { .admin-seed-toolbar { align-items:stretch; flex-direction:column; } .admin-seed-toolbar .btn { width:100%; min-height:44px; } }
 .editor-grid { display: grid; grid-template-columns: 1.4fr .8fr; gap: 1.2rem; align-items: start; }
 @media (max-width: 700px) { .editor-grid { grid-template-columns: 1fr; } .admin-row { flex-wrap: wrap; } }
 
@@ -666,10 +670,15 @@ details.perm-edit summary { padding: .55rem 0; min-height: 44px; display: flex; 
 .btn-danger { color:var(--err); border-color:color-mix(in srgb, var(--err) 40%, transparent); }
 .btn-danger:hover { color:#fff; background:var(--err); }
 .admin-password-due { flex:0 0 auto; font-size:.72rem; }
-.admin-user-card .perm-edit { grid-column:1 / -1; min-width:0; border-top:1px solid var(--border); padding-top:.65rem; }
-.admin-user-card .perm-edit summary { display:flex; align-items:center; justify-content:space-between; gap:.7rem; min-height:42px; color:var(--violet); }
-.admin-user-card .perm-edit summary span:first-child { font-weight:700; }
-.admin-user-card .perm-edit summary .muted { font-size:.78rem; font-weight:400; }
+.admin-user-card .admin-profile-edit, .admin-user-card .perm-edit { grid-column:1 / -1; min-width:0; border-top:1px solid var(--border); padding-top:.65rem; }
+.admin-user-card .admin-profile-edit summary, .admin-user-card .perm-edit summary { display:flex; align-items:center; justify-content:space-between; gap:.7rem; min-height:42px; color:var(--violet); }
+.admin-user-card .admin-profile-edit summary span:first-child, .admin-user-card .perm-edit summary span:first-child { font-weight:700; }
+.admin-user-card .admin-profile-edit summary .muted, .admin-user-card .perm-edit summary .muted { font-size:.78rem; font-weight:400; }
+.admin-profile-edit-content { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:end; gap:.7rem; padding:.3rem 0 .2rem; }
+.admin-name-control { display:grid; gap:.25rem; min-width:0; font-size:.82rem; color:var(--text-muted); }
+.admin-name-control input { min-width:0; width:100%; min-height:40px; }
+.admin-email-help { grid-column:1/-1; font-size:.78rem; margin:0; overflow-wrap:anywhere; }
+.admin-email-help code { white-space:normal; overflow-wrap:anywhere; }
 .perm-edit-content { display:flex; align-items:end; justify-content:space-between; gap:1rem; padding:.3rem 0 .2rem; }
 .perm-edit-content .perm-grid { flex:1; min-width:0; }
 .admin-user-card .perm-grid label { min-width:0; overflow-wrap:anywhere; }
@@ -692,7 +701,10 @@ details.perm-edit summary { padding: .55rem 0; min-height: 44px; display: flex; 
   .admin-user-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); width:100%; gap:.5rem; }
   .admin-role-control { grid-column:1 / -1; min-width:0; }
   .admin-user-actions .btn { width:100%; min-height:44px; white-space:normal; line-height:1.2; padding:.45rem .5rem; }
-  .admin-user-card .perm-edit summary { align-items:flex-start; flex-direction:column; justify-content:center; gap:.1rem; padding:.4rem 0; }
+  .admin-user-card .admin-profile-edit summary, .admin-user-card .perm-edit summary { align-items:flex-start; flex-direction:column; justify-content:center; gap:.1rem; padding:.4rem 0; }
+  .admin-profile-edit-content { grid-template-columns:minmax(0,1fr); align-items:stretch; }
+  .admin-profile-edit-content > .btn { width:100%; min-height:44px; }
+  .admin-email-help { grid-column:auto; }
   .perm-edit-content { align-items:stretch; flex-direction:column; }
   .perm-edit-content > .btn { width:100%; min-height:44px; }
   .admin-user-card .perm-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }

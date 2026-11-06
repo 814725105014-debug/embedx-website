@@ -84,6 +84,7 @@ export function domainCard(d) {
 }
 
 export function resourceCard(r) {
+  const link = externalUrl(r.url);
   return `
   <article class="card tilt" data-reveal>
     <div style="display:flex;justify-content:space-between;gap:.6rem;align-items:center">
@@ -92,21 +93,25 @@ export function resourceCard(r) {
     <h3 style="margin-top:.7rem">${esc(r.title)}</h3>
     <p class="muted" style="font-size:.92rem">${esc(r.desc)}</p>
     <div class="card-tags">${(Array.isArray(r.tags) ? r.tags : []).map((t) => `<span class="chip">${esc(t)}</span>`).join("")}</div>
-    <p class="card-link" style="cursor:default">${icon("check")} Curated Guide — available at club sessions</p>
+    ${link ? `<a class="card-link" href="${esc(link)}" target="_blank" rel="noopener noreferrer">Open resource ${icon("external")}</a>` : `<p class="card-link" style="cursor:default">${icon("check")} Curated Guide — available at club sessions</p>`}
   </article>`;
 }
 
 export function achievementCard(a) {
+  const image = a.image || a.imageUrl || "";
+  const description = a.description || a.detail || "";
+  const team = a.team || a.member || "";
+  const projectId = a.projectId || "";
   return `
   <article class="card tilt" data-reveal>
-    <div class="card-img"><img src="${esc(asset(a.image))}" alt="${esc(a.title)}" loading="lazy" width="1000" height="620" /></div>
-    <span class="badge-status">${esc(a.badge)}</span>
+    ${image ? `<div class="card-img"><img src="${esc(asset(image))}" alt="${esc(a.title)}" loading="lazy" width="1000" height="620" /></div>` : ""}
+    <span class="badge-status">${esc(a.badge || a.date || "Achievement")}</span>
     <h3 style="margin-top:.7rem">${esc(a.title)}</h3>
-    <p class="card-sub">${esc(a.subtitle)}</p>
-    <p class="muted" style="font-size:.92rem">${esc(a.description)}</p>
-    <p style="font-size:.85rem"><strong>Team:</strong> <span class="muted">${esc(a.team)} • ${esc(a.institution)}</span></p>
+    <p class="card-sub">${esc(a.subtitle || "")}</p>
+    <p class="muted" style="font-size:.92rem">${esc(description)}</p>
+    <p style="font-size:.85rem"><strong>Team:</strong> <span class="muted">${esc(team)}${a.institution ? ` • ${esc(a.institution)}` : ""}</span></p>
     <ul class="spec-list" style="margin-top:.6rem">${(Array.isArray(a.highlights) ? a.highlights : []).map((h) => `<li>${esc(h)}</li>`).join("")}</ul>
-    <a class="card-link" href="/pages/project-detail.html?id=${encodeURIComponent(a.projectId)}">Read Project Specs ${icon("arrow-right")}</a>
+    ${projectId ? `<a class="card-link" href="/pages/project-detail.html?id=${encodeURIComponent(projectId)}">Read Project Specs ${icon("arrow-right")}</a>` : ""}
   </article>`;
 }
 

@@ -31,6 +31,13 @@ service cloud.firestore {
     }
     function rolePath() { return /databases/$(database)/documents/admin_roles/$(request.auth.token.email); }
     function hasRole() { return signedIn() && exists(rolePath()); }
+    function roleNeedsEmailVerification() {
+      let roleData = get(rolePath()).data;
+      return ('emailVerificationRequired' in roleData) && roleData.emailVerificationRequired == true;
+    }
+    function verifiedRole() {
+      return hasRole() && (!roleNeedsEmailVerification() || request.auth.token.email_verified == true);
+    }
     function myRole() { return get(rolePath()).data.role; }
 
     // per-admin custom permissions: owner ticks sections in the portal (admin_roles/{email}.perms).
@@ -45,7 +52,12 @@ service cloud.firestore {
     function permsOf() {
       return get(rolePath()).data.perms != null ? get(rolePath()).data.perms : legacyPerms(get(rolePath()).data.role);
     }
-    function canWrite(sec) { return isOwner() || (hasRole() && sec in permsOf()); }
+    function canWrite(sec) { return isOwner() || (verifiedRole() && sec in permsOf()); }
+    function isTaskAssignee(task) {
+      return signedIn() && request.auth.token.email_verified == true
+        && (task.assigneeEmail == request.auth.token.email
+            || (verifiedRole() && task.assigneeRole == myRole()));
+    }
 
     // ---- content collections: public read, role-scoped write ----
     match /events/{id}        { allow read: if true; allow create, update, delete: if canWrite('events'); }
@@ -75,17 +87,13 @@ service cloud.firestore {
 
     // ---- tasks: task managers read/manage all; assignees see only their own tasks ----
     match /tasks/{id} {
-      allow read: if canWrite('tasks')
-        || (signedIn()
-            && (resource.data.assigneeEmail == request.auth.token.email
-                || (hasRole() && resource.data.assigneeRole == myRole())));
+      allow read: if canWrite('tasks') || isTaskAssignee(resource.data);
       allow create, delete: if canWrite('tasks');
       allow update: if canWrite('tasks')
         || (signedIn()
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
             && request.resource.data.status in ['open', 'in_progress', 'done']
-            && (request.auth.token.email == resource.data.assigneeEmail
-                || (hasRole() && resource.data.assigneeRole == myRole())));
+            && isTaskAssignee(resource.data));
     }
 
     // ---- club membership applications: create-only ----
