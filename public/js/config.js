@@ -13,7 +13,7 @@ export const isConfigured = Boolean(firebaseConfig.apiKey && firebaseConfig.proj
 
 // Set only the /exec URL from the restricted, user-executed official-mail deployment.
 // OAuth tokens and Google credentials never belong in website config.
-const EMBEDX_MAIL_WEB_APP_URL = "";
+const EMBEDX_MAIL_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzWs32_T5LcnYsxHGZ_pRvJ0FIz7tNqj4WuIe8iIA4vGi0dO9CTbvqNPwjbMCx1mWzf/exec";
 // Task notices retain a separate owner-executed endpoint, protected by Firebase ID-token checks.
 const EMBEDX_TASK_MAIL_WEB_APP_URL = "";
 export const mailWorkspace = { url: EMBEDX_MAIL_WEB_APP_URL };
