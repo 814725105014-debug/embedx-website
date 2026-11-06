@@ -1,7 +1,7 @@
 // EMBEDX — Shared chrome: navbar, mobile menu, footer, theme toggle.
 import { icon } from "./icons.js";
 import { initSearch } from "./search.js?v=20261106";
-import { getSiteSettings } from "./store.js?v=20261106-college-logo-mobile";
+import { getSiteSettings } from "./store.js?v=20261106-attached-college-logo";
 
 const NAV = [
   ["Home", "/"],
@@ -71,7 +71,7 @@ function injectChrome() {
             <img src="/assets/images/embedx-emblem.webp" alt="" width="48" height="48" loading="lazy" />
             <div><strong>EMBEDX</strong><span>Embedded Systems &amp; Automation Club</span></div>
           </div>
-          <div class="college-mark-lockup"><span class="college-logo-frame"><img class="college-mark" data-site-src="collegeLogoUrl" src="/assets/images/srm-trp-college-wordmark.webp" alt="SRM TRP Engineering College logo" loading="lazy" /></span><span>SRM TRP Engineering College</span></div>
+          <div class="college-mark-lockup"><span class="college-logo-frame"><img class="college-mark" data-site-src="collegeLogoUrl" src="/assets/images/srm-trp-college-attached.png" alt="SRM TRP Engineering College logo" loading="lazy" /></span><span>SRM TRP Engineering College</span></div>
           <p class="muted footer-institution">Department of Electrical and Electronics Engineering (EEE)<br />SRM TRP Engineering College (Autonomous)<br />SRM Nagar, Samayapuram, Tiruchirappalli – 621 105.</p>
           <p class="chip chip-accent" style="margin-top:.4rem">INNOVATE • INTEGRATE • INSPIRE</p>
         </div>
@@ -86,7 +86,7 @@ function injectChrome() {
         <div>
           <h4>Connect With Us</h4>
           <p class="muted" style="font-size:.9rem">Follow departmental technical initiatives, competition updates, and workshop announcements.</p>
-          <p style="font-size:.9rem">${icon("phone", "i")} Tel: <a data-site-href="phoneHref" href="tel:04312908050" data-site-text="phoneDisplay">0431-2908050</a><br />${icon("globe", "i")} Portal: <a data-site-href="collegeWebsiteUrl" href="https://www.trpengg.ac.in" rel="noopener noreferrer" target="_blank" data-site-text="collegeWebsiteLabel">www.trpengg.ac.in</a><br />${icon("mail", "i")} Email: <a data-site-email href="mailto:eee@srmtrpr.edu.in">eee@srmtrpr.edu.in</a></p>
+          <p style="font-size:.9rem">${icon("phone", "i")} Tel: <a data-site-href="phoneHref" href="tel:04312908050" data-site-text="phoneDisplay">0431-2908050</a><br />${icon("globe", "i")} Portal: <a data-site-href="collegeWebsiteUrl" href="https://trp.srmtrichy.edu.in" rel="noopener noreferrer" target="_blank" data-site-text="collegeWebsiteLabel">trp.srmtrichy.edu.in</a><br />${icon("mail", "i")} Email: <a data-site-email href="mailto:hod.eee@trp.srmtrichy.edu.in">hod.eee@trp.srmtrichy.edu.in</a></p>
           <div class="socials">
             <a class="icon-btn" data-site-href="linkedinUrl" href="https://www.linkedin.com/school/srm-trp-engineering-college" rel="noopener noreferrer" target="_blank" aria-label="LinkedIn">${icon("linkedin")}</a>
             <a class="icon-btn" data-site-href="instagramUrl" href="https://www.instagram.com/trpengineeringcollege" rel="noopener noreferrer" target="_blank" aria-label="Instagram">${icon("instagram")}</a>
@@ -179,7 +179,7 @@ function applySiteSettings(settings) {
     if (value != null) element.textContent = String(value);
   });
   document.querySelectorAll("[data-site-src]").forEach((element) => {
-    const fallback = "/assets/images/srm-trp-college-wordmark.webp";
+    const fallback = "/assets/images/srm-trp-college-attached.png";
     element.addEventListener("error", () => { element.src = fallback; }, { once: true });
     const value = String(settings[element.dataset.siteSrc] || "").trim();
     if (value.startsWith("/assets/images/") && !value.split(/[?#]/, 1)[0].split("/").includes("..")) { element.src = value; return; }

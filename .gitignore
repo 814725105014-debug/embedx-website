@@ -7,6 +7,7 @@ ui-debug.log
 node_modules/
 scripts/node_modules/
 backend-bundle/appsscript/.clasp.json
+backend-bundle/appsscript-mail/.clasp.json
 .env
 .env.*
 

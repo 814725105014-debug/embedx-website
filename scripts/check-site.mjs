@@ -72,7 +72,7 @@ for (const file of jsFiles) {
 // Syntax-check trusted backend scripts and Apps Script sources as well as browser modules.
 const { writeFile: writeTemp, unlink: unlinkTemp } = await import("node:fs/promises");
 let checkedScript = 0;
-for (const dir of [path.join(root, "scripts"), path.join(root, "backend-bundle", "scripts"), path.join(root, "backend-bundle", "appsscript")]) {
+for (const dir of [path.join(root, "scripts"), path.join(root, "backend-bundle", "scripts"), path.join(root, "backend-bundle", "appsscript"), path.join(root, "backend-bundle", "appsscript-mail")]) {
   for (const file of await readdir(dir)) {
     if (!/\.(?:js|mjs|gs)$/.test(file)) continue;
     const source = await readFile(path.join(dir, file), "utf8");
@@ -85,7 +85,7 @@ for (const dir of [path.join(root, "scripts"), path.join(root, "backend-bundle",
 }
 
 // Configuration, rules mirrors and sitemap integrity.
-for (const name of ["firebase.json", "firestore.indexes.json", "public/manifest.webmanifest", "scripts/package.json", "backend-bundle/scripts/package.json", "backend-bundle/appsscript/appsscript.json"]) {
+for (const name of ["firebase.json", "firestore.indexes.json", "public/manifest.webmanifest", "scripts/package.json", "backend-bundle/scripts/package.json", "backend-bundle/appsscript/appsscript.json", "backend-bundle/appsscript-mail/appsscript.json"]) {
   try { JSON.parse(await readFile(path.join(root, name), "utf8")); }
   catch (err) { fail(`${name}: invalid JSON (${err.message})`); }
 }
