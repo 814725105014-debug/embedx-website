@@ -17,10 +17,10 @@
   <meta name="theme-color" content="#08060c" />
   <link rel="manifest" href="/manifest.webmanifest" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' https://trp.srmtrichy.edu.in data: https://firebasestorage.googleapis.com https://www.google-analytics.com; connect-src 'self' https://www.gstatic.com https://www.google-analytics.com https://analytics.google.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://firebasestorage.googleapis.com https://www.googleapis.com; object-src 'none'; base-uri 'self'; form-action 'self'" />
-  <link rel="stylesheet" href="/css/style.css?v=20261106-forms" />
+  <link rel="stylesheet" href="/css/style.css?v=20261106-site-settings" />
   <link rel="stylesheet" href="/css/forms.css?v=20261106-forms" />
   <script src="/js/theme.js?v=20261106"></script>
-  <script type="module" src="/js/main.js?v=20261106-forms"></script>
+  <script type="module" src="/js/main.js?v=20261106-site-settings"></script>
 </head>
 <body data-page="contact">
 <a class="skip-link" href="#main">Skip to content</a>
@@ -39,17 +39,18 @@
       <div class="grid grid-2">
         <div class="card" data-reveal>
           <h3>Department Information</h3>
+          <img class="college-mark contact-college-mark" data-site-src="collegeLogoUrl" src="https://trp.srmtrichy.edu.in/wp-content/uploads/2026/03/TRP.png" alt="SRM TRP Engineering College logo" />
           <ul class="spec-list">
             <li><strong>Address:</strong>&nbsp;Department of Electrical and Electronics Engineering, SRM TRP Engineering College (Autonomous), SRM Nagar, Near Samayapuram, Tiruchirappalli – 621 105.</li>
-            <li><strong>Telephone:</strong>&nbsp;<a href="tel:04312908050">0431-2908050</a></li>
-            <li><strong>Official Portal:</strong>&nbsp;<a href="https://www.trpengg.ac.in" rel="noopener">www.trpengg.ac.in</a></li>
-            <li><strong>Email:</strong>&nbsp;<a href="mailto:eee@srmtrpr.edu.in">eee@srmtrpr.edu.in</a></li>
+            <li><strong>Telephone:</strong>&nbsp;<a data-site-href="phoneHref" data-site-text="phoneDisplay" href="tel:04312908050">0431-2908050</a></li>
+            <li><strong>Official Portal:</strong>&nbsp;<a data-site-href="collegeWebsiteUrl" data-site-text="collegeWebsiteLabel" href="https://www.trpengg.ac.in" rel="noopener noreferrer" target="_blank">www.trpengg.ac.in</a></li>
+            <li><strong>Email:</strong>&nbsp;<a data-site-email href="mailto:eee@srmtrpr.edu.in">eee@srmtrpr.edu.in</a></li>
           </ul>
           <p style="margin-top:1rem;font-size:.9rem">Follow EMBEDX social channels:</p>
           <div class="socials">
-            <a class="icon-btn" href="https://www.linkedin.com/school/srm-trp-engineering-college" rel="noopener" aria-label="EMBEDX on LinkedIn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="19" height="19"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg></a>
-            <a class="icon-btn" href="https://www.instagram.com/trpengineeringcollege" rel="noopener" aria-label="EMBEDX on Instagram"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="19" height="19"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg></a>
-            <a class="icon-btn" href="https://www.facebook.com/SRMTRPEngg" rel="noopener" aria-label="EMBEDX on Facebook"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="19" height="19"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg></a>
+            <a class="icon-btn" data-site-href="linkedinUrl" href="https://www.linkedin.com/school/srm-trp-engineering-college" target="_blank" rel="noopener noreferrer" aria-label="EMBEDX on LinkedIn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="19" height="19"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg></a>
+            <a class="icon-btn" data-site-href="instagramUrl" href="https://www.instagram.com/trpengineeringcollege" target="_blank" rel="noopener noreferrer" aria-label="EMBEDX on Instagram"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="19" height="19"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg></a>
+            <a class="icon-btn" data-site-href="facebookUrl" href="https://www.facebook.com/SRMTRPEngg" target="_blank" rel="noopener noreferrer" aria-label="EMBEDX on Facebook"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="19" height="19"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg></a>
           </div>
         </div>
         <div class="card" style="padding:var(--sp-4)" data-reveal>

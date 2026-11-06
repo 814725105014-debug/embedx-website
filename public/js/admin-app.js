@@ -12,6 +12,7 @@ import { gallery as starterGallery } from "./data/gallery.js?v=20261106-admin-co
 import { resources as starterResources } from "./data/resources.js?v=20261106-admin-controls";
 import { achievements as starterAchievements } from "./data/achievements.js?v=20261106-admin-controls";
 import { forms as starterForms } from "./data/forms.js?v=20261106-admin-controls";
+import { DEFAULT_SITE_SETTINGS, getSiteSettings } from "./store.js?v=20261106-site-settings";
 
 const STARTER_CONTENT = {
   announcements: starterAnnouncements,
@@ -39,6 +40,7 @@ const PAGES = {
   resources:     { h1: "Resources",      hint: "Learning Hub guides with category filters.", crud: true },
   achievements:  { h1: "Achievers",      hint: "Hall of Achievers cards.", crud: true },
   forms:         { h1: "Forms & responses", hint: "Design forms, close intake, review submissions, export records, and manage Google Sheets sync.", crud: false },
+  site:          { h1: "Website settings", hint: "Update college contact information, social links, and the official college logo used across the site.", crud: false },
   tasks:         { h1: "Tasks",          hint: "Assign work to a person or a role; assignees mark tasks done.", crud: true },
   admins:        { h1: "Admins & roles", hint: "Add coordinators, HOD and president in one click; reset or revoke any time.", crud: false }
 };
@@ -68,11 +70,13 @@ const WRITE = {
   resources:     ["owner", "technical"],
   achievements:  ["owner", "president", "technical"],
   forms:         ["owner", "president"],
+  site:          ["owner"],
   tasks:         ["owner", "president"],
   admins:        ["owner"]
 };
 // per-admin custom permissions: the owner ticks exactly these per person.
-const SECTIONS = ["announcements", "events", "projects", "team", "gallery", "resources", "achievements", "forms", "tasks"];
+const SECTIONS = ["announcements", "events", "projects", "team", "gallery", "resources", "achievements", "forms", "site", "tasks"];
+const SECTION_LABELS = { announcements: "Announcements", events: "Events", projects: "Projects", team: "Team", gallery: "Gallery", resources: "Resources", achievements: "Achievers", forms: "Forms & responses", site: "Website settings", tasks: "Tasks" };
 // fallback for role docs created before custom perms existed (mirrors firestore.rules legacyPerms)
 const LEGACY_PERMS = {
   president: ["announcements", "team", "achievements", "forms", "tasks"],
@@ -91,6 +95,7 @@ const NAV = [
   ["resources", "Resources", "/admin/resources"],
   ["achievements", "Achievers", "/admin/achievers"],
   ["forms", "Forms & responses", "/admin/forms"],
+  ["site", "Website settings", "/admin/site"],
   ["tasks", "Tasks", "/admin/tasks"],
   ["admins", "Admins & roles", "/admin/admins"]
 ];
@@ -429,6 +434,13 @@ function renderShell() {
         <button class="btn btn-ghost btn-sm" id="signOut">Sign out</button>
       </div>
     </div>`;
+  const adminCollegeLogo = $("#adminTop .admin-college-mark");
+  getSiteSettings().then((settings) => {
+    if (!adminCollegeLogo) return;
+    const url = String(settings.collegeLogoUrl || "");
+    if (url.startsWith("/assets/images/") && !url.split(/[?#]/, 1)[0].split("/").includes("..")) adminCollegeLogo.src = url;
+    else { try { const parsed = new URL(url); if (parsed.protocol === "https:" && parsed.hostname === "trp.srmtrichy.edu.in") adminCollegeLogo.src = parsed.href; } catch { /* keep bundled default */ } }
+  }).catch(() => {});
   $("#signOut").addEventListener("click", async () => { const { auth } = await sdk(); authMod.signOut(auth); location.href = "/admin/"; });
   $("#adminNav").innerHTML = NAV
     .filter(([id]) => id === "overview" || id === "tasks" || (id === "admins" ? role === "owner" : canView(id)))
@@ -444,6 +456,7 @@ function route() {
   if (PAGE === "overview") return renderOverview();
   if (PAGE === "admins") return renderAdmins();
   if (PAGE === "forms") return renderForms();
+  if (PAGE === "site") return renderWebsiteSettings();
   return renderCollection(PAGE);
 }
 
@@ -584,6 +597,72 @@ const taskRow = (t) => `
       <span class="muted">${t.status} • ${esc(t.assigneeEmail || t.assigneeRole || "unassigned")}${t.due ? ` • due ${esc(t.due)}` : ""}</span>
     </div>
   </div>`;
+
+/* ---------------- editable public website settings ---------------- */
+async function renderWebsiteSettings() {
+  const region = $("#pageRegion");
+  if (!canView("site")) { region.innerHTML = `<p class="muted">Website settings access is not assigned to your account.</p>`; return; }
+  region.innerHTML = `<div class="skeleton" style="min-height:180px"></div>`;
+  try {
+    const { db } = await sdk();
+    const snap = await dbMod.getDoc(dbMod.doc(db, "site_settings", "site"));
+    const settings = snap.exists() ? { ...DEFAULT_SITE_SETTINGS, ...snap.data() } : { ...DEFAULT_SITE_SETTINGS };
+    if (PAGE !== "site" || !region.isConnected) return;
+    region.innerHTML = `<section class="admin-site-settings card"><div class="admin-form-toolbar"><div><h2>Public contact &amp; social links</h2><p class="muted">Edit these once here; the public footer and Contact page use the saved values after reload.</p></div></div>
+      <div class="admin-site-logo-preview"><img id="siteLogoPreview" src="${esc(settings.collegeLogoUrl)}" alt="College logo preview" /><div><strong>College logo</strong><p class="muted">Transparent artwork displays on a white tile. Use an /assets/images/ path or an HTTPS URL on trp.srmtrichy.edu.in.</p></div></div>
+      <div class="form-grid admin-site-grid">
+        ${siteSettingField("collegeLogoUrl", "College logo image URL", settings.collegeLogoUrl, "https://trp.srmtrichy.edu.in/... or /assets/images/college.png", "url")}
+        ${siteSettingField("collegeWebsiteUrl", "Official college website", settings.collegeWebsiteUrl, "https://www.example.edu", "url")}
+        ${siteSettingField("contactEmail", "Public contact email", settings.contactEmail, "department@example.edu", "email")}
+        ${siteSettingField("phoneDisplay", "Public phone number", settings.phoneDisplay, "+91 431 2908050", "tel")}
+        ${siteSettingField("linkedinUrl", "LinkedIn URL", settings.linkedinUrl, "https://www.linkedin.com/...", "url")}
+        ${siteSettingField("instagramUrl", "Instagram URL", settings.instagramUrl, "https://www.instagram.com/...", "url")}
+        ${siteSettingField("facebookUrl", "Facebook URL", settings.facebookUrl, "https://www.facebook.com/...", "url")}
+      </div>
+      ${can("site") ? `<div class="admin-site-actions"><p class="muted" id="siteSettingsMessage" role="status"></p><button class="btn btn-primary" id="saveSiteSettings">Save website settings</button></div>` : `<p class="muted">Read only — ask the owner to grant Website settings permission.</p>`}
+    </section>`;
+    const logoInput = region.querySelector("[name=collegeLogoUrl]");
+    logoInput?.addEventListener("input", () => { const preview = region.querySelector("#siteLogoPreview"); if (preview) preview.src = logoInput.value.trim(); });
+    region.querySelector("#saveSiteSettings")?.addEventListener("click", async (event) => {
+      const button = event.currentTarget;
+      const message = region.querySelector("#siteSettingsMessage");
+      const fieldValue = (key) => region.querySelector(`[name="${key}"]`).value.trim();
+      const updated = {
+        collegeLogoUrl: fieldValue("collegeLogoUrl"),
+        collegeWebsiteUrl: fieldValue("collegeWebsiteUrl"),
+        contactEmail: fieldValue("contactEmail"),
+        phoneDisplay: fieldValue("phoneDisplay"),
+        linkedinUrl: fieldValue("linkedinUrl"),
+        instagramUrl: fieldValue("instagramUrl"),
+        facebookUrl: fieldValue("facebookUrl")
+      };
+      const urlValid = (value) => { try { return new URL(value).protocol === "https:"; } catch { return false; } };
+      const logoPathValid = (value) => value.startsWith("/assets/images/") && !value.split(/[?#]/, 1)[0].split("/").includes("..")
+        || (() => { try { const u = new URL(value); return u.protocol === "https:" && u.hostname === "trp.srmtrichy.edu.in"; } catch { return false; } })();
+      if (!logoPathValid(updated.collegeLogoUrl)) { message.textContent = "Use a local /assets/images/ logo or an HTTPS logo hosted on trp.srmtrichy.edu.in."; return; }
+      if (!urlValid(updated.collegeWebsiteUrl)) { message.textContent = "The official website must be a valid HTTPS URL."; return; }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(updated.contactEmail) || updated.contactEmail.length > 120) { message.textContent = "Enter a valid contact email (up to 120 characters)."; return; }
+      if (!/^[+0-9()\s-]{8,24}$/.test(updated.phoneDisplay) || updated.phoneDisplay.replace(/\D/g, "").length < 8) { message.textContent = "Enter a phone number with 8–15 digits."; return; }
+      for (const key of ["linkedinUrl", "instagramUrl", "facebookUrl"]) if (updated[key] && !urlValid(updated[key])) { message.textContent = `${key.replace("Url", "")} must be an HTTPS URL or left blank.`; return; }
+      updated.phoneHref = `tel:${updated.phoneDisplay.replace(/\D/g, "")}`;
+      try { updated.collegeWebsiteLabel = new URL(updated.collegeWebsiteUrl).hostname.replace(/^www\./, ""); } catch { updated.collegeWebsiteLabel = updated.collegeWebsiteUrl; }
+      button.disabled = true; button.textContent = "Saving…"; message.textContent = "";
+      try {
+        await dbMod.setDoc(dbMod.doc(db, "site_settings", "site"), { ...updated, updatedAt: new Date().toISOString() });
+        toast("Website settings saved. Public pages will show them after reload.", "ok");
+        message.textContent = "Saved successfully. Reload a public page to see the updated links.";
+      } catch (err) { message.textContent = `Save failed: ${err.message}`; toast("Could not save website settings.", "err"); }
+      finally { button.disabled = false; button.textContent = "Save website settings"; }
+    });
+  } catch (err) {
+    console.error("Website settings failed", err);
+    region.innerHTML = `<p class="muted">Could not load website settings: ${esc(err.message)}</p>`;
+  }
+}
+
+function siteSettingField(name, label, value, placeholder, type) {
+  return `<div class="field"><label for="site-${name}">${esc(label)}</label><input id="site-${name}" name="${name}" type="${type}" value="${esc(value || "")}" placeholder="${esc(placeholder)}" autocomplete="off" /></div>`;
+}
 
 /* ---------------- forms, responses, and sheet status ---------------- */
 async function renderForms() {
@@ -812,6 +891,10 @@ function exportCsv(filename, rows) {
 }
 
 /* ---------------- generic collection pages ---------------- */
+function isStarterGalleryPresent(photo, currentItems = items) {
+  return currentItems.some((item) => item.id === photo.id || item.imageUrl === photo.imageUrl);
+}
+
 async function renderCollection(sec) {
   const schema = SCHEMAS[sec];
   if (!schema) { $("#pageRegion").innerHTML = `<p class="muted">Unknown section.</p>`; return; }
@@ -822,10 +905,12 @@ async function renderCollection(sec) {
   const add = $("#addItem");
   if (add) { add.hidden = !can(sec); add.onclick = () => openForm(null); }
   await loadList(sec);
+  if (PAGE !== sec) return;
   if (sec === "gallery" && can(sec) && $("#listRegion")) {
-    const toolbar = document.createElement("div");
-    toolbar.className = "admin-seed-toolbar card";
-    toolbar.innerHTML = `<div><strong>Starter gallery</strong><p class="muted">Restore any missing bundled photos without changing existing gallery entries. Use a local /assets/ path or HTTPS URL when adding images; file uploads need Firebase Storage.</p></div><button class="btn btn-ghost btn-sm" id="restoreGallery">Restore missing photos</button>`;
+    const toolbar = document.createElement("section");
+    toolbar.className = "admin-seed-toolbar admin-gallery-sync card";
+    const missing = starterGallery.filter((item) => !isStarterGalleryPresent(item));
+    toolbar.innerHTML = `<div class="admin-gallery-sync-copy"><strong>Bundled website gallery · ${starterGallery.length} starter photos</strong><p class="muted">These images are part of the public-site starter set. Import missing photos into Firestore to edit their captions, order, and image links here. Existing entries are preserved; local /assets/ paths and HTTPS image links are supported. File upload requires Firebase Storage.</p><div class="admin-starter-thumbs">${starterGallery.map((photo) => { const present = isStarterGalleryPresent(photo); return `<div class="admin-starter-thumb ${present ? "is-published" : "is-missing"}" title="${esc(photo.caption)}"><img src="${esc(asset(photo.imageUrl))}" alt="${esc(photo.caption)}" loading="lazy" /><span>${present ? "Published" : "Not in Firestore"}</span></div>`; }).join("")}</div></div><button class="btn btn-primary btn-sm" id="restoreGallery" ${missing.length ? "" : "disabled"}>${missing.length ? `Import ${missing.length} missing photo${missing.length === 1 ? "" : "s"}` : "All starter photos imported"}</button>`;
     $("#pageRegion").prepend(toolbar);
     $("#restoreGallery").addEventListener("click", (event) => restoreStarterGallery(event.currentTarget));
   }
@@ -836,8 +921,7 @@ async function restoreStarterGallery(button) {
   button.disabled = true;
   try {
     const { db } = await sdk();
-    const presentImages = new Set(items.map((item) => item.imageUrl).filter(Boolean));
-    const candidates = starterGallery.filter((item) => !presentImages.has(item.imageUrl));
+    const candidates = starterGallery.filter((item) => !isStarterGalleryPresent(item));
     if (!candidates.length) {
       toast("All starter photos are already in the gallery; nothing was changed.", "info");
       return;
@@ -857,10 +941,22 @@ async function restoreStarterGallery(button) {
     });
     toast(added ? `Restored ${added} missing starter photo${added === 1 ? "" : "s"}.` : "Starter photos already exist; nothing was changed.", "ok");
     await loadList("gallery");
+    const thumbs = document.querySelectorAll(".admin-starter-thumb");
+    starterGallery.forEach((photo, index) => {
+      const thumb = thumbs[index]; if (!thumb) return;
+      const present = isStarterGalleryPresent(photo);
+      thumb.classList.toggle("is-published", present); thumb.classList.toggle("is-missing", !present);
+      const badge = thumb.querySelector("span"); if (badge) badge.textContent = present ? "Published" : "Not in Firestore";
+    });
+    const stillMissing = starterGallery.filter((item) => !isStarterGalleryPresent(item));
+    button.textContent = stillMissing.length ? `Import ${stillMissing.length} missing photo${stillMissing.length === 1 ? "" : "s"}` : "All starter photos imported";
+    button.disabled = !stillMissing.length;
   } catch (err) {
     console.error("Gallery restore failed", err);
     toast(`Could not restore starter photos: ${err.message}`, "err");
-  } finally { button.disabled = false; }
+  } finally {
+    if (button.isConnected && button.textContent !== "All starter photos imported") button.disabled = false;
+  }
 }
 
 async function loadList(sec) {
@@ -1271,7 +1367,7 @@ async function renderAdmins() {
         <div class="field"><label for="aa-name">Display name</label><input id="aa-name" placeholder="e.g. Keerthivasan A" /></div>
         <div class="field"><label for="aa-role">Role preset</label><select id="aa-role">${Object.entries(ROLES).filter(([r]) => r !== "owner").map(([r, m]) => `<option value="${r}">${m.label} — ${m.blurb}</option>`).join("")}</select></div>
         <div class="field"><label for="aa-pass">Temporary password *</label><div class="password-entry"><input id="aa-pass" type="password" minlength="8" required autocomplete="new-password" placeholder="At least 8 characters" /><button class="btn btn-ghost btn-sm" id="aa-pass-toggle" type="button" aria-pressed="false">Show</button></div></div>
-        <div class="field full"><label>Can see &amp; edit — tick their sections</label><div class="perm-grid" id="aa-perms">${SECTIONS.map((s) => `<label><input type="checkbox" value="${s}" /> ${s}</label>`).join("")}</div></div>
+        <div class="field full"><label>Can see &amp; edit — tick their sections</label><div class="perm-grid" id="aa-perms">${SECTIONS.map((s) => `<label><input type="checkbox" value="${s}" /> ${esc(SECTION_LABELS[s] || s)}</label>`).join("")}</div></div>
         <div class="field full"><button class="btn btn-primary" type="submit">Add admin</button></div>
       </form>
       <p class="muted" style="font-size:.82rem;margin:.9rem 0 0">
@@ -1397,7 +1493,7 @@ async function loadAdmins() {
       </details>
       <details class="perm-edit">
         <summary><span>Section permissions</span><span class="muted">Choose what this admin can view and edit</span></summary>
-        <div class="perm-edit-content"><div class="perm-grid">${SECTIONS.map((s) => `<label><input type="checkbox" data-p="${s}" ${((Array.isArray(a.perms) ? a.perms : LEGACY_PERMS[a.role]) || []).includes(s) ? "checked" : ""} /> ${s}</label>`).join("")}</div>
+        <div class="perm-edit-content"><div class="perm-grid">${SECTIONS.map((s) => `<label><input type="checkbox" data-p="${s}" ${((Array.isArray(a.perms) ? a.perms : LEGACY_PERMS[a.role]) || []).includes(s) ? "checked" : ""} /> ${esc(SECTION_LABELS[s] || s)}</label>`).join("")}</div>
         <button class="btn btn-primary btn-sm" data-saveperms="${esc(a.email)}">Save permissions</button></div>
       </details>
     </section>`).join("")}`;

@@ -31,7 +31,7 @@ for (const file of htmlFiles) {
   for (const id of new Set(ids.filter((v, i) => ids.indexOf(v) !== i))) fail(`${rel}: duplicate id "${id}"`);
   for (const tag of html.matchAll(/<([a-z][\w:-]*)\b([^>]*)>/gi)) {
     const name = tag[1].toLowerCase(), attrs = tag[2];
-    const get = (key) => attrs.match(new RegExp(`\\b${key}\\s*=\\s*(["'])(.*?)\\1`, "i"))?.[2] || "";
+    const get = (key) => attrs.match(new RegExp(`(?:^|\\s)${key}\\s*=\\s*(["'])(.*?)\\1`, "i"))?.[2] || "";
     if (name === "img" && !/\balt\s*=/.test(attrs)) fail(`${rel}: img missing alt attribute`);
     if (get("target") === "_blank" && !/\brel=["'][^"']*\bnoopener\b/i.test(attrs)) fail(`${rel}: target=_blank link missing rel=noopener`);
     for (const key of ["href", "src", "poster"]) {

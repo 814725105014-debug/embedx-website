@@ -124,6 +124,7 @@ account. Gallery images use bundled assets, not Firebase Storage.
 | `members_applications` | written by Join + EMBEDNOVA forms | public create; assigned Forms admins monitor/export/delete |
 | `contact_messages` | written by Contact form | public create; assigned Forms admins monitor/export/delete |
 | `site_settings/forms` | Google Sheets sync URL and last-run health | Forms admins can read; owner/Apps Script owner writes |
+| `site_settings/site` | Public logo, official portal, phone, email, and social links | Public read; assigned `site` admins write through Website settings |
 
 Image URLs should be **root-absolute local paths** (`/assets/images/foo.webp`) or
 HTTPS URLs. The admin image editor accepts either; file upload/crop is available
@@ -136,7 +137,9 @@ empty rather than resurrecting deleted content.
 
 A built-in CMS at **`https://<PROJECT_ID>.web.app/admin/`** (linked in the site footer).
 It includes content editing, task assignment, media editing, and owner-managed
-per-admin section permissions. Navigation and URLs work without a full page reload.
+per-admin section permissions. Navigation and URLs work without a full page reload. The Gallery page previews the bundled public-site photos and clearly shows which are already in Firestore; **Import missing photos** copies only absent starter entries so they can be captioned and reordered in Admin.
+
+Owners can also open **Website settings** in Admin to edit the public college logo, official portal URL, phone, email, and LinkedIn/Instagram/Facebook links. These values are read publicly by the shared footer, home-page portal card, and Contact page; updates appear after a page reload. Assign the `site` permission to a trusted admin if they should be able to edit these values.
 
 ### Creating an admin (one click)
 

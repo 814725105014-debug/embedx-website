@@ -1,6 +1,7 @@
 // EMBEDX — Shared chrome: navbar, mobile menu, footer, theme toggle.
 import { icon } from "./icons.js";
 import { initSearch } from "./search.js?v=20261106";
+import { getSiteSettings } from "./store.js?v=20261106-site-settings";
 
 const NAV = [
   ["Home", "/"],
@@ -70,7 +71,7 @@ function injectChrome() {
             <img src="/assets/images/embedx-emblem.webp" alt="" width="48" height="48" loading="lazy" />
             <div><strong>EMBEDX</strong><span>Embedded Systems &amp; Automation Club</span></div>
           </div>
-          <div class="college-mark-lockup"><img class="college-mark" src="https://trp.srmtrichy.edu.in/wp-content/uploads/2026/03/TRP.png" alt="SRM TRP Engineering College logo" loading="lazy" /><span>SRM TRP Engineering College</span></div>
+          <div class="college-mark-lockup"><img class="college-mark" data-site-src="collegeLogoUrl" src="https://trp.srmtrichy.edu.in/wp-content/uploads/2026/03/TRP.png" alt="SRM TRP Engineering College logo" loading="lazy" /><span>SRM TRP Engineering College</span></div>
           <p class="muted footer-institution">Department of Electrical and Electronics Engineering (EEE)<br />SRM TRP Engineering College (Autonomous)<br />SRM Nagar, Samayapuram, Tiruchirappalli – 621 105.</p>
           <p class="chip chip-accent" style="margin-top:.4rem">INNOVATE • INTEGRATE • INSPIRE</p>
         </div>
@@ -85,11 +86,11 @@ function injectChrome() {
         <div>
           <h4>Connect With Us</h4>
           <p class="muted" style="font-size:.9rem">Follow departmental technical initiatives, competition updates, and workshop announcements.</p>
-          <p style="font-size:.9rem">${icon("phone", "i")} Tel: <a href="tel:04312908050">0431-2908050</a><br />${icon("globe", "i")} Portal: <a href="https://www.trpengg.ac.in" rel="noopener">www.trpengg.ac.in</a></p>
+          <p style="font-size:.9rem">${icon("phone", "i")} Tel: <a data-site-href="phoneHref" href="tel:04312908050" data-site-text="phoneDisplay">0431-2908050</a><br />${icon("globe", "i")} Portal: <a data-site-href="collegeWebsiteUrl" href="https://www.trpengg.ac.in" rel="noopener noreferrer" target="_blank" data-site-text="collegeWebsiteLabel">www.trpengg.ac.in</a><br />${icon("mail", "i")} Email: <a data-site-email href="mailto:eee@srmtrpr.edu.in">eee@srmtrpr.edu.in</a></p>
           <div class="socials">
-            <a class="icon-btn" href="https://www.linkedin.com/school/srm-trp-engineering-college" rel="noopener" aria-label="LinkedIn">${icon("linkedin")}</a>
-            <a class="icon-btn" href="https://www.instagram.com/trpengineeringcollege" rel="noopener" aria-label="Instagram">${icon("instagram")}</a>
-            <a class="icon-btn" href="https://www.facebook.com/SRMTRPEngg" rel="noopener" aria-label="Facebook">${icon("facebook")}</a>
+            <a class="icon-btn" data-site-href="linkedinUrl" href="https://www.linkedin.com/school/srm-trp-engineering-college" rel="noopener noreferrer" target="_blank" aria-label="LinkedIn">${icon("linkedin")}</a>
+            <a class="icon-btn" data-site-href="instagramUrl" href="https://www.instagram.com/trpengineeringcollege" rel="noopener noreferrer" target="_blank" aria-label="Instagram">${icon("instagram")}</a>
+            <a class="icon-btn" data-site-href="facebookUrl" href="https://www.facebook.com/SRMTRPEngg" rel="noopener noreferrer" target="_blank" aria-label="Facebook">${icon("facebook")}</a>
           </div>
         </div>
       </div>
@@ -152,3 +153,37 @@ function injectChrome() {
 }
 
 injectChrome();
+
+function validSiteHref(key, value) {
+  const text = String(value || "").trim();
+  if (!text) return "";
+  if (key === "phoneHref") return /^tel:\+?[0-9().\s-]{8,28}$/i.test(text) ? text : "";
+  try { const url = new URL(text); return url.protocol === "https:" ? url.href : ""; }
+  catch { return ""; }
+}
+
+function applySiteSettings(settings) {
+  document.querySelectorAll("[data-site-href]").forEach((element) => {
+    const key = element.dataset.siteHref;
+    const href = validSiteHref(key, settings[key]);
+    if (!href) { element.hidden = true; element.style.display = "none"; return; }
+    element.hidden = false; element.style.removeProperty("display"); element.href = href;
+  });
+  document.querySelectorAll("[data-site-email]").forEach((element) => {
+    const email = String(settings.contactEmail || "").trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) { element.hidden = true; element.style.display = "none"; return; }
+    element.hidden = false; element.style.removeProperty("display"); element.href = `mailto:${email}`; element.textContent = email;
+  });
+  document.querySelectorAll("[data-site-text]").forEach((element) => {
+    const value = settings[element.dataset.siteText];
+    if (value != null) element.textContent = String(value);
+  });
+  document.querySelectorAll("[data-site-src]").forEach((element) => {
+    const value = String(settings[element.dataset.siteSrc] || "").trim();
+    if (value.startsWith("/assets/images/") && !value.split(/[?#]/, 1)[0].split("/").includes("..")) { element.src = value; return; }
+    try { const url = new URL(value); if (url.protocol === "https:" && url.hostname === "trp.srmtrichy.edu.in") element.src = url.href; }
+    catch { /* keep the safe bundled default */ }
+  });
+}
+
+getSiteSettings().then(applySiteSettings).catch((err) => console.warn("Could not apply public website settings", err));
