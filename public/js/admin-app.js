@@ -1,9 +1,9 @@
 // EMBEDX — Admin portal: multi-page, role-based CMS.
 // One page per section (/admin/, /admin/events, /admin/admins, …) sharing this module.
 // Real security lives in firestore.rules / storage.rules (roles from `admin_roles` collection).
-import { firebaseConfig, isConfigured, taskMail } from "./config.js";
-import { toast } from "./ui.js";
-import { esc, asset } from "./render.js";
+import { firebaseConfig, isConfigured, taskMail } from "./config.js?v=20261106";
+import { toast } from "./ui.js?v=20261106";
+import { esc, asset } from "./render.js?v=20261106";
 
 const SDK = "https://www.gstatic.com/firebasejs/10.12.5";
 let PAGE = document.body.dataset.adminPage || "overview";
@@ -77,6 +77,7 @@ let authMod = null, dbMod = null, stMod = null, app = null;
 let role = null, me = "", perms = [];
 let items = [], editingId = null, pendingImageField = null, editorState = null;
 let statsCache = null;
+let listRequestId = 0;
 
 async function sdk() {
   const { initializeApp, getApps, getApp } = await import(`${SDK}/firebase-app.js`);
@@ -88,6 +89,13 @@ async function sdk() {
 }
 const $ = (s) => document.querySelector(s);
 const can = (sec) => role === "owner" || perms.includes(sec);
+const canView = (sec) => can(sec) || (role === "hod" && sec !== "tasks" && sec !== "admins");
+
+async function countCollection(db, name) {
+  const ref = dbMod.collection(db, name);
+  try { return (await dbMod.getCountFromServer(ref)).data().count; }
+  catch { return (await dbMod.getDocs(ref)).size; }
+}
 
 /* ---------------- schemas ---------------- */
 const SCHEMAS = {
@@ -210,8 +218,8 @@ const SCHEMAS = {
     fields: [
       { k: "title", t: "text", req: true, label: "Task" },
       { k: "detail", t: "textarea", label: "Details" },
-      { k: "assigneeEmail", t: "text", label: "Assignee email" },
-      { k: "assigneeRole", t: "select", opts: Object.keys(ROLES).filter((r) => r !== "owner"), label: "…or assign to a whole role" },
+      { k: "assigneeEmail", t: "email", label: "Assignee email (optional)" },
+      { k: "assigneeRole", t: "select", opts: [{ value: "", label: "No role assignment" }, ...Object.entries(ROLES).filter(([r]) => r !== "owner").map(([value, info]) => ({ value, label: info.label }))], label: "Or assign to a whole role" },
       { k: "due", t: "text", label: "Due (e.g. 2026-11-20)" },
       { k: "status", t: "select", opts: ["open", "in_progress", "done"], label: "Status" }
     ],
@@ -246,11 +254,12 @@ async function resolveRole(user) {
   try {
     const { db } = await sdk();
     const snap = await dbMod.getDoc(dbMod.doc(db, "admin_roles", email));
-    if (snap.exists() && snap.data().role && ROLES[snap.data().role]) {
+    if (snap.exists() && snap.data().role && snap.data().role !== "owner" && ROLES[snap.data().role]) {
       const d = snap.data();
       return {
         role: d.role,
         mustChange: d.mustChangePassword === true,
+        needsVerification: d.emailVerificationRequired === true,
         perms: Array.isArray(d.perms) ? d.perms.filter((p) => SECTIONS.includes(p)) : (LEGACY_PERMS[d.role] || [])
       };
     }
@@ -281,6 +290,20 @@ async function boot() {
     me = (user.email || "").toLowerCase();
     role = rr.role;
     perms = rr.perms || [];
+    if (rr.needsVerification) {
+      await user.reload().catch(() => {});
+      if (!user.emailVerified) {
+        await authMod.signOut(auth);
+        showView("out");
+        $("#loginError").textContent = "Verify your college email using the link sent to your inbox, then sign in again. Portal access stays locked until verification.";
+        return;
+      }
+      try {
+        await user.getIdToken(true);
+        const { db } = await sdk();
+        await dbMod.updateDoc(dbMod.doc(db, "admin_roles", me), { emailVerificationRequired: false });
+      } catch (err) { console.warn("Could not clear verified-email flag yet", err); }
+    }
     if (rr.mustChange) { showView("change"); return; }
     showView("in");
     renderShell();
@@ -346,7 +369,7 @@ function renderShell() {
     </div>`;
   $("#signOut").addEventListener("click", async () => { const { auth } = await sdk(); authMod.signOut(auth); location.href = "/admin/"; });
   $("#adminNav").innerHTML = NAV
-    .filter(([id]) => id === "overview" || id === "tasks" || (id === "admins" ? role === "owner" : can(id)))
+    .filter(([id]) => id === "overview" || id === "tasks" || (id === "admins" ? role === "owner" : canView(id)))
     .map(([id, label, href]) => `<a href="${href}" class="${id === PAGE ? "active" : ""}">${esc(label)}</a>`).join("");
 }
 
@@ -394,15 +417,16 @@ function navigate(page, push = true) {
 async function renderOverview() {
   const region = $("#pageRegion");
   region.innerHTML = `<div class="skeleton" style="min-height:200px"></div>`;
-  const names = ["announcements", "events", "projects", "team", "gallery", "resources", "achievements"];
+  const names = ["announcements", "events", "projects", "team", "gallery", "resources", "achievements"].filter(canView);
   let counts = [];
   if (isConfigured) {
     try {
       const { db } = await sdk();
-      counts = await Promise.all(names.map(async (n) => [n, (await dbMod.getDocs(dbMod.collection(db, n))).size]));
+      counts = await Promise.all(names.map(async (n) => [n, await countCollection(db, n)]));
     } catch { counts = []; }
   }
   const mine = await myTasks();
+  if (PAGE !== "overview" || !region.isConnected) return;
   region.innerHTML = `
     <p class="muted" style="margin:.2rem 0 1rem">${esc(ROLES[role].blurb)}.</p>
     <div class="admin-cards">
@@ -412,8 +436,8 @@ async function renderOverview() {
     ${mine.length ? mine.map(taskRow).join("") : `<p class="muted">Nothing assigned to you right now. ${role === "owner" || role === "president" ? "Assign work from the <a href='/admin/tasks'>Tasks</a> page." : ""}</p>`}
     <h2 style="margin:1.8rem 0 .6rem">Your access</h2>
     <div class="admin-list">
-      ${NAV.filter(([id]) => id !== "overview" && id !== "tasks" && (id !== "admins" || role === "owner") && can(id)).map(([id, label]) =>
-        `<div class="admin-row card"><div class="admin-row-main"><strong>${esc(label)}</strong><span class="muted">read + write</span></div></div>`).join("")}
+      ${NAV.filter(([id]) => id !== "overview" && id !== "tasks" && (id !== "admins" || role === "owner") && canView(id)).map(([id, label]) =>
+        `<div class="admin-row card"><div class="admin-row-main"><strong>${esc(label)}</strong><span class="muted">${can(id) ? "read + write" : "read only"}</span></div></div>`).join("")}
       <div class="admin-row card"><div class="admin-row-main"><strong>Tasks</strong><span class="muted">${can("tasks") ? "assign + edit" : "your assigned tasks"}</span></div></div>
     </div>`;
 }
@@ -422,10 +446,19 @@ async function myTasks() {
   if (!isConfigured) return [];
   try {
     const { db } = await sdk();
-    const snap = await dbMod.getDocs(dbMod.query(dbMod.collection(db, "tasks"), dbMod.orderBy("createdAt", "desc")));
-    return snap.docs.map((d) => ({ id: d.id, ...d.data() }))
-      .filter((t) => t.status !== "done" && (t.assigneeEmail === me || (t.assigneeRole && t.assigneeRole === role)));
-  } catch { return []; }
+    const ref = dbMod.collection(db, "tasks");
+    let docs;
+    if (can("tasks")) docs = (await dbMod.getDocs(ref)).docs;
+    else {
+      const queries = [dbMod.query(ref, dbMod.where("assigneeEmail", "==", me))];
+      if (role) queries.push(dbMod.query(ref, dbMod.where("assigneeRole", "==", role)));
+      const snaps = await Promise.all(queries.map((q) => dbMod.getDocs(q)));
+      docs = [...new Map(snaps.flatMap((snap) => snap.docs.map((d) => [d.id, d]))).values()];
+    }
+    return docs.map((d) => ({ id: d.id, ...d.data() }))
+      .filter((t) => t.status !== "done" && (t.assigneeEmail === me || (t.assigneeRole && t.assigneeRole === role)))
+      .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
+  } catch (err) { console.warn("Could not load assigned tasks", err); return []; }
 }
 const taskRow = (t) => `
   <div class="admin-row card ${t.status === "done" ? "task-done" : ""}">
@@ -440,30 +473,48 @@ const taskRow = (t) => `
 async function renderCollection(sec) {
   const schema = SCHEMAS[sec];
   if (!schema) { $("#pageRegion").innerHTML = `<p class="muted">Unknown section.</p>`; return; }
-  if (!can(sec) && sec !== "tasks") {
+  if (!canView(sec) && sec !== "tasks") {
     $("#pageRegion").innerHTML = `<div class="card" style="padding:var(--sp-4)"><h2 style="margin:0 0 .4rem">No access</h2><p class="muted" style="margin:0">Your owner hasn't granted you this section. Ask them to tick it for you under <b>Admins &amp; roles → Permissions</b>.</p></div>`;
     return;
   }
   const add = $("#addItem");
-  if (add) { add.hidden = false; add.onclick = () => openForm(null); }
+  if (add) { add.hidden = !can(sec); add.onclick = () => openForm(null); }
   await loadList(sec);
   loadStats();
 }
 
 async function loadList(sec) {
+  if (PAGE !== sec) return;
+  const requestId = ++listRequestId;
   const schema = SCHEMAS[sec];
   const region = $("#pageRegion");
+  if (!region || !schema) return;
   region.innerHTML = `<div id="listRegion" class="admin-list"><div class="skeleton" style="min-height:160px"></div></div>`;
   if (!isConfigured) { region.innerHTML = `<p class="muted">Firebase config missing.</p>`; return; }
   try {
     const { db } = await sdk();
+    const collectionRef = dbMod.collection(db, sec);
+    let docs;
+    if (sec === "tasks" && !can("tasks")) {
+      const queries = [dbMod.query(collectionRef, dbMod.where("assigneeEmail", "==", me))];
+      if (role) queries.push(dbMod.query(collectionRef, dbMod.where("assigneeRole", "==", role)));
+      const snapshots = await Promise.all(queries.map((q) => dbMod.getDocs(q)));
+      docs = [...new Map(snapshots.flatMap((snap) => snap.docs.map((d) => [d.id, d]))).values()];
+    } else {
+      docs = (await dbMod.getDocs(collectionRef)).docs;
+    }
+    if (requestId !== listRequestId || PAGE !== sec) return;
     const [field, dir] = schema.sort;
-    const snap = await dbMod.getDocs(dbMod.query(dbMod.collection(db, sec), dbMod.orderBy(field, dir)));
-    items = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    items = docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => {
+      const x = a[field], y = b[field], sign = dir === "desc" ? -1 : 1;
+      if (x == null) return y == null ? 0 : 1;
+      if (y == null) return -1;
+      return (typeof x === "number" && typeof y === "number" ? x - y : String(x).localeCompare(String(y), undefined, { numeric: true })) * sign;
+    });
     renderList(sec);
   } catch (err) {
     console.error(err);
-    region.innerHTML = `<p class="muted">Could not load ${sec}: ${esc(err.message)}</p>`;
+    if (requestId === listRequestId && PAGE === sec) region.innerHTML = `<p class="muted">Could not load ${sec}: ${esc(err.message)}</p>`;
   }
 }
 
@@ -473,8 +524,8 @@ async function loadStats() {
   if (!statsCache && isConfigured) {
     try {
       const { db } = await sdk();
-      const names = ["announcements", "events", "projects", "team", "gallery", "resources", "achievements"];
-      statsCache = await Promise.all(names.map(async (n) => [n, (await dbMod.getDocs(dbMod.collection(db, n))).size]));
+      const names = ["announcements", "events", "projects", "team", "gallery", "resources", "achievements"].filter(canView);
+      statsCache = await Promise.all(names.map(async (n) => [n, await countCollection(db, n)]));
     } catch { return; }
   }
   if (statsCache) strip.innerHTML = statsCache.map(([n, c]) => `<a class="chip ${c ? "chip-accent" : ""}" style="text-decoration:none" href="/admin/${n}">${n}: ${c}</a>`).join("");
@@ -483,7 +534,7 @@ async function loadStats() {
 function renderList(sec) {
   const schema = SCHEMAS[sec];
   const region = $("#listRegion");
-  if (!items.length) { region.innerHTML = `<p class="muted">No ${schema.label}s yet — hit “+ New”.</p>`; return; }
+  if (!items.length) { region.innerHTML = `<p class="muted">${can(sec) ? `No ${schema.label}s yet — use “+ New” to add one.` : `No ${schema.label}s to display.`}</p>`; return; }
   region.innerHTML = items.map((d) => `
     <div class="admin-row card">
       ${schema.image && d[schema.image] ? `<img src="${esc(asset(d[schema.image]))}" alt="" loading="lazy" />` : '<span class="admin-noimg">◈</span>'}
@@ -500,10 +551,17 @@ function renderList(sec) {
   region.querySelectorAll("[data-edit]").forEach((b) => b.addEventListener("click", () => openForm(b.dataset.edit)));
   region.querySelectorAll("[data-del]").forEach((b) => b.addEventListener("click", () => removeItem(b.dataset.del)));
   region.querySelectorAll("[data-done]").forEach((b) => b.addEventListener("click", async () => {
-    const { db } = await sdk();
-    await dbMod.updateDoc(dbMod.doc(db, "tasks", b.dataset.done), { status: "done" });
-    toast("Nice work — task closed ✔", "ok");
-    loadList("tasks");
+    b.disabled = true;
+    try {
+      const { db } = await sdk();
+      await dbMod.updateDoc(dbMod.doc(db, "tasks", b.dataset.done), { status: "done" });
+      toast("Nice work — task closed ✔", "ok");
+      loadList("tasks");
+    } catch (err) {
+      console.error(err);
+      toast(`Could not update task: ${err.message}`, "err");
+      b.disabled = false;
+    }
   }));
 }
 
@@ -531,7 +589,14 @@ function buildField(f, v) {
     input = document.createElement("textarea"); input.value = v ?? "";
   } else if (f.t === "select") {
     input = document.createElement("select");
-    (f.opts || []).forEach((o) => { const op = document.createElement("option"); op.textContent = o; if (o === v) op.selected = true; input.appendChild(op); });
+    (f.opts || []).forEach((o) => {
+      const value = typeof o === "object" ? o.value : o;
+      const text = typeof o === "object" ? o.label : o;
+      const op = document.createElement("option");
+      op.value = value; op.textContent = text;
+      if (String(value) === String(v ?? "")) op.selected = true;
+      input.appendChild(op);
+    });
   } else if (f.t === "image") {
     input = document.createElement("input"); input.type = "hidden"; input.value = v ?? "";
     const picker = document.createElement("div"); picker.className = "img-picker";
@@ -556,7 +621,7 @@ function buildField(f, v) {
     wrap.append(picker);
   } else {
     input = document.createElement("input");
-    input.type = f.t === "num" ? "number" : "text";
+    input.type = f.t === "num" ? "number" : f.t === "email" ? "email" : "text";
     input.value = v ?? "";
   }
   input.id = id; input.name = f.k;
@@ -596,17 +661,38 @@ function openForm(id = null) {
     });
   });
 
+  modalReturnFocus = document.activeElement;
   $("#formModal").classList.add("open");
   document.body.style.overflow = "hidden";
+  $("#formModal").querySelector("input,select,textarea,button")?.focus();
 }
 
+let modalReturnFocus = null;
 function closeModals() {
   document.querySelectorAll(".modal-backdrop.open").forEach((m) => m.classList.remove("open"));
   document.body.style.overflow = "";
+  if (modalReturnFocus?.isConnected) modalReturnFocus.focus();
+  modalReturnFocus = null;
+}
+
+function trapAdminModalTab(e) {
+  if (e.key !== "Tab") return;
+  const modals = [...document.querySelectorAll(".modal-backdrop.open")];
+  const top = modals[modals.length - 1];
+  if (!top) return;
+  const focusable = [...top.querySelectorAll('a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])')]
+    .filter((el) => el.offsetParent !== null);
+  if (!focusable.length) { e.preventDefault(); return; }
+  const first = focusable[0], last = focusable[focusable.length - 1];
+  if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
 }
 
 async function saveForm(e) {
   e.preventDefault();
+  const form = e.currentTarget;
+  if (form.dataset.saving === "1") return;
+  const submitButton = form.querySelector('[type="submit"]');
   const sec = PAGE;
   const schema = SCHEMAS[sec];
   if (!can(sec)) { toast("Your role can't edit this section.", "err"); return; }
@@ -618,22 +704,35 @@ async function saveForm(e) {
     else data[f.k] = String(el.value).trim();
     if (f.req && !data[f.k]) { toast(`“${f.label}” is required.`, "err"); return; }
   }
-  const { db } = await sdk();
+  if (sec === "tasks") {
+    data.assigneeEmail = String(data.assigneeEmail || "").toLowerCase();
+    data.assigneeRole = data.assigneeRole || "";
+    if (data.assigneeEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(data.assigneeEmail)) {
+      toast("Enter a valid assignee email address.", "err"); return;
+    }
+    if (data.assigneeEmail && data.assigneeRole) {
+      toast("Choose one assignee: enter an email or select a role, not both.", "err"); return;
+    }
+  }
+  form.dataset.saving = "1";
+  if (submitButton) { submitButton.disabled = true; submitButton.textContent = "Saving…"; }
   try {
+    const { db } = await sdk();
     if (editingId) {
+      const previous = sec === "tasks" ? items.find((x) => x.id === editingId) : null;
       await dbMod.updateDoc(dbMod.doc(db, sec, editingId), data);
-      toast("Updated ✔", "ok");
+      if (sec === "tasks" && (previous?.assigneeEmail !== data.assigneeEmail || previous?.assigneeRole !== data.assigneeRole) && (data.assigneeEmail || data.assigneeRole)) {
+        const state = await notifyTaskAssignee(editingId);
+        toast(state === "requested" ? "Task updated. Assignment email request sent." : state === "unconfigured" ? "Task updated; email notifications are not configured." : "Task updated, but the email request could not be sent.", state === "failed" ? "err" : "ok");
+      } else toast("Updated ✔", "ok");
     } else {
       if (sec === "announcements" || sec === "tasks") data.createdAt = new Date().toISOString();
       if (sec === "tasks") data.createdBy = me;
       const ref = await dbMod.addDoc(dbMod.collection(db, sec), data);
-      if (sec === "tasks") {
-        const mailed = await notifyTaskAssignee(data);
-        await dbMod.updateDoc(ref, { notified: mailed, notifiedAt: new Date().toISOString() }).catch(() => {});
-        toast(mailed ? "Published ✔ — assignee emailed automatically" : "Published ✔ (no email: Task Mail not configured or no assignee email)", "ok");
-      } else {
-        toast("Published ✔", "ok");
-      }
+      if (sec === "tasks" && (data.assigneeEmail || data.assigneeRole)) {
+        const state = await notifyTaskAssignee(ref.id);
+        toast(state === "requested" ? "Task created. Email notification request sent." : state === "unconfigured" ? "Task created; email notifications are not configured." : "Task created, but the email request could not be sent.", state === "failed" ? "err" : "ok");
+      } else toast(sec === "tasks" ? "Task created. No assignee was selected." : "Published ✔", "ok");
     }
     closeModals();
     statsCache = null;
@@ -644,7 +743,10 @@ async function saveForm(e) {
     const hint = err.code === "permission-denied"
       ? " — your role doesn't include this section, or the Firebase rules need redeploying (firebase deploy --only firestore:rules,firestore:indexes,storage)"
       : "";
-    toast(`Save failed [${esc(err.code || "error")}]: ${esc(err.message)}${hint}`, "err");
+    toast(`Save failed [${err.code || "error"}]: ${err.message}${hint}`, "err");
+  } finally {
+    form.dataset.saving = "0";
+    if (submitButton) { submitButton.disabled = false; submitButton.textContent = "Save"; }
   }
 }
 
@@ -659,55 +761,38 @@ async function removeItem(id) {
     statsCache = null;
     loadList(sec);
     loadStats();
-  } catch (err) { toast(`Delete failed: ${esc(err.message)}`, "err"); }
+  } catch (err) { toast(`Delete failed: ${err.message}`, "err"); }
 }
 
 /* ---------------- task assignment email (Apps Script web app hook) ---------------- */
-async function notifyTaskAssignee(t) {
-  if (!taskMail || !taskMail.url) return false;
-  let emails = [];
-  if (t.assigneeEmail) emails = [t.assigneeEmail];
-  else if (t.assigneeRole) {
-    try {
-      const { db } = await sdk();
-      const snap = await dbMod.getDocs(dbMod.collection(db, "admin_roles"));
-      emails = snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((a) => a.role === t.assigneeRole && a.id !== OWNER_EMAIL).map((a) => a.id);
-    } catch { return false; }
-  }
-  emails = [...new Set(emails.filter((e) => e && e.includes("@")))];
-  if (!emails.length) return false;
-  const body = [
-    `<p><b>${esc(t.title)}</b> has been assigned${t.assigneeRole && !t.assigneeEmail ? ` to the ${esc(ROLES[t.assigneeRole]?.label || t.assigneeRole)}` : " to you"} by ${esc(me)}.</p>`,
-    t.detail ? `<p>${esc(t.detail)}</p>` : "",
-    t.due ? `<p>Due: <b>${esc(t.due)}</b></p>` : "",
-    `<p>Open your portal to act on it: <a href="https://embedx-club-eee.web.app/admin/tasks">embedx-club-eee.web.app/admin/tasks</a></p>`,
-    `<p style="color:#888;font-size:12px">EMBEDX Admin Portal — automated task notification</p>`
-  ].join("");
+async function notifyTaskAssignee(taskId) {
+  if (!taskMail?.url) return "unconfigured";
   try {
+    const { auth } = await sdk();
+    const user = auth.currentUser;
+    if (!user) return "failed";
+    const idToken = await user.getIdToken();
     await fetch(taskMail.url, {
       method: "POST",
-      mode: "no-cors", // Apps Script web apps don't send CORS headers; fire-and-forget
+      mode: "no-cors", // Apps Script web apps return an opaque response; request delivery is best-effort.
       headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({
-        token: taskMail.token,
-        to: emails,
-        subject: `[EMBEDX Task] ${t.title}${t.due ? ` (due ${t.due})` : ""}`,
-        html: body
-      })
+      body: JSON.stringify({ idToken, taskId })
     });
-    return true;
+    return "requested";
   } catch (err) {
-    console.error("task mail failed", err);
-    return false;
+    console.error("task notification request failed", err);
+    return "failed";
   }
 }
 
 /* ---------------- image editor + upload ---------------- */
 function openEditor(img) {
   editorState = { img, rot: 0 };
+  if (!modalReturnFocus) modalReturnFocus = document.activeElement;
   drawEditor();
   $("#editorModal").classList.add("open");
   document.body.style.overflow = "hidden";
+  $("#rotL")?.focus();
 }
 function drawEditor() {
   const { img, rot } = editorState;
@@ -748,7 +833,7 @@ async function applyEditor() {
     toast("Photo uploaded ✔", "ok");
   } catch (err) {
     console.error(err);
-    toast(`Upload failed: ${esc(err.message)}`, "err");
+    toast(`Upload failed: ${err.message}`, "err");
   }
 }
 
@@ -759,12 +844,12 @@ async function renderAdmins() {
   region.innerHTML = `
     <div class="card" style="padding:var(--sp-4);margin-bottom:1.2rem">
       <h2 style="margin:0 0 .4rem">Add an admin — one click</h2>
-      <p class="muted" style="font-size:.88rem;margin:0 0 1rem">Fill the four fields and hit <b>Add admin</b>: the login is created instantly and the role is saved. They sign in with the temporary password and <b>must change it at first login</b>.</p>
+      <p class="muted" style="font-size:.88rem;margin:0 0 1rem">Fill the fields and hit <b>Add admin</b>: a verification link is emailed first, and portal access stays locked until they verify their college email. They then sign in with the temporary password and <b>must choose a new password</b>.</p>
       <form id="addAdminForm" class="form-grid">
         <div class="field"><label for="aa-email">Email *</label><input id="aa-email" type="email" required placeholder="name@trp.srmtrichy.edu.in" /></div>
         <div class="field"><label for="aa-name">Display name</label><input id="aa-name" placeholder="e.g. Keerthivasan A" /></div>
         <div class="field"><label for="aa-role">Role preset</label><select id="aa-role">${Object.entries(ROLES).filter(([r]) => r !== "owner").map(([r, m]) => `<option value="${r}">${m.label} — ${m.blurb}</option>`).join("")}</select></div>
-        <div class="field"><label for="aa-pass">Temporary password *</label><input id="aa-pass" type="text" minlength="8" required placeholder="8+ chars, share privately" /></div>
+        <div class="field"><label for="aa-pass">Temporary password *</label><div class="password-entry"><input id="aa-pass" type="password" minlength="8" required autocomplete="new-password" placeholder="At least 8 characters" /><button class="btn btn-ghost btn-sm" id="aa-pass-toggle" type="button" aria-pressed="false">Show</button></div></div>
         <div class="field full"><label>Can see &amp; edit — tick their sections</label><div class="perm-grid" id="aa-perms">${SECTIONS.map((s) => `<label><input type="checkbox" value="${s}" /> ${s}</label>`).join("")}</div></div>
         <div class="field full"><button class="btn btn-primary" type="submit">Add admin</button></div>
       </form>
@@ -787,6 +872,13 @@ async function renderAdmins() {
   };
   $("#aa-role").addEventListener("change", applyPreset);
   applyPreset();
+  $("#aa-pass-toggle").addEventListener("click", (e) => {
+    const input = $("#aa-pass");
+    const show = input.type === "password";
+    input.type = show ? "text" : "password";
+    e.currentTarget.textContent = show ? "Hide" : "Show";
+    e.currentTarget.setAttribute("aria-pressed", String(show));
+  });
   $("#addAdminForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     const email = $("#aa-email").value.trim().toLowerCase();
@@ -794,37 +886,61 @@ async function renderAdmins() {
     const r = $("#aa-role").value;
     const pass = $("#aa-pass").value;
     const chosen = [...document.querySelectorAll("#aa-perms input:checked")].map((c) => c.value);
-    if (!email.includes("@")) { toast("Enter a valid email.", "err"); return; }
+    if (!/^[^\s@]+@trp\.srmtrichy\.edu\.in$/i.test(email)) { toast("Use a valid @trp.srmtrichy.edu.in college email.", "err"); return; }
     if (pass.length < 8) { toast("Temporary password needs 8+ characters.", "err"); return; }
-    // 1) create the Auth login from the browser (public sign-up endpoint; portal access still gated by admin_roles)
-    let created = false, existed = false;
+    // Create only genuinely new Auth users. Never grant a role to an existing
+    // unverified login: that enables account-squatting attacks on college emails.
+    let signup;
     try {
       const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${firebaseConfig.apiKey}`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password: pass, returnSecureToken: true })
       });
-      const js = await res.json().catch(() => ({}));
-      if (res.ok) created = true;
-      else if (String(js.error && js.error.message).includes("EMAIL_EXISTS")) existed = true;
-      else { toast(`Login create failed: ${esc((js.error && js.error.message) || res.status)}`, "err"); return; }
-    } catch (err) { toast(`Network error: ${esc(err.message)}`, "err"); return; }
-    // 2) save the role (+ force password change for brand-new logins)
+      signup = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (String(signup.error && signup.error.message).includes("EMAIL_EXISTS")) {
+          toast("An Auth login already exists. No portal role was granted. Confirm ownership and use the trusted Firebase Admin setup process for verified existing accounts.", "err");
+        } else toast(`Login create failed: ${(signup.error && signup.error.message) || res.status}`, "err");
+        return;
+      }
+    } catch (err) { toast(`Network error: ${err.message}`, "err"); return; }
+
+    // Verify that the intended user controls the mailbox before opening portal access.
+    try {
+      const verify = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${firebaseConfig.apiKey}`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ requestType: "VERIFY_EMAIL", idToken: signup.idToken })
+      });
+      if (!verify.ok) throw new Error("Firebase could not send the verification email.");
+    } catch (err) {
+      await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:delete?key=${firebaseConfig.apiKey}`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken: signup.idToken })
+      }).catch(() => {});
+      toast(`${err.message} No portal role was created.`, "err");
+      return;
+    }
+
     const { db } = await sdk();
     try {
-      await dbMod.setDoc(dbMod.doc(db, "admin_roles", email), { role: r, name, addedBy: me, addedAt: new Date().toISOString(), mustChangePassword: created, perms: chosen }, { merge: true });
-      toast(created ? `Done ✔ ${email} can sign in now and will be asked to change the temporary password.` : `Login already existed for ${email} — role saved. Use “Send reset email” if they forgot their password.`, "ok");
+      await dbMod.setDoc(dbMod.doc(db, "admin_roles", email), {
+        role: r, name, addedBy: me, addedAt: new Date().toISOString(),
+        mustChangePassword: true, emailVerificationRequired: true, perms: chosen
+      }, { merge: true });
+      toast(`Login created and verification email sent to ${email}. After verifying, they sign in with the temporary password and choose a new one.`, "ok");
       $("#addAdminForm").reset();
       loadAdmins();
-    } catch (err) { toast(`Role save failed: ${esc(err.message)}`, "err"); }
+    } catch (err) { toast(`Role save failed: ${err.message}. The new login has no portal access until the role is saved.`, "err"); }
   });
   loadAdmins();
 }
 
 async function loadAdmins() {
   const region = $("#adminList");
-  const { db } = await sdk();
+  if (!region) return;
   let rows = [];
   try {
+    const { db } = await sdk();
     const snap = await dbMod.getDocs(dbMod.collection(db, "admin_roles"));
     rows = snap.docs.map((d) => ({ email: d.id, ...d.data() }));
   } catch (err) { region.innerHTML = `<p class="muted">${esc(err.message)}</p>`; return; }
@@ -838,6 +954,7 @@ async function loadAdmins() {
       <div class="admin-user-identity">
         <span class="admin-avatar" aria-hidden="true">${esc((a.name || a.email).trim().charAt(0).toUpperCase())}</span>
         <div class="admin-user-copy"><strong title="${esc(a.email)}">${esc(a.email)}</strong><span class="muted">${esc(a.name || "Name not set")}${a.addedAt ? ` · Added ${(a.addedAt || "").slice(0, 10)}` : ""}</span></div>
+        ${a.emailVerificationRequired ? `<span class="chip admin-password-due" title="Email must be verified before portal access">✉ Verify email</span>` : ""}
         ${a.mustChangePassword ? `<span class="chip admin-password-due" title="Must change temporary password at next login">🔑 Change password due</span>` : ""}
       </div>
       <div class="admin-user-actions">
@@ -869,30 +986,43 @@ async function loadAdmins() {
   applyAdminFilters();
   region.querySelectorAll("[data-saveperms]").forEach((b) => b.addEventListener("click", async () => {
     const chosen = [...b.parentElement.querySelectorAll("input[data-p]:checked")].map((c) => c.dataset.p);
-    const { db } = await sdk();
-    await dbMod.updateDoc(dbMod.doc(db, "admin_roles", b.dataset.saveperms), { perms: chosen });
-    toast(`Permissions saved for ${b.dataset.saveperms} ✔ (applies on their next sign-in)`, "ok");
+    b.disabled = true;
+    try {
+      const { db } = await sdk();
+      await dbMod.updateDoc(dbMod.doc(db, "admin_roles", b.dataset.saveperms), { perms: chosen });
+      toast(`Permissions saved for ${b.dataset.saveperms} ✔ (applies on their next sign-in)`, "ok");
+    } catch (err) { toast(`Permissions not saved: ${err.message}`, "err"); }
+    finally { b.disabled = false; }
   }));
   region.querySelectorAll("[data-rolefor]").forEach((s) => s.addEventListener("change", async () => {
-    const { db } = await sdk();
-    await dbMod.updateDoc(dbMod.doc(db, "admin_roles", s.dataset.rolefor), { role: s.value });
-    s.closest(".admin-user-card").dataset.role = s.value;
-    applyAdminFilters();
-    toast("Role updated ✔", "ok");
+    const card = s.closest(".admin-user-card");
+    const previous = card.dataset.role;
+    s.disabled = true;
+    try {
+      const { db } = await sdk();
+      await dbMod.updateDoc(dbMod.doc(db, "admin_roles", s.dataset.rolefor), { role: s.value });
+      card.dataset.role = s.value;
+      applyAdminFilters();
+      toast("Role updated ✔", "ok");
+    } catch (err) { s.value = previous; toast(`Role not updated: ${err.message}`, "err"); }
+    finally { s.disabled = false; }
   }));
   region.querySelectorAll("[data-reset]").forEach((b) => b.addEventListener("click", async () => {
     try {
       const { auth } = await sdk();
       await authMod.sendPasswordResetEmail(auth, b.dataset.reset);
       toast(`Reset email sent to ${b.dataset.reset} ✔`, "ok");
-    } catch (err) { toast(`Could not send: ${esc(err.message)}`, "err"); }
+    } catch (err) { toast(`Could not send: ${err.message}`, "err"); }
   }));
   region.querySelectorAll("[data-revoke]").forEach((b) => b.addEventListener("click", async () => {
     if (!confirm(`Remove portal access for ${b.dataset.revoke}? (Their login stays but can no longer enter the portal.)`)) return;
-    const { db } = await sdk();
-    await dbMod.deleteDoc(dbMod.doc(db, "admin_roles", b.dataset.revoke));
-    toast("Access revoked.", "ok");
-    loadAdmins();
+    b.disabled = true;
+    try {
+      const { db } = await sdk();
+      await dbMod.deleteDoc(dbMod.doc(db, "admin_roles", b.dataset.revoke));
+      toast("Access revoked.", "ok");
+      loadAdmins();
+    } catch (err) { b.disabled = false; toast(`Access was not revoked: ${err.message}`, "err"); }
   }));
 }
 
@@ -952,6 +1082,10 @@ $("#entityForm")?.addEventListener("submit", saveForm);
 document.querySelectorAll(".modal-backdrop").forEach((bd) => {
   bd.addEventListener("click", (e) => { if (e.target === bd) closeModals(); });
   bd.querySelectorAll("[data-modal-close]").forEach((x) => x.addEventListener("click", closeModals));
+});
+window.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && document.querySelector(".modal-backdrop.open")) { closeModals(); return; }
+  trapAdminModalTab(e);
 });
 $("#rotL")?.addEventListener("click", () => { editorState.rot = (editorState.rot + 270) % 360; drawEditor(); });
 $("#rotR")?.addEventListener("click", () => { editorState.rot = (editorState.rot + 90) % 360; drawEditor(); });

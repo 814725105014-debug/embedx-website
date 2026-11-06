@@ -1,5 +1,5 @@
 // EMBEDX — Data store: Firestore first, graceful static fallback.
-import { firebaseConfig, isConfigured } from "./config.js";
+import { firebaseConfig, isConfigured } from "./config.js?v=20261106";
 
 const SDK = "https://www.gstatic.com/firebasejs/10.12.5";
 let appPromise = null;
@@ -22,11 +22,20 @@ async function getApp() {
 async function loadCollection(name, orderField = "order", dir = "asc") {
   if (!isConfigured) throw new Error("Firestore not configured");
   const app = await getApp();
-  const { getFirestore, collection, getDocs, query, orderBy } = await import(`${SDK}/firebase-firestore.js`);
-  const ref = collection(getFirestore(app), name);
-  const snap = await getDocs(orderField ? query(ref, orderBy(orderField, dir)) : query(ref));
-  if (snap.empty) throw new Error(`collection ${name} is empty`);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  const { getFirestore, collection, getDocs } = await import(`${SDK}/firebase-firestore.js`);
+  const snap = await getDocs(collection(getFirestore(app), name));
+  const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  // Sort client-side so older documents missing the indexed field are not silently hidden.
+  if (!orderField) return rows;
+  const sign = dir === "desc" ? -1 : 1;
+  const value = (v) => v && typeof v.toDate === "function" ? v.toDate().getTime() : v;
+  return rows.sort((a, b) => {
+    const x = value(a[orderField]), y = value(b[orderField]);
+    if (x == null) return y == null ? 0 : 1;
+    if (y == null) return -1;
+    if (typeof x === "number" && typeof y === "number") return (x - y) * sign;
+    return String(x).localeCompare(String(y), undefined, { numeric: true }) * sign;
+  });
 }
 
 async function addDocument(name, data) {

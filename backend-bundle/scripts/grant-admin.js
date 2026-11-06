@@ -8,7 +8,9 @@ async function main() {
   if (!email || !email.includes("@")) { console.error("Usage: node grant-admin.js <email> [--revoke]"); process.exit(1); }
   if (!process.env.FIREBASE_PROJECT_ID || !process.env.GOOGLE_APPLICATION_CREDENTIALS) { console.error("Set FIREBASE_PROJECT_ID and GOOGLE_APPLICATION_CREDENTIALS first."); process.exit(1); }
   admin.initializeApp({ credential: admin.credential.applicationDefault(), projectId: process.env.FIREBASE_PROJECT_ID });
+  if (!revoke && !/^[^\s@]+@trp\.srmtrichy\.edu\.in$/i.test(email)) throw new Error("Admins must use a @trp.srmtrichy.edu.in college email.");
   const user = await admin.auth().getUserByEmail(email);
+  if (!revoke && !user.emailVerified) throw new Error("Refusing to grant full admin access to an email-unverified account.");
   await admin.auth().setCustomUserClaims(user.uid, revoke ? { admin: false } : { admin: true });
   console.log(`${email}: admin claim ${revoke ? "revoked" : "granted"}. Sign in again to apply.`);
 }

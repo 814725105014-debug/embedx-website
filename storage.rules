@@ -1,6 +1,6 @@
 rules_version = '2';
 
-// EMBEDX Storage rules — images only; uploads for owner + staff roles that edit visual sections.
+// EMBEDX Storage rules — public images, uploads scoped to the matching CMS section.
 service firebase.storage {
   match /b/{bucket}/o {
     function signedIn() { return request.auth != null; }
@@ -9,10 +9,10 @@ service firebase.storage {
              && (request.auth.token.email == '814725105014@trp.srmtrichy.edu.in'
                  || request.auth.token.admin == true);
     }
-    function hasRole() {
-      return signedIn()
-             && exists(/databases/$(firestore)/documents/admin_roles/$(request.auth.token.email));
+    function rolePath() {
+      return /databases/$(firestore)/documents/admin_roles/$(request.auth.token.email);
     }
+    function hasRole() { return signedIn() && exists(rolePath()); }
     function legacyPerms(r) {
       return r == 'president'         ? ['announcements', 'team', 'achievements', 'tasks']
         :    r == 'event_coordinator' ? ['events']
@@ -21,21 +21,28 @@ service firebase.storage {
         :    [];
     }
     function permsOf() {
-      return get(/databases/$(firestore)/documents/admin_roles/$(request.auth.token.email)).data.perms != null
-        ? get(/databases/$(firestore)/documents/admin_roles/$(request.auth.token.email)).data.perms
-        : legacyPerms(get(/databases/$(firestore)/documents/admin_roles/$(request.auth.token.email)).data.role);
+      return get(rolePath()).data.perms != null
+        ? get(rolePath()).data.perms
+        : legacyPerms(get(rolePath()).data.role);
     }
-    // upload allowed when the admin can edit at least one visual section
-    function canUpload() {
-      return isOwner()
-        || (hasRole() && ('gallery' in permsOf() || 'events' in permsOf() || 'team' in permsOf()
-                          || 'projects' in permsOf() || 'achievements' in permsOf()));
+    function canEdit(section) {
+      return isOwner() || (hasRole() && section in permsOf());
+    }
+    function isAllowedSection(section) {
+      return section in ['events', 'projects', 'team', 'gallery', 'achievements'];
+    }
+    function validImageUpload() {
+      return request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType in ['image/jpeg', 'image/png', 'image/webp'];
+    }
+
+    match /images/{section}/{imagePath=**} {
+      allow read: if true;
+      allow write: if isAllowedSection(section) && canEdit(section) && validImageUpload();
     }
     match /images/{allPaths=**} {
       allow read: if true;
-      allow write: if canUpload()
-        && request.resource.size < 5 * 1024 * 1024
-        && request.resource.contentType.matches('image/.*');
+      allow write: if false;
     }
     match /{allPaths=**} {
       allow read, write: if false;
