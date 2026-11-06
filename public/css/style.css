@@ -758,8 +758,12 @@ details.perm-edit summary { padding: .55rem 0; min-height: 44px; display: flex; 
   .card:hover::before { opacity:0; }
 }
 
-/* College identity lockup: the supplied transparent mark sits on a clean white tile. */
+/* The logo artwork is zoomed inside a fixed white frame; enlarging the mark never enlarges its background tile. */
 .college-mark-lockup { display:flex; align-items:center; gap:.6rem; margin-top:.7rem; color:var(--text-muted); font-size:.78rem; }
-.college-mark { width:166px; height:62px; display:block; object-fit:contain; padding:.4rem .85rem; border-radius:.55rem; background:#fff; }
-.admin-brand .admin-college-mark { width:102px; height:56px; flex:0 0 102px; object-fit:contain; padding:.35rem .65rem; border-radius:.55rem; background:#fff; }
-@media(max-width:650px) { .admin-brand .admin-college-mark { display:none; } .college-mark { width:144px; height:54px; } }
+.college-logo-frame,.admin-college-logo-frame { display:grid; place-items:center; flex:none; overflow:hidden; background:#fff; }
+.college-logo-frame { width:166px; height:62px; border-radius:.55rem; }
+.college-mark { width:100%; height:100%; display:block; object-fit:contain; padding:0; background:transparent; transform:scale(1.28); }
+.contact-college-logo-frame { margin:.5rem 0 1rem; }
+.admin-college-logo-frame { width:102px; height:56px; border-radius:.55rem; }
+.admin-brand .admin-college-mark { width:100%; height:100%; display:block; object-fit:contain; padding:0; background:transparent; transform:scale(1.22); }
+@media(max-width:650px) { .admin-brand .admin-college-logo-frame { display:none; } .college-logo-frame { width:144px; height:54px; } }

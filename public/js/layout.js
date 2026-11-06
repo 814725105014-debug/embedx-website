@@ -71,7 +71,7 @@ function injectChrome() {
             <img src="/assets/images/embedx-emblem.webp" alt="" width="48" height="48" loading="lazy" />
             <div><strong>EMBEDX</strong><span>Embedded Systems &amp; Automation Club</span></div>
           </div>
-          <div class="college-mark-lockup"><img class="college-mark" data-site-src="collegeLogoUrl" src="https://trp.srmtrichy.edu.in/wp-content/uploads/2026/03/TRP.png" alt="SRM TRP Engineering College logo" loading="lazy" /><span>SRM TRP Engineering College</span></div>
+          <div class="college-mark-lockup"><span class="college-logo-frame"><img class="college-mark" data-site-src="collegeLogoUrl" src="https://trp.srmtrichy.edu.in/wp-content/uploads/2026/03/TRP.png" alt="SRM TRP Engineering College logo" loading="lazy" /></span><span>SRM TRP Engineering College</span></div>
           <p class="muted footer-institution">Department of Electrical and Electronics Engineering (EEE)<br />SRM TRP Engineering College (Autonomous)<br />SRM Nagar, Samayapuram, Tiruchirappalli – 621 105.</p>
           <p class="chip chip-accent" style="margin-top:.4rem">INNOVATE • INTEGRATE • INSPIRE</p>
         </div>

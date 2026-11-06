@@ -426,7 +426,7 @@ async function boot() {
 function renderShell() {
   $("#adminTop").innerHTML = `
     <div class="wrap admin-top-inner">
-      <a class="brand admin-brand" href="/" aria-label="EMBEDX — Department of EEE, SRM TRP Engineering College"><img src="/assets/images/embedx-emblem.webp" alt="" width="38" height="38" /><span class="brand-copy"><span class="brand-name">EMBED<span>X</span></span><span class="brand-sub">Department of EEE</span><span class="brand-institution">SRM TRP Engineering College · Admin</span></span><img class="admin-college-mark" src="https://trp.srmtrichy.edu.in/wp-content/uploads/2026/03/TRP.png" alt="SRM TRP Engineering College logo" /></a>
+      <a class="brand admin-brand" href="/" aria-label="EMBEDX — Department of EEE, SRM TRP Engineering College"><img src="/assets/images/embedx-emblem.webp" alt="" width="38" height="38" /><span class="brand-copy"><span class="brand-name">EMBED<span>X</span></span><span class="brand-sub">Department of EEE</span><span class="brand-institution">SRM TRP Engineering College · Admin</span></span><span class="admin-college-logo-frame"><img class="admin-college-mark" src="https://trp.srmtrichy.edu.in/wp-content/uploads/2026/03/TRP.png" alt="SRM TRP Engineering College logo" /></span></a>
       <div class="admin-top-actions">
         <span class="chip chip-accent" title="Signed in as">${esc(me)}</span>
         <span class="chip" title="Your role">${esc(ROLES[role].label)}</span>
