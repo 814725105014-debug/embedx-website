@@ -42,7 +42,7 @@ firestore.rules          ← security rules
 firestore.indexes.json   ← composite indexes
 scripts/seed.js          ← add-missing-only seed for public content and form definitions
 scripts/check-site.mjs   ← no-dependency HTML/link/module/config QA
-backend-bundle/          ← deployable rules + owner scripts + Apps Script mailer
+backend-bundle/          ← deployable rules + owner scripts + task/forms Apps Script automation
 .github/workflows/       ← GitHub Hosting deploy workflows (need a configured service-account secret)
 ```
 

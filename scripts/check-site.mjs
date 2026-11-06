@@ -72,7 +72,7 @@ for (const file of jsFiles) {
 // Syntax-check trusted backend scripts and Apps Script sources as well as browser modules.
 const { writeFile: writeTemp, unlink: unlinkTemp } = await import("node:fs/promises");
 let checkedScript = 0;
-for (const dir of [path.join(root, "scripts"), path.join(root, "backend-bundle", "scripts"), path.join(root, "backend-bundle", "appsscript"), path.join(root, "backend-bundle", "appsscript-mail")]) {
+for (const dir of [path.join(root, "scripts"), path.join(root, "backend-bundle", "scripts"), path.join(root, "backend-bundle", "appsscript")]) {
   for (const file of await readdir(dir)) {
     if (!/\.(?:js|mjs|gs)$/.test(file)) continue;
     const source = await readFile(path.join(dir, file), "utf8");
@@ -85,7 +85,7 @@ for (const dir of [path.join(root, "scripts"), path.join(root, "backend-bundle",
 }
 
 // Configuration, rules mirrors and sitemap integrity.
-for (const name of ["firebase.json", "firestore.indexes.json", "public/manifest.webmanifest", "scripts/package.json", "backend-bundle/scripts/package.json", "backend-bundle/appsscript/appsscript.json", "backend-bundle/appsscript-mail/appsscript.json"]) {
+for (const name of ["firebase.json", "firestore.indexes.json", "public/manifest.webmanifest", "scripts/package.json", "backend-bundle/scripts/package.json", "backend-bundle/appsscript/appsscript.json"]) {
   try { JSON.parse(await readFile(path.join(root, name), "utf8")); }
   catch (err) { fail(`${name}: invalid JSON (${err.message})`); }
 }
@@ -105,7 +105,11 @@ try {
 } catch (err) { fail(`firestore.indexes.json: invalid index schema (${err.message})`); }
 const config = await readFile(path.join(pub, "js/config.js"), "utf8");
 if (/taskMail\s*=\s*\{[^}]*\btoken\s*:/s.test(config)) fail("public/js/config.js: public task-mail token must not be shipped");
+if (!config.includes("export const taskMail =")) fail("public/js/config.js: task notification compatibility endpoint is missing");
+if (config.includes("EMBEDX_MAIL_WEB_APP_URL") || config.includes("mailWorkspace")) fail("public/js/config.js: manual official-mail endpoint must be removed");
 const adminAppSource = await readFile(path.join(pub, "js/admin-app.js"), "utf8");
+if (adminAppSource.includes("renderMailWorkspace") || adminAppSource.includes("/admin/mail")) fail("public/js/admin-app.js: manual official-mail UI is still present");
+if (!adminAppSource.includes("async function notifyTaskAssignee") || !adminAppSource.includes("notifyTaskAssignee(editingId)")) fail("public/js/admin-app.js: task notification compatibility was removed");
 if (/id=["'](?:restoreStarterContent|restoreGallery|seedForms)["']/.test(adminAppSource)) fail("public/js/admin-app.js: starter data must sync automatically, without manual seed controls");
 if (!adminAppSource.includes('dbMod.collection(db, "content_tombstones")') || !adminAppSource.includes("addContentTombstone(batch")) fail("public/js/admin-app.js: automatic restore/delete tombstone protection is missing");
 for (const seedFile of ["scripts/seed.js", "backend-bundle/scripts/seed.js"]) {
