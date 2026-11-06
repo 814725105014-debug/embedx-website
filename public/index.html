@@ -24,9 +24,9 @@
   <meta name="theme-color" content="#08060c" />
   <link rel="manifest" href="/manifest.webmanifest" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' https://trp.srmtrichy.edu.in data: https://firebasestorage.googleapis.com https://www.google-analytics.com; connect-src 'self' https://www.gstatic.com https://www.google-analytics.com https://analytics.google.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://firebasestorage.googleapis.com https://www.googleapis.com; object-src 'none'; base-uri 'self'; form-action 'self'" />
-  <link rel="stylesheet" href="/css/style.css?v=20261106-forms" />
+  <link rel="stylesheet" href="/css/style.css?v=20261106-site-settings" />
   <script src="/js/theme.js?v=20261106"></script>
-  <script type="module" src="/js/main.js?v=20261106-forms"></script>
+  <script type="module" src="/js/main.js?v=20261106-site-settings"></script>
 </head>
 <body data-page="home">
 <a class="skip-link" href="#main">Skip to content</a>
@@ -234,8 +234,8 @@
       </div>
       <div class="grid grid-3">
         <div class="card" data-reveal><h3 style="font-size:1.05rem">Location</h3><p class="muted" style="font-size:.92rem;margin:0">Department of Electrical and Electronics Engineering<br />SRM TRP Engineering College, SRM Nagar, Near Samayapuram, Tiruchirappalli – 621 105.</p></div>
-        <div class="card" data-reveal><h3 style="font-size:1.05rem">Department Telephone</h3><p class="muted" style="font-size:.92rem;margin:0"><a href="tel:04312908050">0431-2908050</a></p></div>
-        <div class="card" data-reveal><h3 style="font-size:1.05rem">Official College Portal</h3><p class="muted" style="font-size:.92rem;margin:0"><a href="https://www.trpengg.ac.in" rel="noopener">www.trpengg.ac.in</a></p></div>
+        <div class="card" data-reveal><h3 style="font-size:1.05rem">Department Telephone</h3><p class="muted" style="font-size:.92rem;margin:0"><a data-site-href="phoneHref" data-site-text="phoneDisplay" href="tel:04312908050">0431-2908050</a></p></div>
+        <div class="card" data-reveal><h3 style="font-size:1.05rem">Official College Portal</h3><p class="muted" style="font-size:.92rem;margin:0"><a data-site-href="collegeWebsiteUrl" data-site-text="collegeWebsiteLabel" href="https://www.trpengg.ac.in" target="_blank" rel="noopener noreferrer">www.trpengg.ac.in</a></p></div>
       </div>
       <p style="margin-top:1.4rem"><a class="btn btn-ghost" href="/pages/contact.html">Send an Official Inquiry</a></p>
     </div>

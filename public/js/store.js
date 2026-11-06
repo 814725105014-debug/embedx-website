@@ -75,6 +75,29 @@ export async function getAnnouncements() {
   catch { const m = await import("./data/announcements.js"); return m.announcements; }
 }
 
+export const DEFAULT_SITE_SETTINGS = Object.freeze({
+  collegeLogoUrl: "https://trp.srmtrichy.edu.in/wp-content/uploads/2026/03/TRP.png",
+  collegeWebsiteUrl: "https://www.trpengg.ac.in",
+  collegeWebsiteLabel: "www.trpengg.ac.in",
+  contactEmail: "eee@srmtrpr.edu.in",
+  phoneDisplay: "0431-2908050",
+  phoneHref: "tel:04312908050",
+  linkedinUrl: "https://www.linkedin.com/school/srm-trp-engineering-college",
+  instagramUrl: "https://www.instagram.com/trpengineeringcollege",
+  facebookUrl: "https://www.facebook.com/SRMTRPEngg",
+  whatsappUrl: "https://chat.whatsapp.com/C0lGhoQ6D9MK79OXroCPuF"
+});
+
+export async function getSiteSettings() {
+  if (!isConfigured) return { ...DEFAULT_SITE_SETTINGS };
+  try {
+    const app = await getApp();
+    const { getFirestore, doc, getDoc } = await import(`${SDK}/firebase-firestore.js`);
+    const snap = await getDoc(doc(getFirestore(app), "site_settings", "site"));
+    return snap.exists() ? { ...DEFAULT_SITE_SETTINGS, ...snap.data() } : { ...DEFAULT_SITE_SETTINGS };
+  } catch (err) { console.warn("Using bundled site settings", err); return { ...DEFAULT_SITE_SETTINGS }; }
+}
+
 // --- public form API ---
 export async function getFormDefinition(formId) {
   if (!isConfigured) throw new Error("Forms are temporarily unavailable.");

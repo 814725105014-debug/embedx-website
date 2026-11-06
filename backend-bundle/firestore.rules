@@ -106,8 +106,9 @@ service cloud.firestore {
       allow create, update, delete: if canWrite('forms');
     }
     match /site_settings/{settingId} {
-      allow read: if canWrite('forms');
-      allow create, update: if isOwner();
+      allow read: if settingId == 'site' || canWrite('forms');
+      allow create, update: if (settingId == 'site' && canWrite('site'))
+        || (settingId == 'forms' && isOwner());
       allow delete: if false;
     }
     match /form_responses/{responseId} {
