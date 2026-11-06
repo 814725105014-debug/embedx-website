@@ -1,5 +1,5 @@
 // EMBEDX — Form handling: validation, honeypot, rate limiting, Firestore writes, toasts.
-import { submitApplication, submitContact, isConfigured } from "./store.js?v=20261106";
+import { submitApplication, submitContact, getFormDefinition, submitFormResponse, isConfigured } from "./store.js?v=20261106-forms";
 import { toast } from "./ui.js?v=20261106";
 
 const RATE_KEY = "embedx_rate";
@@ -50,7 +50,7 @@ function setErrors(form, errors) {
 
 const validators = {
   required: (v, label) => (v.trim() ? "" : `${label} is required.`),
-  email: (v) => (/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim()) ? "" : "Enter a valid email address."),
+  email: (v) => (v.trim().length <= 120 && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim()) ? "" : "Enter a valid email address (maximum 120 characters)."),
   phone: (v) => (/^[0-9+\-\s()]{8,15}$/.test(v.trim()) ? "" : "Enter a valid phone number."),
   max: (v, n) => (v.length <= n ? "" : `Keep this under ${n} characters.`)
 };
@@ -65,9 +65,26 @@ function readForm(form) {
   return data;
 }
 
-function wire(formId, { build, submit, successMsg, draftKey }) {
+function wire(formId, { build, submit, successMsg, draftKey, formKey }) {
   const form = document.getElementById(formId);
   if (!form) return;
+  let activeDefinition = null;
+  if (formKey && isConfigured) getFormDefinition(formKey).then((definition) => {
+    activeDefinition = definition;
+    if (!definition) return;
+    const titleTarget = document.getElementById(formKey === "join" ? "joinFormTitle" : formKey === "enquiry" ? "enquiryFormTitle" : "");
+    const descriptionTarget = document.getElementById(formKey === "join" ? "joinFormDescription" : formKey === "enquiry" ? "enquiryFormDescription" : "");
+    if (titleTarget && definition.title) titleTarget.textContent = definition.title;
+    if (descriptionTarget && definition.description) descriptionTarget.textContent = definition.description;
+    if (definition.status !== "open") {
+      const notice = document.createElement("p");
+      notice.className = "form-closed-notice";
+      notice.setAttribute("role", "status");
+      notice.textContent = "This form is currently closed and is not accepting responses.";
+      form.prepend(notice);
+      form.querySelectorAll("input, select, textarea, button").forEach((control) => { control.disabled = true; });
+    }
+  }).catch((err) => console.warn("Could not read form availability", err));
 
   if (draftKey && storageGet("sessionStorage", "embedx_join_submitted") !== "1") {
     try {
@@ -94,6 +111,14 @@ function wire(formId, { build, submit, successMsg, draftKey }) {
 
     const errors = build.validate(d);
     if (!setErrors(form, errors)) { toast("Please fix the highlighted fields.", "err"); return; }
+    if (formKey && isConfigured) {
+      try { activeDefinition = await getFormDefinition(formKey); }
+      catch (err) { console.warn("Could not refresh form status; Firestore still validates a seeded form ID", err); }
+      if (activeDefinition && activeDefinition.status !== "open") {
+        toast("This form is closed and is no longer accepting responses.", "err");
+        return;
+      }
+    }
 
     if (rateLimited(formId)) {
       toast("Too many submissions from this device. Please try again in a few minutes.", "err");
@@ -106,7 +131,9 @@ function wire(formId, { build, submit, successMsg, draftKey }) {
     const label = btn?.innerHTML || "Submit";
     if (btn) btn.textContent = "Sending…";
     try {
-      await submit(build.payload(d));
+      const payload = build.payload(d);
+      if (formKey && !activeDefinition) delete payload.formId;
+      await submit(payload);
       toast(successMsg, "ok");
       form.reset();
       if (draftKey) storageRemove("sessionStorage", draftKey);
@@ -126,17 +153,21 @@ function wire(formId, { build, submit, successMsg, draftKey }) {
 const req = (d, k, label, n = 120) => validators.required(d[k] || "", label) || validators.max(d[k] || "", n);
 
 wire("joinForm", {
+  formKey: "join",
   draftKey: "embedx_join_draft",
   build: {
     validate: (d) => {
       const e = {};
       const checks = {
         full_name: req(d, "full_name", "Full name", 80),
-        department: validators.required(d.department || "", "Department"),
-        year: validators.required(d.year || "", "Year of study"),
+        regNo: validators.max(d.regNo || "", 40),
+        department: validators.required(d.department || "", "Department") || validators.max(d.department || "", 120),
+        year: validators.required(d.year || "", "Year of study") || validators.max(d.year || "", 40),
         email: validators.required(d.email || "", "Email") || validators.email(d.email || ""),
         phone: validators.required(d.phone || "", "Phone number") || validators.phone(d.phone || ""),
-        motivation: req(d, "motivation", "Motivation", 1000)
+        technical_skills: validators.max(d.technical_skills || "", 300),
+        motivation: req(d, "motivation", "Motivation", 1000),
+        portfolio: validators.max(d.portfolio || "", 300)
       };
       if (!d.interests || (Array.isArray(d.interests) ? !d.interests.length : true)) e.interests = "Pick at least one area of interest.";
       if (!d.agree) e.agree = "Please confirm your participation commitment.";
@@ -144,6 +175,7 @@ wire("joinForm", {
       return e;
     },
     payload: (d) => ({
+      formId: "join",
       name: d.full_name.trim(),
       email: d.email.trim(),
       regNo: (d.regNo || "").trim(),
@@ -158,18 +190,21 @@ wire("joinForm", {
 });
 
 wire("contactForm", {
+  formKey: "enquiry",
   build: {
     validate: (d) => {
       const e = {};
       const c = {
         name: req(d, "name", "Your name", 80),
         email: validators.required(d.email || "", "Email") || validators.email(d.email || ""),
-        message: req(d, "message", "Message", 1000)
+        subject: validators.max(d.subject || "", 160),
+        message: req(d, "message", "Message", 2000)
       };
       for (const [k, v] of Object.entries(c)) if (v) e[k] = v;
       return e;
     },
     payload: (d) => ({
+      formId: "enquiry",
       name: d.name.trim(),
       email: d.email.trim(),
       subject: (d.subject || "").trim() || "General inquiry",
@@ -181,6 +216,7 @@ wire("contactForm", {
 });
 
 wire("registerForm", {
+  formKey: "embednova",
   build: {
     validate: (d) => {
       const e = {};
@@ -196,6 +232,7 @@ wire("registerForm", {
       return e;
     },
     payload: (d) => ({
+      formId: "embednova",
       name: d.name.trim(),
       email: d.email.trim(),
       regNo: "",
@@ -208,3 +245,104 @@ wire("registerForm", {
   },
   successMsg: "Registration submitted! Watch your email for track schedules. 🏆"
 });
+
+function renderPublicField(field) {
+  const wrapper = document.createElement(field.type === "checkboxes" || field.type === "stars" ? "fieldset" : "div");
+  wrapper.className = "field";
+  if (field.type === "checkboxes" || field.type === "stars") {
+    wrapper.classList.add("full");
+    wrapper.style.cssText = "border:1px solid var(--border);border-radius:var(--r-sm);padding:1rem";
+  }
+  const label = document.createElement(field.type === "checkboxes" || field.type === "stars" ? "legend" : "label");
+  label.textContent = `${field.label || "Question"}${field.required ? " *" : ""}`;
+  wrapper.appendChild(label);
+  if (field.type === "stars") {
+    const rating = document.createElement("div"); rating.className = "star-rating"; rating.setAttribute("role", "radiogroup"); rating.setAttribute("aria-label", field.label || "Star rating");
+    for (let value = 1; value <= 5; value++) {
+      const option = document.createElement("label"); option.className = "star-rating-option";
+      const input = document.createElement("input"); input.type = "radio"; input.name = field.key; input.value = String(value); input.required = !!field.required && value === 1;
+      const visual = document.createElement("span"); visual.textContent = "★"; visual.setAttribute("aria-hidden", "true");
+      const sr = document.createElement("span"); sr.className = "sr-only"; sr.textContent = `${value} star${value === 1 ? "" : "s"}`;
+      option.append(input, visual, sr); rating.appendChild(option);
+    }
+    wrapper.appendChild(rating);
+  } else if (field.type === "checkboxes") {
+    const choices = document.createElement("div"); choices.className = "checks";
+    (field.options || []).forEach((choice, index) => {
+      const choiceLabel = document.createElement("label"); choiceLabel.className = "check-row";
+      const input = document.createElement("input"); input.type = "checkbox"; input.name = field.key; input.value = String(choice).slice(0, 160);
+      choiceLabel.append(input, document.createTextNode(` ${choice}`)); choices.appendChild(choiceLabel);
+    });
+    wrapper.appendChild(choices);
+  } else {
+    let input;
+    if (field.type === "textarea") { input = document.createElement("textarea"); input.maxLength = 2000; }
+    else if (field.type === "select") {
+      input = document.createElement("select");
+      const blank = document.createElement("option"); blank.value = ""; blank.textContent = "Select an option"; input.appendChild(blank);
+      (field.options || []).forEach((choice) => { const option = document.createElement("option"); option.value = String(choice); option.textContent = String(choice); input.appendChild(option); });
+    } else {
+      input = document.createElement("input"); input.type = ["text", "email", "tel", "url", "date"].includes(field.type) ? field.type : "text"; input.maxLength = field.type === "email" ? 120 : 500;
+    }
+    input.name = field.key; input.required = !!field.required; input.autocomplete = field.type === "email" ? "email" : "off";
+    wrapper.appendChild(input);
+  }
+  return wrapper;
+}
+
+async function mountPublicForm() {
+  const mount = document.getElementById("publicFormMount");
+  if (!mount) return;
+  const formId = new URLSearchParams(location.search).get("form") || mount.dataset.formKey || "";
+  if (!/^[A-Za-z0-9_-]{1,120}$/.test(formId)) { mount.textContent = "This form link is invalid."; return; }
+  mount.innerHTML = `<p class="muted">Loading form…</p>`;
+  try {
+    const definition = await getFormDefinition(formId);
+    if (!definition) { mount.innerHTML = `<div class="card"><h2>Form unavailable</h2><p class="muted">This form may have been removed or is not published.</p></div>`; return; }
+    document.title = `${definition.title || "Form"} | EMBEDX`;
+    if (definition.status !== "open") { mount.innerHTML = `<div class="card form-closed-notice"><h2>This form is closed</h2><p class="muted">The response period has ended. Contact EMBEDX if you need assistance.</p></div>`; return; }
+    const fields = Array.isArray(definition.fields) ? definition.fields.slice(0, 25).filter((field) => field && /^[a-z0-9_]{1,60}$/i.test(field.key || "") && field.label) : [];
+    if (!fields.length) { mount.innerHTML = `<div class="card"><h2>Form is not ready</h2><p class="muted">The administrator has not published any questions yet.</p></div>`; return; }
+    const card = document.createElement("section"); card.className = "card public-custom-form";
+    const title = document.createElement("h2"); title.textContent = definition.title || "EMBEDX Form";
+    const description = document.createElement("p"); description.className = "muted"; description.textContent = definition.description || "";
+    const form = document.createElement("form"); form.id = "dynamicPublicForm"; form.noValidate = true;
+    const grid = document.createElement("div"); grid.className = "form-grid";
+    fields.forEach((field) => grid.appendChild(renderPublicField(field)));
+    const honey = document.createElement("div"); honey.className = "hp-field"; honey.setAttribute("aria-hidden", "true");
+    const honeyLabel = document.createElement("label"); honeyLabel.textContent = "Leave this field empty";
+    const honeyInput = document.createElement("input"); honeyInput.name = "company_url"; honeyInput.tabIndex = -1; honeyInput.autocomplete = "off";
+    honey.append(honeyLabel, honeyInput);
+    const submitWrap = document.createElement("div"); submitWrap.className = "full";
+    const submitButton = document.createElement("button"); submitButton.type = "submit"; submitButton.className = "btn btn-primary"; submitButton.textContent = "Submit response";
+    submitWrap.appendChild(submitButton); grid.append(honey, submitWrap); form.appendChild(grid); card.append(title, description, form); mount.replaceChildren(card);
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (form.dataset.sending === "1") return;
+      if (honeyInput.value) return;
+      fields.filter((field) => field.type === "checkboxes" && field.required).forEach((field) => {
+        const inputs = [...form.querySelectorAll(`[name="${CSS.escape(field.key)}"]`)];
+        if (inputs[0]) inputs[0].setCustomValidity(inputs.some((input) => input.checked) ? "" : "Select at least one option.");
+      });
+      if (!form.reportValidity()) { toast("Please complete the required fields.", "err"); return; }
+      fields.filter((field) => field.type === "checkboxes").forEach((field) => form.querySelector(`[name="${CSS.escape(field.key)}"]`)?.setCustomValidity(""));
+      const answers = {};
+      fields.forEach((field) => {
+        const selected = [...form.querySelectorAll(`[name="${CSS.escape(field.key)}"]`)];
+        if (field.type === "checkboxes") answers[field.key] = selected.filter((el) => el.checked).map((el) => el.value);
+        else if (field.type === "stars") answers[field.key] = Number(selected.find((el) => el.checked)?.value || 0);
+        else answers[field.key] = (new FormData(form).get(field.key) || "").toString().trim().slice(0, field.type === "textarea" ? 2000 : 500);
+      });
+      if (rateLimited(`custom-${formId}`)) { toast("Too many submissions from this device. Please try again later.", "err"); return; }
+      form.dataset.sending = "1"; submitButton.disabled = true; submitButton.textContent = "Submitting…";
+      try {
+        await submitFormResponse({ formId, formTitle: String(definition.title || "Form").slice(0, 160), answers, submittedAt: new Date().toISOString() });
+        toast("Your response was received. Thank you!", "ok");
+        card.innerHTML = `<div class="success-state"><span class="success-icon" aria-hidden="true">✓</span><h2>Response received</h2><p class="muted">Thank you for sharing your response with EMBEDX.</p></div>`;
+      } catch (err) { console.error(err); toast("We could not submit your response. Please retry or contact EMBEDX.", "err"); submitButton.disabled = false; submitButton.textContent = "Submit response"; }
+      finally { form.dataset.sending = "0"; }
+    });
+  } catch (err) { console.error("Public form load failed", err); mount.innerHTML = `<div class="card"><h2>Form could not load</h2><p class="muted">Check your connection and try again later.</p></div>`; }
+}
+
+mountPublicForm();

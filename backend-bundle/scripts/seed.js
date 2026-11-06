@@ -10,16 +10,16 @@
  *   export FIREBASE_PROJECT_ID=embedx-club-eee
  *   node seed.js
  *
- * Content collections: announcements, events, projects, team, gallery,
- * resources and achievements. Form submissions, admin roles and tasks are never seeded.
+ * Content collections: seven public site collections plus managed form definitions.
+ * Form responses, admin roles and tasks are never seeded.
  */
 const path = require("path");
 const { pathToFileURL } = require("url");
 
-const COLLECTIONS = ["announcements", "events", "projects", "team", "gallery", "resources", "achievements"];
+const COLLECTIONS = ["announcements", "events", "projects", "team", "gallery", "resources", "achievements", "forms"];
 
 async function loadSiteData() {
-  const base = path.join(__dirname, "..", "data");
+  const base = path.join(__dirname, "..", "public", "js", "data");
   const modules = await Promise.all(COLLECTIONS.map(async (name) => {
     const mod = await import(pathToFileURL(path.join(base, `${name}.js`)).href);
     return [name, mod[name]];

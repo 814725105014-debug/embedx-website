@@ -69,8 +69,23 @@ for (const file of jsFiles) {
   if (result.status !== 0) fail(`${path.relative(root, file)}: JavaScript syntax error: ${result.stderr.trim()}`);
 }
 
+// Syntax-check trusted backend scripts and Apps Script sources as well as browser modules.
+const { writeFile: writeTemp, unlink: unlinkTemp } = await import("node:fs/promises");
+let checkedScript = 0;
+for (const dir of [path.join(root, "scripts"), path.join(root, "backend-bundle", "scripts"), path.join(root, "backend-bundle", "appsscript")]) {
+  for (const file of await readdir(dir)) {
+    if (!/\.(?:js|gs)$/.test(file)) continue;
+    const source = await readFile(path.join(dir, file), "utf8");
+    const tmp = path.join("/tmp", `embedx-trusted-${process.pid}-${checkedScript++}.mjs`);
+    await writeTemp(tmp, source);
+    const result = spawnSync(process.execPath, ["--check", tmp], { encoding: "utf8" });
+    await unlinkTemp(tmp).catch(() => {});
+    if (result.status !== 0) fail(`${path.relative(root, path.join(dir, file))}: syntax error: ${result.stderr.trim()}`);
+  }
+}
+
 // Configuration, rules mirrors and sitemap integrity.
-for (const name of ["firebase.json", "firestore.indexes.json", "public/manifest.webmanifest", "scripts/package.json", "backend-bundle/scripts/package.json"]) {
+for (const name of ["firebase.json", "firestore.indexes.json", "public/manifest.webmanifest", "scripts/package.json", "backend-bundle/scripts/package.json", "backend-bundle/appsscript/appsscript.json"]) {
   try { JSON.parse(await readFile(path.join(root, name), "utf8")); }
   catch (err) { fail(`${name}: invalid JSON (${err.message})`); }
 }
@@ -95,7 +110,7 @@ for (const match of sitemap.matchAll(/<loc>(https:\/\/embedx-club-eee\.web\.app[
 }
 
 // Ensure the complete public starter dataset stays in sync with both seeders.
-const seedCollections = ["announcements", "events", "projects", "team", "gallery", "resources", "achievements"];
+const seedCollections = ["announcements", "events", "projects", "team", "gallery", "resources", "achievements", "forms"];
 for (const seedFile of ["scripts/seed.js", "backend-bundle/scripts/seed.js"]) {
   const source = await readFile(path.join(root, seedFile), "utf8");
   const declared = source.match(/const COLLECTIONS = \[([^\]]*)\]/)?.[1] || "";

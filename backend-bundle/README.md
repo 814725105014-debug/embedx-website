@@ -10,19 +10,19 @@ No Cloud Functions are required.
 - `storage.rules`: section-scoped image uploads, for projects where Firebase Storage is initialized.
 - `firestore.indexes.json`: indexes used by the site.
 - `data/`: seed-source modules (kept in sync with `public/js/data/`).
-- `scripts/seed.js`: adds missing starter documents in all seven public content collections; never overwrites existing documents.
+- `scripts/seed.js`: adds missing starter documents in seven public content collections plus standard form definitions; never overwrites existing documents.
 - `scripts/create-admin.js`, `grant-admin.js`, `reset-password.js`, `update-admin.js`: trusted Admin SDK owner tools.
 - `appsscript/task-mail.gs`: optional, token-verified task-email web app source.
+- `appsscript/forms-sync.gs` + `appsscript/appsscript.json`: owner-authorized Firestore-to-Sheets sync, spreadsheet creation, response notifications, and applicant confirmations.
 
 ## Seed content
 
-Seeded collections: `announcements`, `events`, `projects`, `team`, `gallery`,
-`resources`, and `achievements`. Form submissions, `admin_roles`, and tasks are
-never seeded. Announcements are intentionally empty until real notices are written.
-The gallery source refers to images already deployed under `public/assets/images/`.
-The website's Admin → Gallery page also offers **Restore missing photos** using
-signed-in Firestore writes, so gallery bootstrap does not require Storage or an
-Admin SDK credential.
+The seeder adds missing docs in seven public content collections and the `forms`
+configuration collection (`join`, `enquiry`, `embednova`, `feedback`). It never seeds
+form responses, `admin_roles`, or tasks. Announcements are intentionally empty until
+real notices are written. The gallery source refers to images already deployed under
+`public/assets/images/`. The Admin → Overview restore action adds missing starter
+docs without overwriting existing edits or requiring Storage.
 
 To seed from a trusted machine (Admin SDK bypasses Firestore rules):
 
@@ -78,6 +78,24 @@ The project currently has no Firebase Storage bucket. Do not initialize Storage 
 Firebase Console asks you to enable billing; static `/assets/` files and HTTPS image
 URLs work without it. If a bucket is later initialized on an approved plan, deploy
 Storage rules with `firebase deploy --only storage`.
+
+## Forms and Google Sheets
+
+Admin → Forms & responses supports standard seeded forms, custom form creation,
+star ratings, open/close controls, response monitoring, CSV export, and deletion.
+Public forms write directly to Firestore; the portal reflects those records and
+public clients cannot read them. The join and enquiry forms remain on their existing
+validated collections so existing workflows are preserved.
+
+To connect the automatic spreadsheet archive, create a standalone Google Apps Script
+project, enable **Show `appsscript.json`**, copy `appsscript/forms-sync.gs` into a
+`.gs` file, and paste the checked-in manifest. Deploy Firestore rules first, then
+sign in as the allowlisted owner and run `setupEmbedxSheets()` once. Authorize the
+requested Google Sheets, Firestore REST, email, and time-trigger scopes. It creates
+a spreadsheet, installs a five-minute sync trigger, and publishes the sheet URL and
+health to `site_settings/forms` for the admin portal. No Web App endpoint, shared
+secret, Cloud Function, or paid Firebase service is involved. Share the generated
+sheet only with trusted reviewers.
 
 ## Task-email source
 

@@ -75,7 +75,15 @@ export async function getAnnouncements() {
   catch { const m = await import("./data/announcements.js"); return m.announcements; }
 }
 
-// --- writes (forms) ---
+// --- public form API ---
+export async function getFormDefinition(formId) {
+  if (!isConfigured) throw new Error("Forms are temporarily unavailable.");
+  const app = await getApp();
+  const { getFirestore, doc, getDoc } = await import(`${SDK}/firebase-firestore.js`);
+  const snap = await getDoc(doc(getFirestore(app), "forms", formId));
+  return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+}
 export async function submitApplication(data) { return addDocument("members_applications", data); }
 export async function submitContact(data) { return addDocument("contact_messages", data); }
+export async function submitFormResponse(data) { return addDocument("form_responses", data); }
 export { isConfigured };

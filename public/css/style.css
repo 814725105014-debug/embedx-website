@@ -757,3 +757,9 @@ details.perm-edit summary { padding: .55rem 0; min-height: 44px; display: flex; 
   .card:hover, .card:focus-within { transform:none; }
   .card:hover::before { opacity:0; }
 }
+
+/* College identity lockup: the supplied transparent mark sits on a clean white tile. */
+.college-mark-lockup { display:flex; align-items:center; gap:.6rem; margin-top:.7rem; color:var(--text-muted); font-size:.78rem; }
+.college-mark { width:118px; height:42px; display:block; object-fit:contain; padding:.25rem .6rem; border-radius:.45rem; background:#fff; }
+.admin-brand .admin-college-mark { width:76px; height:42px; flex:0 0 76px; object-fit:contain; padding:.25rem .45rem; border-radius:.45rem; background:#fff; }
+@media(max-width:650px) { .admin-brand .admin-college-mark { display:none; } .college-mark { width:108px; height:38px; } }

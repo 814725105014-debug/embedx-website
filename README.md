@@ -37,7 +37,7 @@ firebase.json            ← hosting + cache headers + clean URLs + firestore po
 .firebaserc              ← default Firebase project ID (`embedx-club-eee`)
 firestore.rules          ← security rules
 firestore.indexes.json   ← composite indexes
-scripts/seed.js          ← non-destructive seed for all seven public content collections
+scripts/seed.js          ← add-missing-only seed for public content and form definitions
 scripts/check-site.mjs   ← no-dependency HTML/link/module/config QA
 backend-bundle/          ← deployable rules + owner scripts + Apps Script mailer
 .github/workflows/       ← GitHub Hosting deploy workflows (need a configured service-account secret)
@@ -97,14 +97,14 @@ export FIREBASE_PROJECT_ID=<PROJECT_ID>
 node seed.js
 ```
 
-Seeds all seven public content collections (`announcements`, `events`, `projects`,
-`team`, `gallery`, `resources`, `achievements`) using stable document IDs. It only
-creates missing IDs and preserves existing Firestore documents, so rerunning it
-won't overwrite admin edits. `announcements` is intentionally empty in the source
-until the club publishes real notices. Form submissions, admin roles, and tasks
-are never seeded. The owner-only Gallery page also has a **Restore missing photos**
-action that adds bundled static gallery entries directly through Firestore rules;
-it does not require Storage or a service-account file.
+Seeds seven public content collections (`announcements`, `events`, `projects`,
+`team`, `gallery`, `resources`, `achievements`) plus starter form definitions using
+stable document IDs. It only creates missing IDs and preserves existing Firestore
+documents, so rerunning it will not overwrite admin edits. `announcements` is
+intentionally empty until real notices are written. Form responses, admin roles, and
+tasks are never seeded. Owner-only **Restore missing content** and **Seed standard
+forms** controls can initialize content from the admin portal without a service
+account. Gallery images use bundled assets, not Firebase Storage.
 
 > Alternative: add/edit documents manually in **Firebase Console → Firestore**.
 
@@ -119,8 +119,11 @@ it does not require Storage or a service-account file.
 | `resources` | `title, category, level, tags[], desc, url, order` | written by the admin portal; Learning Hub; optional HTTPS resource links |
 | `achievements` | `badge, title, subtitle, description, image, team, institution, projectId, highlights[], order` | written by the admin portal; Hall of Achievers |
 | `announcements` | `title, kind, body, pinned, createdAt` | written by the admin portal; home notice board (pinned first) |
-| `members_applications` | written by the Join + EMBEDNOVA forms | create-only; read via Console export |
-| `contact_messages` | written by the Contact form | create-only |
+| `forms` | owner-managed form definitions, seeded with join/enquiry/EMBEDNOVA/feedback starters | public can read open/closed definitions; role-scoped admin writes |
+| `form_responses` | custom registrations, surveys, and feedback (including 1–5 star ratings) | public create only while a form is open; assigned Forms admins monitor/export/delete |
+| `members_applications` | written by Join + EMBEDNOVA forms | public create; assigned Forms admins monitor/export/delete |
+| `contact_messages` | written by Contact form | public create; assigned Forms admins monitor/export/delete |
+| `site_settings/forms` | Google Sheets sync URL and last-run health | Forms admins can read; owner/Apps Script owner writes |
 
 Image URLs should be **root-absolute local paths** (`/assets/images/foo.webp`) or
 HTTPS URLs. The admin image editor accepts either; file upload/crop is available
@@ -195,8 +198,32 @@ published token must be treated as exposed.
   restrict the API key to approved website referrers and configure/enforce Firebase
   App Check for the web app before relying on client-side public form writes.
 
-Form submissions (`members_applications`, `contact_messages`) remain create-only
-and are **not** readable from the portal; export them from the Firebase Console.
+### Forms, registrations, and Google Sheets
+
+The Admin → **Forms & responses** page seeds and manages the built-in Join,
+Enquiry, EMBEDNOVA registration, and Feedback forms, plus custom forms. Owners and
+admins explicitly assigned the `forms` permission can edit custom questions,
+open/close intake, review submissions, export CSV, and delete custom forms or
+responses. Feedback forms support accessible 1–5 star rating questions. Join and
+enquiry submissions stay in their existing Firestore collections and are now
+visible to authorized Forms admins; public users cannot read submissions.
+
+To create and connect the spreadsheet, deploy the owner-only Apps Script bridge:
+
+1. In a standalone Google Apps Script project, enable **Show `appsscript.json`**.
+2. Copy `backend-bundle/appsscript/forms-sync.gs` into the project and replace its
+   manifest with `backend-bundle/appsscript/appsscript.json`.
+3. Sign in as `814725105014@trp.srmtrichy.edu.in`, run `setupEmbedxSheets()` once,
+   and approve the requested Firestore, Sheets, mail, and trigger permissions.
+4. The script creates the spreadsheet and response tabs, syncs every five minutes,
+   and publishes the sheet URL and sync health to Admin → Forms & responses.
+
+Deploy Firestore rules first. The Apps Script reads Firestore as the allowlisted
+owner and stores only the response archive; Firestore remains the live source for
+portal monitoring. Notifications and applicant confirmations are sent by the
+script when a new response is synchronized. This requires no web-app URL, shared
+token, Cloud Function, or Firebase billing upgrade. Share the generated sheet only
+with trusted reviewers.
 
 ## 6. GitHub auto-deploy
 
