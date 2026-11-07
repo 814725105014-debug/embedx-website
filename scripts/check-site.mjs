@@ -107,6 +107,15 @@ const config = await readFile(path.join(pub, "js/config.js"), "utf8");
 if (/taskMail\s*=\s*\{[^}]*\btoken\s*:/s.test(config)) fail("public/js/config.js: public task-mail token must not be shipped");
 if (!config.includes("export const taskMail =")) fail("public/js/config.js: task notification compatibility endpoint is missing");
 if (config.includes("EMBEDX_MAIL_WEB_APP_URL") || config.includes("mailWorkspace")) fail("public/js/config.js: manual official-mail endpoint must be removed");
+const taskMailSource = await readFile(path.join(root, "backend-bundle", "appsscript", "task-mail.gs"), "utf8");
+if (/FIREBASE_API_KEY\s*=\s*["']AIza/.test(taskMailSource)) fail("backend-bundle/appsscript/task-mail.gs: Firebase API key must come from Script Properties, not checked-in source");
+const storageRules = await readFile(path.join(root, "storage.rules"), "utf8");
+if (!storageRules.includes("function verifiedRole()") || !storageRules.includes("request.auth.token.email_verified == true")) fail("storage.rules: privileged uploads must honor required email verification");
+const publicCredentialPattern = /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|\b(?:ghp_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}|xox[baprs]-[A-Za-z0-9-]{20,}|ya29\.[A-Za-z0-9_-]{20,})/;
+for (const file of files.filter((f) => /\.(?:html|js|mjs)$/.test(f) && !f.includes(`${path.sep}js${path.sep}vendor${path.sep}`))) {
+  const source = await readFile(file, "utf8");
+  if (publicCredentialPattern.test(source)) fail(`${path.relative(root, file)}: private credential-like material must not ship in the public site`);
+}
 const adminAppSource = await readFile(path.join(pub, "js/admin-app.js"), "utf8");
 if (adminAppSource.includes("renderMailWorkspace") || adminAppSource.includes("/admin/mail")) fail("public/js/admin-app.js: manual official-mail UI is still present");
 if (!adminAppSource.includes("async function notifyTaskAssignee") || !adminAppSource.includes("notifyTaskAssignee(editingId)")) fail("public/js/admin-app.js: task notification compatibility was removed");

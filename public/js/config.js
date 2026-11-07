@@ -1,4 +1,7 @@
-// EMBEDX — Firebase configuration (project: embedx-club-eee).
+// EMBEDX — Firebase web configuration (project: embedx-club-eee).
+// Firebase web API keys are public identifiers, not credentials; never put service-account
+// keys or private API tokens here. Restrict this key to the production host and Firebase
+// APIs in Google Cloud Console, enforce Firebase App Check, and keep access in Security Rules.
 export const firebaseConfig = {
   apiKey: "AIzaSyBwNaduceEdAcJX0uCRv2nLNVZca2OWSgA",
   authDomain: "embedx-club-eee.firebaseapp.com",
