@@ -159,6 +159,13 @@ export function announcementCard(a) {
 }
 
 export function galleryButton(g) {
-  const src = asset(g.imageUrl);
-  return `<button data-lightbox="${esc(src)}" data-caption="${esc(g.caption || "")}" aria-label="Enlarge: ${esc(g.caption || "club photo")}"><img src="${esc(src)}" alt="${esc(g.caption || "EMBEDX club photo")}" loading="lazy" decoding="async" /></button>`;
+  const raw = g.imageUrl || g.mediaUrl || g.videoUrl || g.url || "";
+  const src = asset(raw);
+  const caption = g.caption || g.event || "EMBEDX media";
+  const type = String(g.mediaType || g.type || (g.videoUrl ? "video" : "image")).toLowerCase();
+  if (type === "video") {
+    const poster = driveFileId(raw) ? `<img src="${esc(src)}" alt="" loading="lazy" decoding="async" />` : `<video src="${esc(src)}" muted playsinline preload="metadata" aria-hidden="true"></video>`;
+    return `<button class="gallery-video" data-lightbox="${esc(src)}" data-lightbox-type="video" data-caption="${esc(caption)}" aria-label="Play video: ${esc(caption)}"><span class="gallery-video-poster">${poster}<span class="gallery-video-play" aria-hidden="true">▶</span></span></button>`;
+  }
+  return `<button data-lightbox="${esc(src)}" data-lightbox-type="image" data-caption="${esc(caption)}" aria-label="Enlarge: ${esc(caption)}"><img src="${esc(src)}" alt="${esc(caption)}" loading="lazy" decoding="async" /></button>`;
 }

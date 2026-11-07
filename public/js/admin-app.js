@@ -121,10 +121,8 @@ async function sdk() {
   dbMod = dbMod || (await import(`${SDK}/firebase-firestore.js`));
   stMod = stMod || (await import(`${SDK}/firebase-storage.js`));
   const storage = stMod.getStorage(app);
-  // Firebase Storage defaults to retrying uploads for up to ten minutes. Bound retries so
-  // the admin UI can report a useful failure instead of appearing stuck indefinitely.
-  stMod.setMaxUploadRetryTime(storage, 60_000);
-  stMod.setMaxOperationRetryTime(storage, 30_000);
+  // Do not depend on optional Storage SDK retry-tuning exports. Uploads are bounded
+  // by uploadBlobWithProgress's idle and total timers, which cancel stalled transfers.
   return { auth: authMod.getAuth(app), db: dbMod.getFirestore(app), storage };
 }
 const $ = (s) => document.querySelector(s);
@@ -405,16 +403,17 @@ const SCHEMAS = {
       { k: "registrationLink", t: "text", full: true, label: "External registration URL (optional)" },
       { k: "eligibility", t: "text", label: "Eligibility" },
       { k: "description", t: "textarea", label: "Description" },
-      { k: "glimpses", t: "list", full: true, label: "Event glimpses — photos or clips with descriptions" },
+      { k: "eventEnded", t: "check", label: "Event ended — enable event photos and videos" },
+      { k: "glimpses", t: "event-media", full: true, label: "Event photos and videos" },
       { k: "imageUrl", t: "image", label: "Poster image" },
       { k: "isUpcoming", t: "check", label: "Upcoming event" },
       { k: "featured", t: "check", label: "Featured" },
       { k: "order", t: "num", label: "Sort order" }
     ],
-    defaults: { isUpcoming: true, featured: false, order: 1, type: "Technical Workshop", registrationFormId: "" },
+    defaults: { isUpcoming: true, eventEnded: false, glimpses: [], featured: false, order: 1, type: "Technical Workshop", registrationFormId: "" },
     image: "imageUrl",
     title: (d) => d.title,
-    sub: (d) => `${d.type || ""} • ${d.eventDate || d.date || "Date not set"} ${d.isUpcoming ? "• upcoming" : ""} • ${d.registrationFormId ? "form assigned" : /^https:\/\//i.test(String(d.registrationLink || "")) && safeHttpsUrl(d.registrationLink) ? "external registration" : "unassigned"}`
+    sub: (d) => `${d.type || ""} • ${d.eventDate || d.date || "Date not set"} ${d.eventEnded ? "• ended" : d.isUpcoming ? "• upcoming" : ""} • ${d.registrationFormId ? "form assigned" : /^https:\/\//i.test(String(d.registrationLink || "")) && safeHttpsUrl(d.registrationLink) ? "external registration" : "unassigned"}`
   },
   projects: {
     label: "project",
@@ -466,18 +465,19 @@ const SCHEMAS = {
     sub: (d) => `${d.role || ""} • ${d.group || "student"}`
   },
   gallery: {
-    label: "photo",
+    label: "media item",
     sort: ["order", "asc"],
     fields: [
       { k: "caption", t: "text", req: true, label: "Caption" },
-      { k: "imageUrl", t: "image", req: true, label: "Photo URL or upload" },
+      { k: "mediaType", t: "select", opts: ["image", "video"], label: "Media type" },
+      { k: "imageUrl", t: "image", req: true, label: "Photo or video URL (HTTPS)" },
       { k: "event", t: "text", label: "Event name (optional)" },
       { k: "order", t: "num", label: "Display order" }
     ],
-    defaults: { order: 1 },
+    defaults: { order: 1, mediaType: "image" },
     image: "imageUrl",
     title: (d) => d.caption,
-    sub: (d) => d.event || ""
+    sub: (d) => `${d.mediaType === "video" ? "Video" : "Photo"}${d.event ? ` • ${d.event}` : ""}`
   },
   resources: {
     label: "resource",
@@ -1255,7 +1255,7 @@ async function renderForms() {
           <div class="admin-row-actions">
             <button class="btn btn-ghost btn-sm" data-form-responses="${esc(form.id)}">View responses</button>
             ${can("forms") ? `<button class="btn btn-ghost btn-sm" data-form-edit="${esc(form.id)}">${form.builtin ? "Edit settings" : "Edit"}</button><button class="btn btn-ghost btn-sm" data-form-toggle="${esc(form.id)}">${form.status === "open" ? "Close" : "Open"}</button>${!form.builtin ? `<button class="btn btn-danger btn-sm" data-form-delete="${esc(form.id)}">Delete</button>` : ""}` : ""}
-            <button class="btn btn-ghost btn-sm" data-form-copy="${esc(form.id)}">Copy link</button>
+            <button class="btn btn-ghost btn-sm" data-form-open="${esc(form.id)}">Open public form</button>
           </div>
         </article>`).join("") : `<p class="muted">No forms yet. Standard forms sync automatically when the owner opens Admin; you can also create a custom form.</p>`}</div>
       <section class="admin-legacy-submissions"><div class="admin-form-toolbar"><div><h2>Recent join applications</h2><p class="muted">${joinSnap.size} total · newest first</p></div><button class="btn btn-ghost btn-sm" id="exportJoin">Export CSV</button></div>${renderLegacyPreview(lastJoin, "members_applications")}</section>
@@ -1267,7 +1267,7 @@ async function renderForms() {
     region.querySelectorAll("[data-form-toggle]").forEach((b) => b.addEventListener("click", () => toggleManagedForm(forms.find((f) => f.id === b.dataset.formToggle))));
     region.querySelectorAll("[data-form-delete]").forEach((b) => b.addEventListener("click", () => deleteManagedForm(b.dataset.formDelete)));
     region.querySelectorAll("[data-form-responses]").forEach((b) => b.addEventListener("click", () => showManagedResponses(forms.find((f) => f.id === b.dataset.formResponses))));
-    region.querySelectorAll("[data-form-copy]").forEach((b) => b.addEventListener("click", () => copyManagedFormLink(b.dataset.formCopy, forms.find((f) => f.id === b.dataset.formCopy))));
+    region.querySelectorAll("[data-form-open]").forEach((b) => b.addEventListener("click", () => openManagedFormLink(b.dataset.formOpen, forms.find((f) => f.id === b.dataset.formOpen))));
     region.querySelectorAll("[data-delete-legacy]").forEach((b) => b.addEventListener("click", () => deleteLegacyResponse(b.dataset.collection, b.dataset.deleteLegacy)));
     region.querySelector("#exportJoin")?.addEventListener("click", () => exportCsv("embedx-join-applications.csv", joinSnap.docs.map((d) => ({ id: d.id, ...d.data() }))));
     region.querySelector("#exportEnquiries")?.addEventListener("click", () => exportCsv("embedx-enquiries.csv", enquirySnap.docs.map((d) => ({ id: d.id, ...d.data() }))));
@@ -1352,10 +1352,9 @@ async function toggleManagedForm(form) {
   } catch (err) { toast(`Could not change form status: ${err.message}`, "err"); }
 }
 
-function copyManagedFormLink(id, form) {
+function openManagedFormLink(id, form) {
   const url = form?.kind === "join" ? `${location.origin}/pages/join.html` : form?.kind === "enquiry" ? `${location.origin}/pages/contact.html` : `${location.origin}/pages/form.html?form=${encodeURIComponent(id)}`;
-  if (navigator.clipboard?.writeText) navigator.clipboard.writeText(url).then(() => toast("Public form link copied.", "ok")).catch(() => window.prompt("Copy this public form link:", url));
-  else window.prompt("Copy this public form link:", url);
+  window.open(url, "_blank", "noopener,noreferrer");
 }
 
 async function deleteManagedForm(formId) {
@@ -1512,7 +1511,7 @@ function renderList(sec) {
   if (!items.length) { region.innerHTML = `<p class="muted">${can(sec) ? `No ${schema.label}s yet — use “+ New” to add one.` : `No ${schema.label}s to display.`}</p>`; return; }
   region.innerHTML = items.map((d) => `
     <div class="admin-row card">
-      ${schema.image && (d[schema.image] || (sec === "achievements" && d.imageUrl)) ? `<img src="${esc(asset(d[schema.image] || d.imageUrl))}" alt="" loading="lazy" decoding="async" />` : '<span class="admin-noimg">◈</span>'}
+      ${schema.image && (d[schema.image] || (sec === "achievements" && d.imageUrl)) && !(sec === "gallery" && d.mediaType === "video") ? `<img src="${esc(asset(d[schema.image] || d.imageUrl))}" alt="" loading="lazy" decoding="async" />` : `<span class="admin-noimg">${sec === "gallery" && d.mediaType === "video" ? "▶" : "◈"}</span>`}
       <div class="admin-row-main">
         <strong>${esc(schema.title(d))}</strong>
         <span class="muted">${esc(schema.sub(d))}</span>
@@ -1553,7 +1552,97 @@ async function eventRegistrationFormOptions(selectedId = "") {
   return options;
 }
 
+function normalizeEventMediaEntry(entry) {
+  if (entry && typeof entry === "object") {
+    const type = String(entry.type || entry.mediaType || "image").toLowerCase();
+    return {
+      type: type === "video" ? "video" : "image",
+      url: String(entry.url || entry.mediaUrl || entry.imageUrl || "").trim(),
+      caption: String(entry.caption || entry.description || "").trim()
+    };
+  }
+  const [rawType = "", url = "", ...caption] = String(entry || "").split("|").map((part) => part.trim());
+  const type = rawType.toLowerCase();
+  return {
+    type: type === "video" || /\.(mov|mp4|m4v|webm|ogv)(?:$|[?#])/i.test(url) ? "video" : "image",
+    url: type === "image" || type === "photo" || type === "video" ? url : String(entry || "").trim(),
+    caption: type === "image" || type === "photo" || type === "video" ? caption.join(" | ") : ""
+  };
+}
+
+function buildEventMediaField(f, value) {
+  const wrap = document.createElement("div");
+  wrap.className = "field full event-media-field";
+  wrap.dataset.eventMediaField = "";
+  const label = document.createElement("label");
+  label.textContent = f.label;
+  wrap.appendChild(label);
+  const rows = document.createElement("div");
+  rows.className = "event-media-rows";
+  const addRow = (entry = {}) => {
+    const normalized = normalizeEventMediaEntry(entry);
+    const row = document.createElement("div");
+    row.className = "event-media-row";
+    const type = document.createElement("select");
+    type.setAttribute("aria-label", "Media type");
+    [["image", "Photo"], ["video", "Video"]].forEach(([value, text]) => {
+      const option = document.createElement("option"); option.value = value; option.textContent = text; type.appendChild(option);
+    });
+    type.value = normalized.type;
+    type.dataset.mediaPart = "type";
+    const url = document.createElement("input");
+    url.type = "text"; url.placeholder = "HTTPS media URL or site path"; url.value = normalized.url;
+    url.setAttribute("aria-label", "Media URL"); url.dataset.mediaPart = "url";
+    const caption = document.createElement("input");
+    caption.type = "text"; caption.placeholder = "Caption / description"; caption.value = normalized.caption;
+    caption.setAttribute("aria-label", "Media caption"); caption.dataset.mediaPart = "caption";
+    const remove = document.createElement("button");
+    remove.type = "button"; remove.className = "btn btn-ghost btn-sm event-media-remove";
+    remove.textContent = "Remove"; remove.setAttribute("aria-label", "Remove this media item");
+    remove.addEventListener("click", () => row.remove());
+    row.append(type, url, caption, remove);
+    rows.appendChild(row);
+  };
+  (Array.isArray(value) ? value : value ? [value] : []).map(normalizeEventMediaEntry).forEach(addRow);
+  const controls = document.createElement("div"); controls.className = "event-media-controls";
+  const add = document.createElement("button"); add.type = "button"; add.className = "btn btn-ghost btn-sm";
+  add.textContent = "+ Add media"; add.addEventListener("click", () => { addRow(); rows.lastElementChild?.querySelector("select")?.focus(); });
+  const upload = document.createElement("button"); upload.type = "button"; upload.className = "btn btn-ghost btn-sm";
+  upload.textContent = "Upload event photos";
+  const fileInput = document.createElement("input"); fileInput.type = "file"; fileInput.multiple = true;
+  fileInput.accept = "image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"; fileInput.hidden = true;
+  const status = document.createElement("small"); status.className = "muted"; status.setAttribute("role", "status");
+  upload.addEventListener("click", () => fileInput.click());
+  fileInput.addEventListener("change", async () => {
+    const files = [...(fileInput.files || [])];
+    if (!files.length) return;
+    if (files.length > 10) { toast("Upload up to 10 event photos at a time.", "err"); fileInput.value = ""; return; }
+    upload.disabled = true; status.textContent = "Uploading event photos…";
+    let uploaded = 0;
+    for (const file of files) {
+      try {
+        const url = await uploadOptimizedImage(file, "events", (progress) => {
+          status.textContent = progress.phase === "upload" ? `Uploading ${file.name} — ${progress.percent}%` : `Preparing ${file.name}…`;
+        });
+        addRow({ type: "image", url, caption: file.name.replace(/\.[^.]+$/, "") });
+        uploaded++;
+      } catch (error) {
+        console.error("Event photo upload failed", error);
+        toast(`Could not upload ${file.name}: ${uploadErrorMessage(error)}`, "err");
+      }
+    }
+    status.textContent = `${uploaded} photo${uploaded === 1 ? "" : "s"} added. Save the event to publish.`;
+    upload.disabled = false; fileInput.value = "";
+  });
+  controls.append(add, upload, fileInput, status);
+  const note = document.createElement("small"); note.className = "muted";
+  note.textContent = "Use a public HTTPS link. Drive videos should be shared as Anyone with the link · Viewer; direct MOV/MP4/WebM links play in supported browsers.";
+  wrap.append(rows, controls, note);
+  return wrap;
+}
+
 function buildField(f, v) {
+  if (f.t === "event-media") return buildEventMediaField(f, v);
   const wrap = document.createElement("div");
   const id = `f-${f.k}`;
   const full = f.full || ["textarea", "list", "check", "image"].includes(f.t);
@@ -1614,7 +1703,8 @@ function buildField(f, v) {
     file.id = `file-${f.k}`; file.type = "file"; file.accept = "image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif";
     file.style.display = "none"; file.dataset.imgfield = f.k;
     row.append(driveLink, fileLabel, file);
-    if (v && !driveFileId(v)) {
+    const galleryVideo = PAGE === "gallery" && document.querySelector("#f-mediaType")?.value === "video";
+    if (v && !driveFileId(v) && !galleryVideo) {
       const editBtn = document.createElement("button");
       editBtn.type = "button"; editBtn.className = "btn btn-ghost btn-sm";
       editBtn.dataset.editimg = f.k; editBtn.textContent = "Edit current photo";
@@ -1632,92 +1722,6 @@ function buildField(f, v) {
   }
   input.id = id; input.name = f.k;
   wrap.appendChild(input);
-  if (f.k === "glimpses") {
-    input.placeholder = "One item per line: image | Drive share link | Caption / description\nvideo | Drive share link | Caption / description";
-    const driveRow = document.createElement("div");
-    driveRow.style.cssText = "display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-top:.5rem";
-    const driveLink = document.createElement("a");
-    driveLink.className = "btn btn-ghost btn-sm";
-    driveLink.href = "https://drive.google.com/drive/my-drive";
-    driveLink.target = "_blank"; driveLink.rel = "noopener noreferrer";
-    driveLink.textContent = "Open Google Drive";
-    const note = document.createElement("small");
-    note.className = "muted";
-    note.textContent = "Copy a Drive share link; set General access to Anyone with the link · Viewer. This link format is supported for photos and video clips.";
-    driveRow.append(driveLink, note);
-    wrap.appendChild(driveRow);
-    const uploadRow = document.createElement("div");
-    uploadRow.className = "event-media-upload";
-    uploadRow.style.cssText = "display:flex;align-items:center;gap:.65rem;flex-wrap:wrap;margin-top:.75rem";
-    const uploadLabel = document.createElement("label");
-    uploadLabel.className = "btn btn-ghost btn-sm";
-    uploadLabel.htmlFor = "eventGlimpseUploads";
-    uploadLabel.textContent = "Upload event photos (HEIC supported)";
-    const uploadInput = document.createElement("input");
-    uploadInput.id = "eventGlimpseUploads";
-    uploadInput.type = "file";
-    uploadInput.multiple = true;
-    uploadInput.accept = "image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif";
-    uploadInput.style.display = "none";
-    const uploadStatus = document.createElement("span");
-    uploadStatus.className = "muted";
-    uploadStatus.setAttribute("role", "status");
-    uploadInput.addEventListener("change", async () => {
-      const files = [...(uploadInput.files || [])];
-      if (!files.length) return;
-      if (files.length > 10) {
-        toast("Upload at most 10 event photos at a time. You can add another batch afterward.", "err");
-        uploadInput.value = "";
-        return;
-      }
-      uploadInput.disabled = true;
-      uploadLabel.textContent = "Preparing uploads…";
-      const results = new Array(files.length).fill("");
-      const failures = [];
-      let nextIndex = 0;
-      const uploadNext = async () => {
-        while (nextIndex < files.length) {
-          const index = nextIndex++;
-          const file = files[index];
-          try {
-            results[index] = await uploadOptimizedImage(file, "events", (progress) => {
-              uploadStatus.textContent = progress.phase === "upload"
-                ? `Uploading ${index + 1}/${files.length}: ${file.name} — ${progress.percent}%`
-                : progress.phase === "finish"
-                  ? `Finishing ${index + 1}/${files.length}: getting the public link…`
-                  : progress.phase === "connecting"
-                    ? `Connecting to Firebase Storage for ${file.name}…`
-                    : `Preparing ${index + 1}/${files.length}: ${file.name}…`;
-            });
-          } catch (error) {
-            console.error("Event photo upload failed", { name: file.name, code: error.code, message: error.message });
-            failures.push(`${file.name}: ${uploadErrorMessage(error)}`);
-          }
-        }
-      };
-      try {
-        await Promise.all(Array.from({ length: Math.min(2, files.length) }, uploadNext));
-        const uploadedLines = results.flatMap((url, index) => {
-          if (!url) return [];
-          const caption = files[index].name.replace(/\.[^.]+$/, "").replace(/[|\r\n]/g, " ").trim();
-          return [`image | ${url} | ${caption}`];
-        });
-        if (uploadedLines.length) input.value = `${input.value.trim()}${input.value.trim() ? "\n" : ""}${uploadedLines.join("\n")}`;
-        if (failures.length) {
-          uploadStatus.textContent = `${uploadedLines.length} uploaded; ${failures.length} failed. ${failures[0]}`;
-          toast(`${failures.length} event photo upload${failures.length === 1 ? "" : "s"} failed. See the upload status for details.`, "err");
-        } else {
-          uploadStatus.textContent = `${uploadedLines.length} photo${uploadedLines.length === 1 ? "" : "s"} uploaded. Save the event to publish them.`;
-        }
-      } finally {
-        uploadInput.disabled = false;
-        uploadInput.value = "";
-        uploadLabel.textContent = "Upload event photos (HEIC supported)";
-      }
-    });
-    uploadRow.append(uploadLabel, uploadInput, uploadStatus);
-    wrap.appendChild(uploadRow);
-  }
   return wrap;
 }
 
@@ -1755,6 +1759,15 @@ async function openForm(id = null) {
   host.innerHTML = "";
   fields.forEach((f) => host.appendChild(buildField(f, data?.[f.k] ?? (f.t === "check" ? false : ""))));
   if (sec === "events") {
+    const ended = host.querySelector("#f-eventEnded");
+    const upcoming = host.querySelector("#f-isUpcoming");
+    const mediaField = host.querySelector("[data-event-media-field]");
+    const syncEventMediaVisibility = () => {
+      if (mediaField) mediaField.hidden = !ended?.checked;
+      if (ended?.checked && upcoming) upcoming.checked = false;
+    };
+    ended?.addEventListener("change", syncEventMediaVisibility);
+    syncEventMediaVisibility();
     const help = document.createElement("p"); help.className = "muted full event-registration-help";
     help.innerHTML = `Choose <b>Unassigned</b> to hide registration, select a form for this event, or <a href="/admin/forms">create/edit forms in Forms &amp; responses</a>.`;
     host.appendChild(help);
@@ -1825,7 +1838,13 @@ async function saveForm(e) {
   const data = {};
   for (const f of schema.fields) {
     const el = document.getElementById(`f-${f.k}`);
-    if (f.t === "check") data[f.k] = el.checked;
+    if (f.t === "event-media") {
+      data[f.k] = [...document.querySelectorAll("#entityFields .event-media-row")].map((row) => ({
+        type: row.querySelector('[data-media-part="type"]').value,
+        url: row.querySelector('[data-media-part="url"]').value.trim(),
+        caption: row.querySelector('[data-media-part="caption"]').value.trim()
+      })).filter((item) => item.url || item.caption);
+    } else if (f.t === "check") data[f.k] = el.checked;
     else if (f.t === "num") data[f.k] = Number(el.value || 0);
     else if (f.t === "list") data[f.k] = String(el.value).split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
     else data[f.k] = String(el.value).trim();
@@ -1838,15 +1857,14 @@ async function saveForm(e) {
     toast("Gallery entries must be local site paths or HTTPS URLs.", "err"); return;
   }
   if (sec === "events") {
-    const invalidGlimpse = data.glimpses.some((entry) => {
-      const [kind = "", url = ""] = String(entry).split("|").map((part) => part.trim());
-      const mediaType = kind.toLowerCase();
-      if (!["image", "photo", "video"].includes(mediaType) || !url || !isSafeMediaReference(url)) return true;
-      return mediaType === "video" && !driveFileId(url);
-    });
+    const invalidGlimpse = data.glimpses.some((entry) => !entry.url || !isSafeMediaReference(entry.url)
+      || !["image", "video"].includes(entry.type));
     if (invalidGlimpse) {
-      toast("Each event glimpse must be image | image URL | description or video | Google Drive share link | description. Drive videos need Anyone with the link access.", "err"); return;
+      toast("Each event media row needs a valid Photo or Video type and an HTTPS URL or local site path.", "err"); return;
     }
+  }
+  if (sec === "gallery" && !isSafeMediaReference(data.imageUrl)) {
+    toast("Media URL must be an HTTPS URL or local site path.", "err"); return;
   }
   for (const key of ["githubUrl", "demoUrl", "url", "linkedin"]) {
     if (data[key] && !safeHttpsUrl(data[key])) { toast(`${key} must be an HTTPS URL.`, "err"); return; }
