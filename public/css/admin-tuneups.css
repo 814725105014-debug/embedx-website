@@ -1,24 +1,3 @@
-.admin-gallery-sync { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; padding:1rem; margin-bottom:1rem; }
-.admin-gallery-sync-copy { min-width:0; flex:1; }
-.admin-gallery-sync-copy > p { max-width:72ch; margin:.3rem 0 .75rem; }
-.admin-starter-thumbs { display:flex; gap:.5rem; max-width:100%; overflow-x:auto; padding:.1rem .1rem .4rem; }
-.admin-starter-thumb { position:relative; flex:0 0 94px; height:66px; overflow:hidden; border:2px solid var(--border); border-radius:.55rem; background:#fff; }
-.admin-starter-thumb.is-published { border-color:var(--ok,#29d391); }
-.admin-starter-thumb.is-missing { border-color:var(--warn,#f59e0b); }
-.admin-starter-thumb.is-pending-delete { border-color:var(--cyan); }
-.admin-starter-thumb.is-deleted { border-color:var(--danger,#ff6b81); background:rgba(255,107,129,.08); }
-.admin-asset-delete-status { padding:1rem; margin-bottom:1rem; }
-.admin-asset-delete-status h2 { margin:0 0 .25rem; font-size:1.05rem; }
-.admin-asset-delete-status p { margin:0; font-size:.82rem; }
-.admin-asset-delete-list { display:grid; gap:.45rem; margin-top:.75rem; }
-.admin-asset-delete-row { display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:.65rem .75rem; border:1px solid var(--border); border-radius:.55rem; background:var(--surface); }
-.admin-asset-delete-row > div { display:grid; gap:.15rem; min-width:0; }
-.admin-asset-delete-row strong { overflow-wrap:anywhere; font-size:.84rem; }
-.admin-asset-delete-row .muted, .admin-asset-delete-row small { font-size:.75rem; }
-.admin-asset-delete-row a { flex:none; font-size:.82rem; font-weight:700; }
-@media(max-width:650px) { .admin-asset-delete-row { align-items:flex-start; flex-direction:column; gap:.35rem; } }
-.admin-starter-thumb img { display:block; width:100%; height:100%; object-fit:cover; }
-.admin-starter-thumb span { position:absolute; right:2px; bottom:2px; max-width:calc(100% - 4px); padding:2px 4px; border-radius:3px; background:rgba(5,5,9,.85); color:#fff; font-size:.55rem; white-space:nowrap; }
 .admin-site-settings { padding:clamp(1rem,3vw,1.6rem); }
 .admin-site-logo-preview { display:flex; align-items:center; gap:1rem; padding:1rem; margin:1rem 0 1.4rem; border:1px solid var(--border); border-radius:var(--r-sm); }
 .admin-site-logo-preview img { width:180px; height:82px; padding:.5rem .8rem; object-fit:contain; border-radius:.5rem; background:#fff; }
@@ -27,8 +6,6 @@
 .admin-site-actions { display:flex; align-items:center; justify-content:space-between; gap:1rem; margin-top:1rem; }
 .contact-college-mark { margin:.5rem 0 1rem; }
 @media(max-width:650px) {
-  .admin-gallery-sync { flex-direction:column; align-items:stretch; }
-  .admin-gallery-sync > .btn { width:100%; }
   .admin-site-logo-preview { align-items:flex-start; flex-direction:column; }
   .admin-site-logo-preview img { width:min(100%,240px); height:90px; }
   .admin-site-actions { align-items:stretch; flex-direction:column-reverse; }

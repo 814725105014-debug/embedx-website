@@ -3,9 +3,26 @@ import { icon } from "./icons.js";
 
 export const esc = (s = "") => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
-// Data files store root-relative-without-slash paths; allow only local paths or HTTPS asset URLs.
+// Google Drive share links work on public pages when the file is shared as "Anyone with the link".
+export function driveFileId(value = "") {
+  try {
+    const url = new URL(String(value || "").trim());
+    if (url.hostname !== "drive.google.com") return "";
+    const match = url.pathname.match(/\/file\/d\/([A-Za-z0-9_-]{10,})/);
+    const id = match?.[1] || url.searchParams.get("id") || "";
+    return /^[A-Za-z0-9_-]{10,}$/.test(id) ? id : "";
+  } catch { return ""; }
+}
+export function drivePreviewUrl(value = "") {
+  const id = driveFileId(value);
+  return id ? `https://drive.google.com/file/d/${encodeURIComponent(id)}/preview` : "";
+}
+
+// Data files store root-relative-without-slash paths; Drive links become embeddable image URLs.
 export const asset = (value = "") => {
   const u = String(value || "").trim();
+  const driveId = driveFileId(u);
+  if (driveId) return `https://drive.google.com/uc?export=view&id=${encodeURIComponent(driveId)}`;
   if (/^https:\/\//i.test(u)) return u;
   if (u.startsWith("/") && !u.startsWith("//")) return u;
   return "/" + u.replace(/^\/+/, "");

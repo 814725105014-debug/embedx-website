@@ -198,3 +198,11 @@ body { text-rendering: optimizeLegibility; }
   top: .05rem; left: 0; width: 1.35rem; height: 1.35rem;
   border-width: 2px; background: var(--bg-2);
 }
+
+.event-glimpses { margin-top:2.8rem; }
+.event-glimpses > .muted { margin-top:-.35rem; margin-bottom:1rem; }
+.event-glimpse-card { min-width:0; overflow:hidden; margin:0; padding:.75rem; }
+.event-glimpse-card > img { display:block; width:100%; aspect-ratio:16/10; object-fit:cover; border-radius:var(--r-sm); }
+.event-glimpse-card figcaption, .event-glimpse-card > p { margin:.7rem .15rem .15rem; font-size:.9rem; white-space:pre-line; }
+.event-glimpse-video { aspect-ratio:16/9; overflow:hidden; border-radius:var(--r-sm); background:#000; }
+.event-glimpse-video iframe { display:block; width:100%; height:100%; border:0; }

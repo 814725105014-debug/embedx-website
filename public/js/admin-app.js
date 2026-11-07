@@ -3,7 +3,7 @@
 // Real security lives in firestore.rules / storage.rules (roles from `admin_roles` collection).
 import { firebaseConfig, isConfigured, taskMail } from "./config.js?v=20261106-remove-official-mail";
 import { toast } from "./ui.js?v=20261107-page-cms";
-import { esc, asset } from "./render.js?v=20261107-page-cms";
+import { esc, asset, driveFileId } from "./render.js?v=20261107-drive-glimpses";
 import { announcements as starterAnnouncements } from "./data/announcements.js?v=20261106-admin-controls";
 import { events as starterEvents } from "./data/events.js?v=20261106-event-forms";
 import { projects as starterProjects } from "./data/projects.js?v=20261106-admin-controls";
@@ -34,10 +34,10 @@ const OWNER_EMAIL = "814725105014@trp.srmtrichy.edu.in";
 const PAGES = {
   overview:      { h1: "Overview",       hint: "Live counts, your open tasks and access at a glance.", crud: false },
   announcements: { h1: "Announcements",  hint: "Published instantly to the home-page notice board (pinned first).", crud: true },
-  events:        { h1: "Events",         hint: "Edit event details and posters, then assign a managed registration form or leave it unassigned.", crud: true },
+  events:        { h1: "Events",         hint: "Edit event details, add Drive photos or clips with captions, and assign a registration form.", crud: true },
   projects:      { h1: "Projects",       hint: "Featured projects appear on the home page grid.", crud: true },
   team:          { h1: "Team",           hint: "Executive council & faculty — swap photos and edit details any time.", crud: true },
-  gallery:       { h1: "Gallery",        hint: "Manage photos; deleting a bundled image queues a reviewed GitHub pull request for its repository file.", crud: true },
+  gallery:       { h1: "Gallery",        hint: "Manage public gallery photos. For a poster or event album, use Events to add photos, video clips, and captions.", crud: true },
   resources:     { h1: "Resources",      hint: "Learning Hub guides with category filters.", crud: true },
   achievements:  { h1: "Achievers",      hint: "Hall of Achievers cards.", crud: true },
   forms:         { h1: "Forms & responses", hint: "Design forms, close intake, review submissions, export records, and manage Google Sheets sync.", crud: false },
@@ -187,6 +187,7 @@ const SCHEMAS = {
       { k: "registrationLink", t: "text", full: true, label: "External registration URL (optional)" },
       { k: "eligibility", t: "text", label: "Eligibility" },
       { k: "description", t: "textarea", label: "Description" },
+      { k: "glimpses", t: "list", full: true, label: "Event glimpses — photos or clips with descriptions" },
       { k: "imageUrl", t: "image", label: "Poster image" },
       { k: "isUpcoming", t: "check", label: "Upcoming event" },
       { k: "featured", t: "check", label: "Featured" },
@@ -1017,51 +1018,6 @@ function exportCsv(filename, rows) {
 }
 
 /* ---------------- generic collection pages ---------------- */
-function isStarterGalleryPresent(photo, currentItems = items) {
-  return currentItems.some((item) => item.id === photo.id || item.imageUrl === photo.imageUrl);
-}
-
-const ACTIVE_ASSET_DELETE_STATUSES = new Set(["pending", "queued_for_pr", "pr_open"]);
-async function getGalleryDeletionRequests(db) {
-  const snapshot = await dbMod.getDocs(dbMod.collection(db, "asset_delete_requests"));
-  return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
-    .sort((a, b) => String(b.requestedAt?.toDate?.()?.toISOString?.() || "").localeCompare(String(a.requestedAt?.toDate?.()?.toISOString?.() || "")));
-}
-
-async function renderGalleryTools() {
-  const region = $("#pageRegion");
-  const list = $("#listRegion");
-  if (!region || !list) return;
-  let requests = [];
-  let deletedIds = new Set();
-  try { const { db } = await sdk(); requests = await getGalleryDeletionRequests(db); }
-  catch (error) { console.warn("GitHub image deletion status is not available", error); }
-  try {
-    const { db } = await sdk();
-    const tombstones = await dbMod.getDocs(dbMod.query(dbMod.collection(db, "content_tombstones"), dbMod.where("section", "==", "gallery")));
-    deletedIds = new Set(tombstones.docs.map((doc) => String(doc.get("contentId") || "")));
-  } catch (error) { console.warn("Gallery deletion history is not available", error); }
-  const activeIds = new Set(requests.filter((request) => ACTIVE_ASSET_DELETE_STATUSES.has(request.status || "pending")).map((request) => request.galleryId));
-  const toolbar = document.createElement("section");
-  toolbar.className = "admin-gallery-sync card";
-  toolbar.innerHTML = `<div class="admin-gallery-sync-copy"><strong>Bundled website gallery · ${starterGallery.length} starter photos</strong><p class="muted">Missing starter photos sync automatically when a gallery editor opens Admin. Deleted entries stay removed. The Firestore record is deleted immediately; the public gallery hides it while Firestore is reachable. Its bundled file and fallback row are removed through a reviewed GitHub pull request.</p><div class="admin-starter-thumbs">${starterGallery.map((photo) => {
-    const present = isStarterGalleryPresent(photo);
-    const removing = activeIds.has(photo.id);
-    const removed = deletedIds.has(photo.id);
-    const state = removed ? "Removed" : present ? "Published" : removing ? "GitHub PR pending" : "Waiting for gallery sync";
-    return `<div class="admin-starter-thumb ${present ? "is-published" : removing ? "is-pending-delete" : removed ? "is-deleted" : "is-missing"}" title="${esc(photo.caption)}">${removed ? "" : `<img src="${esc(asset(photo.imageUrl))}" alt="${esc(photo.caption)}" loading="lazy" decoding="async" />`}<span>${state}</span></div>`;
-  }).join("")}</div></div>`;
-  region.insertBefore(toolbar, list);
-
-  if (requests.length) {
-    const statuses = { pending: "Queued", queued_for_pr: "Preparing GitHub PR", pr_open: "PR awaiting review", blocked: "Blocked — image still referenced", completed: "Completed" };
-    const panel = document.createElement("section");
-    panel.className = "admin-asset-delete-status card";
-    panel.innerHTML = `<div class="admin-asset-delete-head"><div><h2>GitHub image removals</h2><p class="muted">Repository files are removed only through a reviewed pull request.</p></div></div><div class="admin-asset-delete-list">${requests.slice(0, 8).map((request) => { const status = request.status || "pending"; const url = String(request.prUrl || ""); const prLink = /^https:\/\/github\.com\//i.test(url) ? `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">Review pull request ↗</a>` : ""; return `<article class="admin-asset-delete-row"><div><strong>${esc(request.imageUrl || request.galleryId || "Image")}</strong><span class="muted">${esc(statuses[status] || status)}</span>${request.detail ? `<small class="muted">${esc(request.detail)}</small>` : ""}</div>${prLink}</article>`; }).join("")}</div>`;
-    region.insertBefore(panel, list);
-  }
-}
-
 async function renderCollection(sec) {
   const schema = SCHEMAS[sec];
   if (!schema) { $("#pageRegion").innerHTML = `<p class="muted">Unknown section.</p>`; return; }
@@ -1073,7 +1029,6 @@ async function renderCollection(sec) {
   if (add) { add.hidden = !can(sec); add.onclick = () => openForm(null); }
   await loadList(sec);
   if (PAGE !== sec) return;
-  if (sec === "gallery" && can(sec) && $("#listRegion")) await renderGalleryTools();
   loadStats();
 }
 
@@ -1213,7 +1168,7 @@ function buildField(f, v) {
     prev.addEventListener("error", () => { prev.alt = "Image preview unavailable"; });
     const urlInput = document.createElement("input");
     urlInput.type = "text"; urlInput.id = `url-${f.k}`; urlInput.value = v ?? "";
-    urlInput.placeholder = "/assets/images/photo.webp or https://…";
+    urlInput.placeholder = "/assets/images/photo.webp, HTTPS URL, or Google Drive share link";
     urlInput.setAttribute("aria-label", `${f.label} URL`);
     urlInput.addEventListener("input", () => {
       input.value = urlInput.value.trim();
@@ -1222,20 +1177,28 @@ function buildField(f, v) {
     });
     const row = document.createElement("div");
     row.style.cssText = "display:flex;gap:.5rem;flex-wrap:wrap;align-items:center";
+    const driveLink = document.createElement("a");
+    driveLink.className = "btn btn-ghost btn-sm";
+    driveLink.href = "https://drive.google.com/drive/my-drive";
+    driveLink.target = "_blank"; driveLink.rel = "noopener noreferrer";
+    driveLink.textContent = "Open Google Drive";
     const fileLabel = document.createElement("label");
     fileLabel.className = "btn btn-ghost btn-sm"; fileLabel.htmlFor = `file-${f.k}`;
-    fileLabel.textContent = "Choose image file";
+    fileLabel.textContent = "Upload image file";
     const file = document.createElement("input");
     file.id = `file-${f.k}`; file.type = "file"; file.accept = "image/jpeg,image/png,image/webp";
     file.style.display = "none"; file.dataset.imgfield = f.k;
-    row.append(fileLabel, file);
-    if (v) {
+    row.append(driveLink, fileLabel, file);
+    if (v && !driveFileId(v)) {
       const editBtn = document.createElement("button");
       editBtn.type = "button"; editBtn.className = "btn btn-ghost btn-sm";
       editBtn.dataset.editimg = f.k; editBtn.textContent = "Edit current photo";
       row.appendChild(editBtn);
     }
-    picker.append(prev, urlInput, row);
+    const driveNote = document.createElement("small");
+    driveNote.className = "muted";
+    driveNote.textContent = "Paste a Drive share link above. Set Share access to Anyone with the link · Viewer so it can display publicly.";
+    picker.append(prev, urlInput, row, driveNote);
     wrap.append(picker);
   } else {
     input = document.createElement("input");
@@ -1244,6 +1207,21 @@ function buildField(f, v) {
   }
   input.id = id; input.name = f.k;
   wrap.appendChild(input);
+  if (f.k === "glimpses") {
+    input.placeholder = "One item per line: image | Drive share link | Caption / description\nvideo | Drive share link | Caption / description";
+    const driveRow = document.createElement("div");
+    driveRow.style.cssText = "display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-top:.5rem";
+    const driveLink = document.createElement("a");
+    driveLink.className = "btn btn-ghost btn-sm";
+    driveLink.href = "https://drive.google.com/drive/my-drive";
+    driveLink.target = "_blank"; driveLink.rel = "noopener noreferrer";
+    driveLink.textContent = "Open Google Drive";
+    const note = document.createElement("small");
+    note.className = "muted";
+    note.textContent = "Copy a Drive share link; set General access to Anyone with the link · Viewer. This link format is supported for photos and video clips.";
+    driveRow.append(driveLink, note);
+    wrap.appendChild(driveRow);
+  }
   return wrap;
 }
 
@@ -1359,6 +1337,17 @@ async function saveForm(e) {
   if (Array.isArray(data.gallery) && !data.gallery.every(isSafeMediaReference)) {
     toast("Gallery entries must be local site paths or HTTPS URLs.", "err"); return;
   }
+  if (sec === "events") {
+    const invalidGlimpse = data.glimpses.some((entry) => {
+      const [kind = "", url = ""] = String(entry).split("|").map((part) => part.trim());
+      const mediaType = kind.toLowerCase();
+      if (!["image", "photo", "video"].includes(mediaType) || !url || !isSafeMediaReference(url)) return true;
+      return mediaType === "video" && !driveFileId(url);
+    });
+    if (invalidGlimpse) {
+      toast("Each event glimpse must be image | image URL | description or video | Google Drive share link | description. Drive videos need Anyone with the link access.", "err"); return;
+    }
+  }
   for (const key of ["githubUrl", "demoUrl", "url", "linkedin"]) {
     if (data[key] && !safeHttpsUrl(data[key])) { toast(`${key} must be an HTTPS URL.`, "err"); return; }
   }
@@ -1420,8 +1409,8 @@ async function removeItem(id) {
   const imageUrl = sec === "gallery" ? String(item?.imageUrl || "") : "";
   const repoImage = repositoryImagePath(imageUrl);
   const starterOwned = Boolean(STARTER_CONTENT[sec]?.some((row) => row.id === id));
-  const warning = repoImage
-    ? `Remove this photo from the live gallery and queue a reviewed GitHub pull request to delete ${repoImage}? The repository file remains until the pull request is approved and merged.`
+  const warning = sec === "gallery"
+    ? "Remove this photo from the public gallery?"
     : `Delete this ${SCHEMAS[sec].label}? This cannot be undone.`;
   if (!confirm(warning)) return;
   try {
@@ -1433,7 +1422,7 @@ async function removeItem(id) {
       if (starterOwned) addContentTombstone(batch, db, sec, id);
       batch.set(requestRef, { galleryId: id, imageUrl: repoImage, requestedBy: me, requestedAt: dbMod.serverTimestamp() });
       await batch.commit();
-      toast("Removed from the live gallery. A GitHub deletion pull request has been queued for review.", "ok");
+      toast("Photo removed from the public gallery.", "ok");
     } else if (starterOwned) {
       const batch = dbMod.writeBatch(db);
       batch.delete(dbMod.doc(db, sec, id));
