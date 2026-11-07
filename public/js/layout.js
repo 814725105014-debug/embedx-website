@@ -1,7 +1,7 @@
 // EMBEDX — Shared chrome: navbar, mobile menu, footer, theme toggle.
 import { icon } from "./icons.js";
-import { initSearch } from "./search.js?v=20261107-page-cms";
-import { getSiteSettings, subscribeSiteSettings, getPageContent, subscribePageContent, applyPageContent, getSiteLinks, subscribeSiteLinks } from "./store.js?v=20261107-site-editor";
+import { initSearch } from "./search.js?v=20261107-admin-controls";
+import { getSiteSettings, subscribeSiteSettings, getPageContent, subscribePageContent, applyPageContent, getSiteLinks, subscribeSiteLinks } from "./store.js?v=20261107-admin-controls";
 import { DEFAULT_SITE_LINKS } from "./data/site-links.js?v=20261107-editor";
 
 function safeNavigationHref(value) {
@@ -234,13 +234,28 @@ function applySiteSettings(settings) {
     if (value != null) element.textContent = String(value);
   });
   document.querySelectorAll("[data-site-src]").forEach((element) => {
-    const fallback = "/assets/images/srm-trp-college-attached.png";
+    const isHero = element.dataset.siteSrc === "heroImageUrl";
+    const fallback = isHero ? "/assets/images/robotics-hero.webp" : "/assets/images/srm-trp-college-attached.png";
     element.addEventListener("error", () => { element.src = fallback; }, { once: true });
     const value = String(settings[element.dataset.siteSrc] || "").trim();
-    if (value.startsWith("/assets/images/") && !value.split(/[?#]/, 1)[0].split("/").includes("..")) { element.src = value; return; }
-    try { const url = new URL(value); if (url.protocol === "https:" && url.hostname === "trp.srmtrichy.edu.in") element.src = url.href; }
-    catch { /* keep the safe bundled default */ }
+    if (value.startsWith("/assets/images/") && !value.split(/[?#]/, 1)[0].split("/").includes("..")) { element.src = value; }
+    else {
+      try {
+        const url = new URL(value);
+        if (url.protocol === "https:" && (isHero || url.hostname === "trp.srmtrichy.edu.in")) element.src = url.href;
+      } catch { /* keep the safe bundled default */ }
+    }
+    const altKey = element.dataset.siteAlt;
+    if (altKey && typeof settings[altKey] === "string") element.alt = settings[altKey];
+    if (element.dataset.siteFit) element.style.objectFit = ["cover", "contain"].includes(settings[element.dataset.siteFit]) ? settings[element.dataset.siteFit] : "cover";
+    if (element.dataset.sitePositionX || element.dataset.sitePositionY) {
+      const x = Math.min(100, Math.max(0, Number(settings[element.dataset.sitePositionX]) || 0));
+      const y = Math.min(100, Math.max(0, Number(settings[element.dataset.sitePositionY]) || 0));
+      element.style.objectPosition = `${x}% ${y}%`;
+    }
   });
+  const heroCaption = document.querySelector("[data-site-hero-caption]");
+  if (heroCaption) heroCaption.hidden = !String(settings.heroImageCaption || "").trim() && !String(settings.heroImageSubcaption || "").trim();
 }
 
 getSiteSettings()

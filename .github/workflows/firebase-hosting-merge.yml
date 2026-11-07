@@ -24,7 +24,7 @@ jobs:
           trap 'rm -f "$key_file"' EXIT
           printf '%s' "$FIREBASE_SERVICE_ACCOUNT_JSON" > "$key_file"
           export GOOGLE_APPLICATION_CREDENTIALS="$key_file"
-          npx --yes firebase-tools deploy --only firestore:rules --project embedx-club-eee --non-interactive
+          npx --yes firebase-tools deploy --only firestore:rules,storage --project embedx-club-eee --non-interactive
       - name: Deploy to Firebase Hosting (live)
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:

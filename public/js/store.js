@@ -1,6 +1,6 @@
 // EMBEDX — Data store: Firestore first, graceful static fallback.
 import { firebaseConfig, isConfigured } from "./config.js?v=20261106";
-import { getPageContentDefaults } from "./data/page-content.js?v=20261107-site-editor";
+import { getPageContentDefaults } from "./data/page-content.js?v=20261107-admin-controls";
 import { DEFAULT_SITE_LINKS, normalizeSiteLinks } from "./data/site-links.js?v=20261107-editor";
 
 const SDK = "https://www.gstatic.com/firebasejs/10.12.5";
@@ -248,7 +248,14 @@ export const DEFAULT_SITE_SETTINGS = Object.freeze({
   linkedinUrl: "https://www.linkedin.com/school/srm-trp-engineering-college",
   instagramUrl: "https://www.instagram.com/trpengineeringcollege",
   facebookUrl: "https://www.facebook.com/SRMTRPEngg",
-  whatsappUrl: "https://chat.whatsapp.com/C0lGhoQ6D9MK79OXroCPuF"
+  whatsappUrl: "https://chat.whatsapp.com/C0lGhoQ6D9MK79OXroCPuF",
+  heroImageUrl: "/assets/images/robotics-hero.webp",
+  heroImageAlt: "Collaborative robotic arm working over a microcontroller board in an embedded systems lab",
+  heroImageFit: "cover",
+  heroImagePositionX: 50,
+  heroImagePositionY: 50,
+  heroImageCaption: "From circuit to system",
+  heroImageSubcaption: "Embedded · Robotics · Automation"
 });
 
 export function normalizeSiteSettings(overrides = {}) {
@@ -262,8 +269,16 @@ export function normalizeSiteSettings(overrides = {}) {
     settings.collegeWebsiteUrl = DEFAULT_SITE_SETTINGS.collegeWebsiteUrl;
     settings.collegeWebsiteLabel = DEFAULT_SITE_SETTINGS.collegeWebsiteLabel;
   }
-  if (String(settings.contactEmail || "").toLowerCase() === "eee@srmtrpr.edu.in") {
+  if (String(settings.contactEmail || "").toLowerCase() === "eee@srmtr.edu.in") {
     settings.contactEmail = DEFAULT_SITE_SETTINGS.contactEmail;
+  }
+  if (!["cover", "contain"].includes(settings.heroImageFit)) settings.heroImageFit = DEFAULT_SITE_SETTINGS.heroImageFit;
+  for (const key of ["heroImagePositionX", "heroImagePositionY"]) {
+    const value = Number(settings[key]);
+    settings[key] = Number.isFinite(value) ? Math.min(100, Math.max(0, value)) : DEFAULT_SITE_SETTINGS[key];
+  }
+  for (const [key, limit] of [["heroImageAlt", 240], ["heroImageCaption", 120], ["heroImageSubcaption", 180]]) {
+    settings[key] = typeof settings[key] === "string" ? settings[key].slice(0, limit) : DEFAULT_SITE_SETTINGS[key];
   }
   return settings;
 }
