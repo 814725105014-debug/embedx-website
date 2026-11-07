@@ -112,7 +112,7 @@ export const team = [
     linkedin: "",
     github: "",
     order: 8,
-    bio: "Coordinates flagship competitions including EMBEDNOVA and fests."
+    bio: "Coordinates club events, inter-college activities, and hands-on bootcamps."
   },
   {
     id: "media-coordinator",

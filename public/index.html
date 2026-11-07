@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>EMBEDX – Embedded Systems &amp; Automation Club | SRM TRP Engineering College</title>
   <meta name="description" content="Official website of EMBEDX – Embedded Systems and Automation Club, Department of Electrical and Electronics Engineering (EEE), SRM TRP Engineering College, Tiruchirappalli. INNOVATE • INTEGRATE • INSPIRE." />
-  <meta name="keywords" content="EMBEDX, Embedded Systems, Automation, IoT, Robotics, SRM TRP Engineering College, EEE Department, EmbedNova, Arduino, STM32, PLC, SCADA" />
+  <meta name="keywords" content="EMBEDX, Embedded Systems, Automation, IoT, Robotics, SRM TRP Engineering College, EEE Department, Arduino, STM32, PLC, SCADA" />
   <meta property="og:title" content="EMBEDX – Embedded Systems &amp; Automation Club | SRM TRP Engineering College" />
   <meta property="og:description" content="A practical technology community where students learn embedded systems, automation, IoT, robotics, and real-world engineering." />
   <meta property="og:image" content="https://embedx-club-eee.web.app/assets/images/embedx-social-share.webp" />
@@ -30,7 +30,7 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' https: https://trp.srmtrichy.edu.in https://drive.google.com https://drive.usercontent.google.com https://*.googleusercontent.com data: https://firebasestorage.googleapis.com https://www.google-analytics.com; connect-src 'self' https://www.gstatic.com https://www.google-analytics.com https://analytics.google.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://firebasestorage.googleapis.com https://www.googleapis.com; media-src 'self' https:; object-src 'none'; base-uri 'self'; form-action 'self'" />
   <link rel="stylesheet" href="/css/style.css?v=20261107-admin-controls" />
   <script src="/js/theme.js?v=20261106"></script>
-  <script type="module" src="/js/main.js?v=20261108-event-dates"></script>
+  <script type="module" src="/js/main.js?v=20261107-form-fix"></script>
   <link rel="stylesheet" href="/css/corporate.css?v=20261107-admin-controls" />
 </head>
 <body data-page="home">
@@ -99,7 +99,7 @@
           <div class="step"><h4>Learn</h4><p>Register-level MCU programming, C/C++, circuit theorems, sensor protocols.</p></div>
           <div class="step"><h4>Experiment</h4><p>Lab testing with oscilloscopes, logic analyzers, simulation suites.</p></div>
           <div class="step"><h4>Build</h4><p>Custom PCBs, robot frames, optimized firmware stacks.</p></div>
-          <div class="step"><h4>Compete</h4><p>EMBEDNOVA, hackathons, National Level Innovation events.</p></div>
+          <div class="step"><h4>Compete</h4><p>Represent the institution in hackathons, circuit debugging contests, and technical symposia.</p></div>
           <div class="step"><h4>Innovate</h4><p>Original IP, patentable prototypes, interdisciplinary systems.</p></div>
           <div class="step"><h4>Impact</h4><p>Sustainable healthcare, agricultural &amp; energy automation.</p></div>
         </div>
@@ -150,14 +150,9 @@
   <section class="section" id="events">
     <div class="wrap">
       <div class="section-head" data-reveal>
-        <p class="eyebrow" data-page-copy="home:eventsEyebrow">Flagship Signature Event</p>
-        <h2 data-page-copy="home:eventsTitle">EMBEDNOVA — A Tech-Powered Event for Innovative Minds</h2>
-        <p data-page-copy="home:eventsDescription">INNOVATE • INTEGRATE • AUTOMATE. EMBEDNOVA is the premier technical competition by EMBEDX, bringing together engineering students across the state to tackle rapid embedded challenges, circuit troubleshooting, and innovative automation systems.</p>
-      </div>
-      <div class="grid grid-3">
-        <article class="card tilt" data-reveal><span class="track-num">01</span><h3>TECH CHALLENGE</h3><p class="card-sub">MCQs &amp; Logic</p><p class="muted" style="font-size:.92rem">Test your Embedded Knowledge! MCQs, Aptitude, Low-Level Logic, and Real-World Scenarios.</p><a class="card-link" href="/pages/event-detail.html?id=embednova#track-01">Track specs →</a></article>
-        <article class="card tilt" data-reveal><span class="track-num">02</span><h3>CIRCUIT WIZARD</h3><p class="card-sub">Debug &amp; Fix</p><p class="muted" style="font-size:.92rem">Build. Debug. Perfect. Component selection, hardware fault diagnosis, and precision wiring.</p><a class="card-link" href="/pages/event-detail.html?id=embednova#track-02">Track specs →</a></article>
-        <article class="card tilt" data-reveal><span class="track-num">03</span><h3>AUTOMATION ARENA</h3><p class="card-sub">Open Innovation</p><p class="muted" style="font-size:.92rem">Automate the Future! Problem statement solutions, working prototypes, and jury presentation.</p><a class="card-link" href="/pages/event-detail.html?id=embednova#track-03">Track specs →</a></article>
+        <p class="eyebrow" data-page-copy="home:eventsEyebrow">Events &amp; Workshops</p>
+        <h2 data-page-copy="home:eventsTitle">Club Events &amp; Workshops</h2>
+        <p data-page-copy="home:eventsDescription">Explore technical events, workshops, and hands-on learning opportunities hosted by EMBEDX.</p>
       </div>
       <h3 style="margin:2.4rem 0 1rem">All Club Events &amp; Workshops</h3>
       <div class="grid grid-3" id="eventsGrid"></div>
@@ -236,7 +231,7 @@
       <div class="section-head" data-reveal>
         <p class="eyebrow">Get in Touch</p>
         <h2>Connect With EMBEDX</h2>
-        <p>Whether you have questions regarding club membership, upcoming EmbedNova rounds, project demonstrations, or technical collaborations, our team is here to assist.</p>
+        <p>Whether you have questions regarding club membership, upcoming club activities, project demonstrations, or technical collaborations, our team is here to assist.</p>
       </div>
       <div class="grid grid-3">
         <div class="card" data-reveal><h3 style="font-size:1.05rem">Location</h3><p class="muted" style="font-size:.92rem;margin:0">Department of Electrical and Electronics Engineering<br />SRM TRP Engineering College, SRM Nagar, Near Samayapuram, Tiruchirappalli – 621 105.</p></div>

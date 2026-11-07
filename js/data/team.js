@@ -85,7 +85,7 @@ const teamData = {
       role: "Signature Events Head",
       department: "EEE / Events Wing",
       avatar: "assets/branding/embedx-logo-emblem.png",
-      bio: "Coordinates flagship events such as EMBEDNOVA, inter-college symposiums, and hands-on bootcamps.",
+      bio: "Coordinates club events, inter-college symposiums, and hands-on bootcamps.",
       isPlaceholder: true
     },
     {

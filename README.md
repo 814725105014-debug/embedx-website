@@ -126,9 +126,9 @@ Storage.
 | `resources` | `title, category, level, tags[], desc, url, order` | written by the admin portal; Learning Hub; optional HTTPS resource links |
 | `achievements` | `badge, title, subtitle, description, image, team, institution, projectId, highlights[], order` | written by the admin portal; Hall of Achievers |
 | `announcements` | `title, kind, body, pinned, createdAt` | written by the admin portal; home notice board (pinned first) |
-| `forms` | owner-managed form definitions, seeded with join/enquiry/EMBEDNOVA/feedback starters | public can read open/closed definitions; role-scoped admin writes |
+| `forms` | owner-managed form definitions, seeded with Join, Enquiry, and Feedback forms | public can read open/closed definitions; role-scoped admin writes |
 | `form_responses` | custom registrations, surveys, and feedback (including 1–5 star ratings) | public create only while a form is open; assigned Forms admins monitor/export/delete |
-| `members_applications` | written by Join + EMBEDNOVA forms | public create; assigned Forms admins monitor/export/delete |
+| `members_applications` | written by Join form submissions | public create; assigned Forms admins monitor/export/delete |
 | `contact_messages` | written by Contact form | public create; assigned Forms admins monitor/export/delete |
 | `site_settings/forms` | Google Sheets sync URL and last-run health | Forms admins can read; owner/Apps Script owner writes |
 | `site_settings/site` | Public logo, official portal, phone, email, and social links | Public read; assigned `site` admins write through Website settings |
@@ -219,7 +219,7 @@ published token must be treated as exposed.
 ### Forms, registrations, and Google Sheets
 
 The Admin → **Forms & responses** page seeds and manages the built-in Join,
-Enquiry, EMBEDNOVA registration, and Feedback forms, plus custom forms. Owners and
+Enquiry and Feedback forms, plus custom forms. Owners and
 admins explicitly assigned the `forms` permission can edit custom questions,
 open/close intake, review submissions, export CSV, and delete custom forms or
 responses. Feedback forms support accessible 1–5 star rating questions. Join and

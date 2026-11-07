@@ -1,5 +1,5 @@
 // EMBEDX — Form handling: validation, honeypot, rate limiting, Firestore writes, toasts.
-import { submitApplication, submitContact, getFormDefinition, submitFormResponse, isConfigured } from "./store.js?v=20261107-admin-controls";
+import { submitApplication, submitContact, getFormDefinition, submitFormResponse, isConfigured } from "./store.js?v=20261107-form-fix";
 import { toast } from "./ui.js?v=20261107-admin-controls";
 
 const RATE_KEY = "embedx_rate";
@@ -155,7 +155,8 @@ function wire(formId, { build, submit, successMsg, draftKey, formKey }) {
     } catch (err) {
       console.error("Public form submission failed", { code: err?.code || "unknown", message: err?.message || String(err) });
       const message = submissionFailureMessage(err);
-      if (status) status.textContent = message;
+      const errorCode = String(err?.code || "").replace(/^firestore\//, "");
+      if (status) status.textContent = errorCode ? `${message} (Reference: ${errorCode})` : message;
       toast(message, "err");
     } finally {
       form.dataset.sending = "0";

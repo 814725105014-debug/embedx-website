@@ -30,8 +30,8 @@ export const PAGE_CONTENT = {
       ["achieversTitle", "Achievers: Heading", "Hall of Achievers"],
       ["achieversDescription", "Achievers: Description", "Celebrating the hard work, competitive representation, and engineering triumphs of EMBEDX club members across national and regional stages."],
       ["eventsEyebrow", "Events: Eyebrow", "Flagship Signature Event"],
-      ["eventsTitle", "Events: Heading", "EMBEDNOVA — A Tech-Powered Event for Innovative Minds"],
-      ["eventsDescription", "Events: Description", "INNOVATE • INTEGRATE • AUTOMATE. EMBEDNOVA is the premier technical competition by EMBEDX, bringing together engineering students across the state to tackle rapid embedded challenges, circuit troubleshooting, and innovative automation systems."]
+      ["eventsTitle", "Events: Heading", "Club Events & Workshops"],
+      ["eventsDescription", "Events: Description", "Explore technical events, workshops, and hands-on learning opportunities hosted by EMBEDX."]
     ]
   },
   about: {
@@ -75,7 +75,7 @@ export const PAGE_CONTENT = {
     fields: [
       ["eyebrow", "Page: Eyebrow", "Competitions & Tech Fests"],
       ["title", "Page: Heading", "Club Events & Fests"],
-      ["intro", "Page: Introduction", "From our flagship technical competition EMBEDNOVA to hands-on silicon workshops and industrial automation bootcamps."]
+      ["intro", "Page: Introduction", "Explore current club events, practical workshops, and technical bootcamps."]
     ]
   },
   achievers: {

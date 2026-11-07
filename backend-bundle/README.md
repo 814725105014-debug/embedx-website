@@ -17,7 +17,7 @@ No Cloud Functions are required.
 ## Seed content
 
 The seeder adds missing docs in six public content collections and the `forms`
-configuration collection (`join`, `enquiry`, `embednova`, `feedback`). It never seeds
+configuration collection (`join`, `enquiry`, `feedback`). It never seeds
 gallery photos, form responses, `admin_roles`, or tasks. Announcements are intentionally
 empty until real notices are written. On owner sign-in, the portal automatically adds
 missing starter docs without overwriting existing edits or requiring Storage. Permanent
@@ -103,11 +103,13 @@ source of truth. The generated
 `appsscript/.clasp.json` only links your local folder to your Apps Script project and
 is intentionally git-ignored.
 
-Deploy Firestore rules first. Then open the created project, run `setupEmbedxSheets()`
-once as the allowlisted owner, and approve the requested Google Sheets, Firestore
-REST, email, and time-trigger scopes. This owner-authorized step creates the
-spreadsheet, installs a five-minute sync trigger, and publishes the sheet URL and
-health to `site_settings/forms` for the admin portal. No Web App endpoint, shared
+Deploy Firestore rules first. Then open the created project and run `setupEmbedxSheets()`
+as the allowlisted owner (the first time, and again after updating the script), and approve
+the requested Google Sheets, Firestore REST, email, and time-trigger scopes. This owner-authorized step creates the
+spreadsheet, installs a one-minute sync trigger, and publishes the sheet URL and
+health to `site_settings/forms` for the admin portal. New Join and Enquiry records are
+emailed to `814725105014@trp.srmtrichy.edu.in` on the next sync, and submitters receive
+a confirmation email when their record is first imported. No Web App endpoint, shared
 secret, Cloud Function, or paid Firebase service is involved. Share the generated
 sheet only with trusted reviewers.
 

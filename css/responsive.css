@@ -117,9 +117,7 @@
     flex: 1 1 40%;
   }
 
-  .embednova-feature-banner {
-    padding: 1.75rem;
-  }
+
 
   .footer-grid {
     grid-template-columns: 1fr;
