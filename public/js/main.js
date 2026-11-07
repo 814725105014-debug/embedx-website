@@ -1,10 +1,10 @@
 // EMBEDX — Page controller. Dispatches renderers by body[data-page].
-import "./layout.js?v=20261107-page-cms";
-import "./forms.js?v=20261107-page-cms";
-import { initAll } from "./ui.js?v=20261107-page-cms";
+import "./layout.js?v=20261107-site-editor";
+import "./forms.js?v=20261107-site-editor";
+import { initAll } from "./ui.js?v=20261107-site-editor";
 import { icon } from "./icons.js";
-import { esc, asset, externalUrl, drivePreviewUrl, skeletons, projectCard, eventCard, teamCard, domainCard, resourceCard, achievementCard, announcementCard, galleryButton } from "./render.js?v=20261107-drive-glimpses";
-import { getProjects, getEvents, getTeam, getGallery, getAnnouncements, getResources, getAchievements, getPageContent, subscribePageContent, applyPageContent, subscribePublicCollection } from "./store.js?v=20261107-page-cms";
+import { esc, asset, externalUrl, drivePreviewUrl, skeletons, projectCard, eventCard, teamCard, domainCard, resourceCard, achievementCard, announcementCard, galleryButton } from "./render.js?v=20261107-site-editor";
+import { getProjects, getEvents, getTeam, getGallery, getAnnouncements, getResources, getAchievements, getPageContent, subscribePageContent, applyPageContent, getPageBlocks, subscribePageBlocks, subscribePublicCollection } from "./store.js?v=20261107-site-editor";
 import { domains, tools, careers } from "./data/domains.js";
 
 const $ = (s) => document.querySelector(s);
@@ -325,8 +325,62 @@ async function achieversPage() {
   initAll();
 }
 
+function renderPageBlocks(region, blocks) {
+  if (!region) return;
+  region.replaceChildren();
+  for (const block of blocks) {
+    const safeHref = (value) => {
+      const href = String(value || "").trim();
+      if (href.startsWith("/") && !href.startsWith("//") && !href.includes("\\")) return href;
+      try { const url = new URL(href); return ["https:", "mailto:", "tel:"].includes(url.protocol) ? url.href : ""; } catch { return ""; }
+    };
+    let element;
+    if (block.type === "heading") {
+      element = document.createElement("section");
+      const h = document.createElement("h2"); h.textContent = block.title; element.append(h);
+      if (block.body) { const p = document.createElement("p"); p.className = "muted"; p.textContent = block.body; element.append(p); }
+    } else if (block.type === "text") {
+      element = document.createElement("section");
+      if (block.title) { const h = document.createElement("h2"); h.textContent = block.title; element.append(h); }
+      const p = document.createElement("p"); p.textContent = block.body; element.append(p);
+    } else if (block.type === "feature") {
+      element = document.createElement("article"); element.className = "card page-feature-block";
+      if (block.title) { const h = document.createElement("h3"); h.textContent = block.title; element.append(h); }
+      if (block.body) { const p = document.createElement("p"); p.textContent = block.body; element.append(p); }
+    } else if (block.type === "link") {
+      element = document.createElement("article"); element.className = "page-link-block";
+      if (block.title) { const h = document.createElement("h3"); h.textContent = block.title; element.append(h); }
+      if (block.body) { const p = document.createElement("p"); p.textContent = block.body; element.append(p); }
+      const href = safeHref(block.url);
+      if (href) { const a = document.createElement("a"); a.className = "btn btn-primary"; a.href = href; a.textContent = block.label || "Learn more"; if (/^https:/i.test(href) && new URL(href).origin !== location.origin) { a.target = "_blank"; a.rel = "noopener noreferrer"; } element.append(a); }
+    } else if (block.type === "image") {
+      const src = safeHref(block.url);
+      if (!src) continue;
+      element = document.createElement("figure"); element.className = "page-media-block";
+      const img = document.createElement("img"); img.src = src; img.alt = block.caption || block.title || "Page image"; img.loading = "lazy"; img.decoding = "async"; element.append(img);
+      if (block.caption || block.title) { const caption = document.createElement("figcaption"); caption.textContent = block.caption || block.title; element.append(caption); }
+    } else if (block.type === "video") {
+      const src = safeHref(block.url);
+      if (!src || !/^https:/i.test(src)) continue;
+      element = document.createElement("figure"); element.className = "page-media-block";
+      const video = document.createElement("video"); video.src = src; video.controls = true; video.preload = "metadata"; video.playsInline = true; element.append(video);
+      if (block.caption || block.title) { const caption = document.createElement("figcaption"); caption.textContent = block.caption || block.title; element.append(caption); }
+    }
+    if (element) region.append(element);
+  }
+  region.hidden = region.childElementCount === 0;
+}
+
 /* ---------- boot ---------- */
 const page = document.body.dataset.page;
+const pageBlockRegion = document.createElement("section");
+pageBlockRegion.className = "wrap page-custom-blocks";
+pageBlockRegion.hidden = true;
+$("main")?.append(pageBlockRegion);
+if (page) {
+  getPageBlocks(page).then((blocks) => renderPageBlocks(pageBlockRegion, blocks));
+  subscribePageBlocks(page, (blocks) => renderPageBlocks(pageBlockRegion, blocks));
+}
 const editableCopyPages = new Set(["home", "about", "domains", "projects", "events", "achievers", "team", "resources", "contact", "join"]);
 if (editableCopyPages.has(page)) {
   getPageContent(page).then((content) => applyPageContent(page, content));

@@ -10,3 +10,12 @@
   .admin-site-logo-preview img { width:min(100%,240px); height:90px; }
   .admin-site-actions { align-items:stretch; flex-direction:column-reverse; }
 }
+
+.editor-section { padding: clamp(1rem, 2vw, 1.5rem); }
+.admin-link-group, .admin-content-block { border: 1px solid var(--border); border-radius: var(--r-md); padding: 1rem; margin-top: 1rem; }
+.admin-link-row { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1.3fr) auto; align-items: end; gap: .8rem; padding: .8rem 0; border-top: 1px solid var(--border); }
+.admin-link-row:first-child { border-top: 0; }
+.admin-link-row .field, .admin-content-block .field { margin: 0; }
+.admin-link-group h3, .admin-content-block strong { margin: 0; }
+.admin-content-block .form-grid { margin-top: .8rem; }
+@media (max-width: 650px) { .admin-link-row { grid-template-columns: 1fr; } .admin-link-row button { justify-self: start; } }
