@@ -3,7 +3,7 @@ import "./layout.js?v=20261107-page-cms";
 import "./forms.js?v=20261107-page-cms";
 import { initAll } from "./ui.js?v=20261107-page-cms";
 import { icon } from "./icons.js";
-import { esc, asset, externalUrl, skeletons, projectCard, eventCard, teamCard, domainCard, resourceCard, achievementCard, announcementCard, galleryButton } from "./render.js?v=20261107-page-cms";
+import { esc, asset, externalUrl, drivePreviewUrl, skeletons, projectCard, eventCard, teamCard, domainCard, resourceCard, achievementCard, announcementCard, galleryButton } from "./render.js?v=20261107-drive-glimpses";
 import { getProjects, getEvents, getTeam, getGallery, getAnnouncements, getResources, getAchievements, getPageContent, subscribePageContent, applyPageContent, subscribePublicCollection } from "./store.js?v=20261107-page-cms";
 import { domains, tools, careers } from "./data/domains.js";
 
@@ -186,6 +186,20 @@ function eventRegistrationTarget(event) {
   return external ? { href: external, external: true } : null;
 }
 
+function eventGlimpseCard(entry, eventTitle) {
+  const [rawType = "", rawUrl = "", ...captionParts] = String(entry || "").split("|").map((part) => part.trim());
+  const type = rawType.toLowerCase();
+  const caption = captionParts.join(" | ") || `${eventTitle} ${type === "video" ? "clip" : "photo"}`;
+  if (type === "video") {
+    const src = drivePreviewUrl(rawUrl);
+    if (!src) return "";
+    return `<article class="card event-glimpse-card"><div class="event-glimpse-video"><iframe src="${esc(src)}" title="${esc(caption)}" loading="lazy" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="muted">${esc(caption)}</p></article>`;
+  }
+  if (type !== "image" && type !== "photo") return "";
+  const src = asset(rawUrl);
+  return `<figure class="card event-glimpse-card"><img src="${esc(src)}" alt="${esc(caption)}" loading="lazy" decoding="async" /><figcaption class="muted">${esc(caption)}</figcaption></figure>`;
+}
+
 /* ---------- event detail ---------- */
 async function eventDetail() {
   const c = $("#eventDetailContainer");
@@ -229,6 +243,7 @@ async function eventDetail() {
           </ul></div>` : ""}
       </div>
     </div>
+    ${(Array.isArray(e.glimpses) && e.glimpses.length) ? `<section class="event-glimpses" aria-labelledby="eventGlimpsesTitle"><h2 id="eventGlimpsesTitle">Event Glimpses</h2><p class="muted">Photos and clips from ${esc(e.title)}.</p><div class="grid grid-3">${e.glimpses.map((entry) => eventGlimpseCard(entry, e.title)).filter(Boolean).join("")}</div></section>` : ""}
     ${(e.tracks || []).length ? `
     <h2 style="margin-top:2.8rem">The ${e.tracks.length} ${esc(e.title)} Tracks</h2>
     <p class="muted">Choose your track or compete across multiple disciplines.</p>
