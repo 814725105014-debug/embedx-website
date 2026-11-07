@@ -19,3 +19,17 @@
 .admin-link-group h3, .admin-content-block strong { margin: 0; }
 .admin-content-block .form-grid { margin-top: .8rem; }
 @media (max-width: 650px) { .admin-link-row { grid-template-columns: 1fr; } .admin-link-row button { justify-self: start; } }
+
+.hero-settings-panel { margin-top:1.4rem; padding:1rem; border:1px solid var(--border); border-radius:var(--r-md); background:var(--glass-surface); }
+.hero-settings-panel .admin-form-toolbar { margin-top:0; }
+.hero-settings-preview { position:relative; width:min(100%,680px); aspect-ratio:16/9; overflow:hidden; margin:.8rem 0 1rem; border:1px solid var(--border-strong); border-radius:var(--r-md); background:var(--bg-3); }
+.hero-settings-preview img { width:100%; height:100%; display:block; }
+.hero-settings-preview span { position:absolute; left:.7rem; bottom:.7rem; padding:.3rem .55rem; border:1px solid rgba(255,255,255,.22); border-radius:999px; color:#fff; background:rgba(12,9,17,.75); font-size:.72rem; }
+.hero-settings-panel input[type="file"] { min-height:44px; }
+.hero-settings-panel input[type="range"] { accent-color:var(--cyan); padding:.2rem 0; }
+.hero-settings-panel output { color:var(--cyan); font-variant-numeric:tabular-nums; }
+.admin-user-activity { display:flex; align-items:center; flex-wrap:wrap; gap:.45rem .8rem; color:var(--text-muted); font-size:.78rem; }
+.activity-status { border-color:rgba(148,163,184,.35); color:var(--text-muted); }
+.activity-status.is-active { border-color:rgba(52,211,153,.45); color:var(--ok); background:rgba(52,211,153,.08); }
+.admin-owner-card .admin-user-activity { grid-column:1/-1; }
+@media(max-width:650px) { .admin-owner-card .admin-user-activity { grid-column:auto; } }

@@ -862,3 +862,39 @@ details.perm-edit summary { padding: .55rem 0; min-height: 44px; display: flex; 
 .page-media-block img, .page-media-block video { width: 100%; max-height: 560px; object-fit: contain; border-radius: var(--r-md); background: #080b12; }
 .page-media-block figcaption { margin-top: .55rem; color: var(--text-muted); font-size: .9rem; }
 .form-submit-status { color: var(--danger, #ef4444); font-weight: 600; margin-top: .8rem; }
+
+/* Theme-aware browser scrollbars */
+html { scrollbar-width: thin; scrollbar-color: var(--cyan) var(--bg-2); }
+::-webkit-scrollbar { width: 11px; height: 11px; }
+::-webkit-scrollbar-track { background: var(--bg-2); border-inline-start: 1px solid var(--border); }
+::-webkit-scrollbar-thumb { background: linear-gradient(180deg, var(--cyan), var(--violet)); border: 2px solid var(--bg-2); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, var(--cyan-strong), var(--violet-strong)); }
+::-webkit-scrollbar-corner { background: var(--bg-2); }
+
+/* Consistent purple/gold checkboxes across forms and the admin permissions UI */
+input[type="checkbox"] {
+  appearance: none; -webkit-appearance: none; position: relative;
+  width: 1.2rem; height: 1.2rem; flex: 0 0 1.2rem;
+  display: inline-grid; place-items: center; margin: 0;
+  border: 1px solid var(--border-strong); border-radius: 5px;
+  background: var(--bg-2); vertical-align: middle; cursor: pointer;
+  transition: background .16s ease, border-color .16s ease, box-shadow .16s ease, transform .16s ease;
+}
+input[type="checkbox"]::after {
+  content: ""; width: .34rem; height: .62rem; margin-top: -.08rem;
+  border: solid #fff; border-width: 0 2px 2px 0;
+  transform: rotate(45deg) scale(0); transition: transform .14s ease;
+}
+input[type="checkbox"]:checked { border-color: var(--cyan); background: var(--grad); box-shadow: 0 0 0 2px color-mix(in srgb, var(--cyan) 18%, transparent); }
+input[type="checkbox"]:checked::after { transform: rotate(45deg) scale(1); }
+input[type="checkbox"]:focus-visible { outline: 2px solid var(--violet); outline-offset: 3px; }
+input[type="checkbox"]:disabled { opacity: .55; cursor: not-allowed; }
+.check-row input[type="checkbox"] { margin-top: .1rem; }
+
+/* Center global social icons and keep their glyphs visually centered */
+.footer .socials { justify-content: center; align-items: center; }
+.footer .socials .icon-btn { display: inline-flex; align-items: center; justify-content: center; padding: 0; line-height: 0; }
+.footer .socials .icon-btn svg { display: block; flex: 0 0 auto; }
+
+/* Let the home banner crop around its true center by default */
+.hero-visual { justify-self: center; }

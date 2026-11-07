@@ -2,8 +2,8 @@
 // One page per section (/admin/, /admin/events, /admin/admins, …) sharing this module.
 // Real security lives in firestore.rules / storage.rules (roles from `admin_roles` collection).
 import { firebaseConfig, isConfigured, taskMail } from "./config.js?v=20261106-remove-official-mail";
-import { toast } from "./ui.js?v=20261107-site-editor";
-import { esc, asset, driveFileId } from "./render.js?v=20261107-site-editor";
+import { toast } from "./ui.js?v=20261107-admin-controls";
+import { esc, asset, driveFileId } from "./render.js?v=20261107-admin-controls";
 import { announcements as starterAnnouncements } from "./data/announcements.js?v=20261106-admin-controls";
 import { events as starterEvents } from "./data/events.js?v=20261106-event-forms";
 import { projects as starterProjects } from "./data/projects.js?v=20261106-admin-controls";
@@ -12,8 +12,8 @@ import { gallery as starterGallery } from "./data/gallery.js?v=20261106-admin-co
 import { resources as starterResources } from "./data/resources.js?v=20261106-admin-controls";
 import { achievements as starterAchievements } from "./data/achievements.js?v=20261106-admin-controls";
 import { forms as starterForms } from "./data/forms.js?v=20261106-admin-controls";
-import { DEFAULT_SITE_SETTINGS, getSiteSettings, normalizeSiteSettings } from "./store.js?v=20261107-site-editor";
-import { PAGE_CONTENT, getPageContentDefaults } from "./data/page-content.js?v=20261107-site-editor";
+import { DEFAULT_SITE_SETTINGS, getSiteSettings, normalizeSiteSettings } from "./store.js?v=20261107-admin-controls";
+import { PAGE_CONTENT, getPageContentDefaults } from "./data/page-content.js?v=20261107-admin-controls";
 import { DEFAULT_SITE_LINKS, SITE_LINK_GROUPS, normalizeSiteLinks } from "./data/site-links.js?v=20261107-editor";
 
 const STARTER_CONTENT = {
@@ -103,11 +103,16 @@ const NAV = [
 
 let authMod = null, dbMod = null, stMod = null, app = null;
 let role = null, me = "", perms = [];
+let hasTaskAccess = false;
 let items = [], editingId = null, pendingImageField = null, editorState = null;
 let statsCache = null;
 let listRequestId = 0;
 let formsRefreshTimer = null;
 let roleWatchUnsubscribe = null;
+let adminPresenceUnsubscribe = null;
+let adminPresenceTimer = null;
+let activityHeartbeatTimer = null;
+let activityVisibilityHandler = null;
 let starterContentSyncUser = "";
 
 async function sdk() {
@@ -121,6 +126,95 @@ async function sdk() {
 const $ = (s) => document.querySelector(s);
 const can = (sec) => role === "owner" || perms.includes(sec);
 const canView = (sec) => can(sec) || (role === "hod" && sec !== "tasks" && sec !== "admins" && sec !== "forms");
+function canAccessAdminPage(page) {
+  if (page === "overview") return true;
+  if (page === "tasks") return can("tasks") || hasTaskAccess;
+  if (page === "admins") return role === "owner";
+  return canView(page);
+}
+
+async function recordAdminActivity(field) {
+  if (!me || !["lastLoginAt", "lastActiveAt"].includes(field)) return;
+  try {
+    const { db } = await sdk();
+    const ref = dbMod.doc(db, "admin_roles", me);
+    const value = dbMod.serverTimestamp();
+    if (role === "owner") await dbMod.setDoc(ref, { [field]: value }, { merge: true });
+    else await dbMod.updateDoc(ref, { [field]: value });
+  } catch (error) { console.warn(`Could not update admin ${field}`, error); }
+}
+function stopAdminActivity() {
+  if (activityHeartbeatTimer) clearInterval(activityHeartbeatTimer);
+  activityHeartbeatTimer = null;
+  if (activityVisibilityHandler) document.removeEventListener("visibilitychange", activityVisibilityHandler);
+  activityVisibilityHandler = null;
+}
+function startAdminActivity() {
+  stopAdminActivity();
+  const loginFlag = `embedx-admin-login-recorded:${me}`;
+  let alreadyRecorded = false;
+  try { alreadyRecorded = sessionStorage.getItem(loginFlag) === "1"; } catch { /* storage can be disabled */ }
+  if (!alreadyRecorded) {
+    void recordAdminActivity("lastLoginAt");
+    try { sessionStorage.setItem(loginFlag, "1"); } catch { /* no persistent session storage */ }
+  }
+  const touch = () => { if (document.visibilityState === "visible") void recordAdminActivity("lastActiveAt"); };
+  touch();
+  activityHeartbeatTimer = setInterval(touch, 90_000);
+  activityVisibilityHandler = () => { if (document.visibilityState === "visible") touch(); };
+  document.addEventListener("visibilitychange", activityVisibilityHandler);
+}
+function activityMillis(value) {
+  if (value && typeof value.toDate === "function") return value.toDate().getTime();
+  if (value instanceof Date) return value.getTime();
+  if (typeof value === "number") return value;
+  const parsed = Date.parse(value || "");
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+function formatActivityTime(value) {
+  const millis = activityMillis(value);
+  return millis ? new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(millis) : "Never recorded";
+}
+function paintPresenceCard(card) {
+  const activity = card?.querySelector("[data-admin-presence]");
+  if (!activity) return;
+  const lastActive = Number(activity.dataset.lastActive || 0);
+  const active = lastActive > 0 && Date.now() - lastActive <= 4 * 60_000;
+  const status = activity.querySelector("[data-presence-status]");
+  if (status) { status.textContent = active ? "Active now" : lastActive ? "Inactive" : "No recent activity"; status.classList.toggle("is-active", active); }
+  const activeLabel = activity.querySelector("[data-last-active-label]");
+  if (activeLabel) activeLabel.textContent = `Last active: ${formatActivityTime(lastActive)}`;
+  const loginLabel = activity.querySelector("[data-last-login-label]");
+  if (loginLabel) loginLabel.textContent = `Last login: ${formatActivityTime(Number(activity.dataset.lastLogin || 0))}`;
+}
+function updateAdminPresence(email, data = {}) {
+  document.querySelectorAll(".admin-user-card[data-admin-email]").forEach((card) => {
+    if (card.dataset.adminEmail !== String(email).toLowerCase()) return;
+    const activity = card.querySelector("[data-admin-presence]");
+    if (!activity) return;
+    activity.dataset.lastActive = String(activityMillis(data.lastActiveAt) || 0);
+    activity.dataset.lastLogin = String(activityMillis(data.lastLoginAt) || 0);
+    paintPresenceCard(card);
+  });
+}
+function stopAdminPresenceWatch() {
+  if (adminPresenceUnsubscribe) adminPresenceUnsubscribe();
+  adminPresenceUnsubscribe = null;
+  if (adminPresenceTimer) clearInterval(adminPresenceTimer);
+  adminPresenceTimer = null;
+}
+async function startAdminPresenceWatch() {
+  stopAdminPresenceWatch();
+  if (role !== "owner" || PAGE !== "admins") return;
+  try {
+    const { db } = await sdk();
+    if (PAGE !== "admins") return;
+    adminPresenceUnsubscribe = dbMod.onSnapshot(dbMod.collection(db, "admin_roles"), (snapshot) => {
+      snapshot.docs.forEach((doc) => updateAdminPresence(doc.id, doc.data()));
+    }, (error) => console.warn("Live admin activity is unavailable", error));
+    adminPresenceTimer = setInterval(() => document.querySelectorAll(".admin-user-card[data-admin-email]").forEach(paintPresenceCard), 30_000);
+  } catch (error) { console.warn("Could not subscribe to admin activity", error); }
+}
 
 async function countCollection(db, name) {
   const ref = dbMod.collection(db, name);
@@ -366,7 +460,11 @@ async function boot() {
   const { auth } = await sdk();
   authMod.onAuthStateChanged(auth, async (user) => {
     if (roleWatchUnsubscribe) { roleWatchUnsubscribe(); roleWatchUnsubscribe = null; }
-    if (!user) { starterContentSyncUser = ""; showView("out"); return; }
+    if (!user) {
+      stopAdminActivity(); stopAdminPresenceWatch(); starterContentSyncUser = "";
+      if (me) { try { sessionStorage.removeItem(`embedx-admin-login-recorded:${me}`); } catch { /* storage may be disabled */ } }
+      showView("out"); return;
+    }
     const rr = await resolveRole(user);
     if (!rr) {
       await authMod.signOut(auth);
@@ -392,6 +490,10 @@ async function boot() {
       } catch (err) { console.warn("Could not clear verified-email flag yet", err); }
     }
     if (rr.mustChange) { showView("change"); return; }
+    startAdminActivity();
+    hasTaskAccess = can("tasks");
+    if (PAGE === "tasks" && !hasTaskAccess) hasTaskAccess = (await myTasks()).length > 0;
+    if (!canAccessAdminPage(PAGE)) { PAGE = "overview"; document.body.dataset.adminPage = PAGE; history.replaceState({ page: PAGE }, "", "/admin/"); }
     if (role !== "owner") {
       try {
         const { db } = await sdk();
@@ -417,6 +519,10 @@ async function boot() {
     renderShell();
     renderMain();
     route();
+    if (!can("tasks") && PAGE !== "tasks") void myTasks().then((assigned) => {
+      const next = assigned.length > 0;
+      if (next !== hasTaskAccess) { hasTaskAccess = next; renderAdminNav(); }
+    });
     if ((role === "owner" || can("gallery")) && starterContentSyncUser !== me) {
       starterContentSyncUser = me;
       const sections = role === "owner" ? Object.keys(STARTER_CONTENT) : ["gallery"];
@@ -469,6 +575,12 @@ async function boot() {
 }
 
 /* ---------------- shell (top bar + sidebar) ---------------- */
+function renderAdminNav() {
+  const nav = $("#adminNav");
+  if (!nav) return;
+  nav.innerHTML = NAV.filter(([id]) => canAccessAdminPage(id))
+    .map(([id, label, href]) => `<a href="${href}" class="${id === PAGE ? "active" : ""}">${esc(label)}</a>`).join("");
+}
 function renderShell() {
   $("#adminTop").innerHTML = `
     <div class="wrap admin-top-inner">
@@ -488,10 +600,11 @@ function renderShell() {
     if (url.startsWith("/assets/images/") && !url.split(/[?#]/, 1)[0].split("/").includes("..")) adminCollegeLogo.src = url;
     else { try { const parsed = new URL(url); if (parsed.protocol === "https:" && parsed.hostname === "trp.srmtrichy.edu.in") adminCollegeLogo.src = parsed.href; } catch { /* keep bundled default */ } }
   }).catch(() => {});
-  $("#signOut").addEventListener("click", async () => { const { auth } = await sdk(); authMod.signOut(auth); location.href = "/admin/"; });
-  $("#adminNav").innerHTML = NAV
-    .filter(([id]) => id === "overview" || id === "tasks" || (id === "admins" ? role === "owner" : canView(id)))
-    .map(([id, label, href]) => `<a href="${href}" class="${id === PAGE ? "active" : ""}">${esc(label)}</a>`).join("");
+  $("#signOut").addEventListener("click", async () => {
+    try { sessionStorage.removeItem(`embedx-admin-login-recorded:${me}`); } catch { /* storage may be disabled */ }
+    const { auth } = await sdk(); await authMod.signOut(auth); location.href = "/admin/";
+  });
+  renderAdminNav();
 }
 
 function noteReadOnly() {
@@ -525,8 +638,9 @@ function renderMain() {
 }
 
 function navigate(page, push = true) {
-  if (!PAGES[page]) page = "overview";
+  if (!PAGES[page] || !canAccessAdminPage(page)) page = "overview";
   if (formsRefreshTimer) { clearInterval(formsRefreshTimer); formsRefreshTimer = null; }
+  if (page !== "admins") stopAdminPresenceWatch();
   PAGE = page;
   document.body.dataset.adminPage = page;
   if (push) history.pushState({ page }, "", page === "overview" ? "/admin/" : `/admin/${page}`);
@@ -550,6 +664,10 @@ async function renderOverview() {
     } catch { counts = []; }
   }
   const mine = await myTasks();
+  if (!can("tasks")) {
+    const next = mine.length > 0;
+    if (next !== hasTaskAccess) { hasTaskAccess = next; renderAdminNav(); }
+  }
   if (PAGE !== "overview" || !region.isConnected) return;
   region.innerHTML = `
     <p class="muted" style="margin:.2rem 0 1rem">${esc(ROLES[role].blurb)}.</p>
@@ -674,11 +792,62 @@ async function renderWebsiteSettings() {
         ${siteSettingField("instagramUrl", "Instagram URL", settings.instagramUrl, "https://www.instagram.com/...", "url")}
         ${siteSettingField("facebookUrl", "Facebook URL", settings.facebookUrl, "https://www.facebook.com/...", "url")}
       </div>
+      <section class="hero-settings-panel">
+        <div class="admin-form-toolbar"><div><h2>Homepage banner &amp; image</h2><p class="muted">Paste a direct image URL or upload a photo. Adjust crop position, fit, alt text, and caption; this one setting updates the public homepage for everyone.</p></div></div>
+        <div class="hero-settings-preview"><img id="heroImagePreview" src="${esc(settings.heroImageUrl)}" alt="Homepage banner preview" style="object-fit:${esc(settings.heroImageFit)};object-position:${settings.heroImagePositionX}% ${settings.heroImagePositionY}%" /><span>Live crop preview</span></div>
+        <div class="form-grid admin-site-grid">
+          ${siteSettingField("heroImageUrl", "Image URL", settings.heroImageUrl, "/assets/images/... or direct HTTPS image URL", "url")}
+          <div class="field"><label for="heroImageFile">Choose media from your device</label><input id="heroImageFile" type="file" accept="image/png,image/jpeg,image/webp" ${can("site") ? "" : "disabled"} /><small class="muted">Uploads are resized and optimized to WebP (max 5 MB input).</small></div>
+          ${siteSettingField("heroImageAlt", "Accessibility alt text", settings.heroImageAlt, "Describe the image clearly", "text")}
+          <div class="field"><label for="heroImageFit">Image fit</label><select id="heroImageFit" name="heroImageFit" ${can("site") ? "" : "disabled"}><option value="cover" ${settings.heroImageFit === "cover" ? "selected" : ""}>Fill banner (cover)</option><option value="contain" ${settings.heroImageFit === "contain" ? "selected" : ""}>Show full image (contain)</option></select></div>
+          <div class="field"><label for="heroImagePositionX">Horizontal focus <output id="heroImagePositionXValue">${settings.heroImagePositionX}%</output></label><input type="range" id="heroImagePositionX" name="heroImagePositionX" min="0" max="100" value="${settings.heroImagePositionX}" ${can("site") ? "" : "disabled"} /></div>
+          <div class="field"><label for="heroImagePositionY">Vertical focus <output id="heroImagePositionYValue">${settings.heroImagePositionY}%</output></label><input type="range" id="heroImagePositionY" name="heroImagePositionY" min="0" max="100" value="${settings.heroImagePositionY}" ${can("site") ? "" : "disabled"} /></div>
+          ${siteSettingField("heroImageCaption", "Banner caption (blank hides it)", settings.heroImageCaption, "From circuit to system", "text")}
+          ${siteSettingField("heroImageSubcaption", "Banner sub-caption", settings.heroImageSubcaption, "Embedded · Robotics · Automation", "text")}
+        </div>
+      </section>
       ${can("site") ? `<div class="admin-site-actions"><p class="muted" id="siteSettingsMessage" role="status"></p><button class="btn btn-primary" id="saveSiteSettings">Save website settings</button></div>` : `<p class="muted">Read only — ask the owner to grant Website settings permission.</p>`}
     </section><div id="pageCopyEditor"></div>`;
     await renderPageCopyEditor($("#pageCopyEditor"), db);
     const logoInput = region.querySelector("[name=collegeLogoUrl]");
     logoInput?.addEventListener("input", () => { const preview = region.querySelector("#siteLogoPreview"); if (preview) preview.src = logoInput.value.trim(); });
+    const heroPreview = region.querySelector("#heroImagePreview");
+    const heroUrlInput = region.querySelector("[name=heroImageUrl]");
+    const updateHeroPreview = () => {
+      if (!heroPreview) return;
+      if (heroUrlInput.value.trim()) heroPreview.src = heroUrlInput.value.trim();
+      heroPreview.style.objectFit = region.querySelector("[name=heroImageFit]").value;
+      heroPreview.style.objectPosition = `${region.querySelector("[name=heroImagePositionX]").value}% ${region.querySelector("[name=heroImagePositionY]").value}%`;
+      for (const axis of ["X", "Y"]) region.querySelector(`#heroImagePosition${axis}Value`).textContent = `${region.querySelector(`[name=heroImagePosition${axis}]`).value}%`;
+    };
+    heroUrlInput?.addEventListener("input", updateHeroPreview);
+    region.querySelector("[name=heroImageFit]")?.addEventListener("change", updateHeroPreview);
+    region.querySelector("[name=heroImagePositionX]")?.addEventListener("input", updateHeroPreview);
+    region.querySelector("[name=heroImagePositionY]")?.addEventListener("input", updateHeroPreview);
+    region.querySelector("#heroImageFile")?.addEventListener("change", async (event) => {
+      const file = event.currentTarget.files?.[0];
+      if (!file) return;
+      if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 5 * 1024 * 1024) {
+        toast("Choose a JPG, PNG, or WebP image under 5 MB.", "err"); event.currentTarget.value = ""; return;
+      }
+      const picker = event.currentTarget; picker.disabled = true;
+      try {
+        const bitmap = await createImageBitmap(file);
+        const scale = Math.min(1, 1920 / bitmap.width);
+        const canvas = document.createElement("canvas"); canvas.width = Math.round(bitmap.width * scale); canvas.height = Math.round(bitmap.height * scale);
+        canvas.getContext("2d", { alpha: false }).drawImage(bitmap, 0, 0, canvas.width, canvas.height); bitmap.close?.();
+        const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/webp", .82));
+        if (!blob) throw new Error("Image optimization failed.");
+        const { storage } = await sdk();
+        const path = `images/site/hero/${Date.now()}-${Math.random().toString(36).slice(2, 7)}.webp`;
+        const ref = stMod.ref(storage, path);
+        await stMod.uploadBytes(ref, blob, { contentType: "image/webp" });
+        heroUrlInput.value = await stMod.getDownloadURL(ref);
+        updateHeroPreview();
+        toast("Banner image uploaded and optimized. Save website settings to publish it.", "ok");
+      } catch (error) { toast(`Banner upload failed: ${error.message}`, "err"); }
+      finally { picker.disabled = false; picker.value = ""; }
+    });
     region.querySelector("#saveSiteSettings")?.addEventListener("click", async (event) => {
       const button = event.currentTarget;
       const message = region.querySelector("#siteSettingsMessage");
@@ -690,12 +859,23 @@ async function renderWebsiteSettings() {
         phoneDisplay: fieldValue("phoneDisplay"),
         linkedinUrl: fieldValue("linkedinUrl"),
         instagramUrl: fieldValue("instagramUrl"),
-        facebookUrl: fieldValue("facebookUrl")
+        facebookUrl: fieldValue("facebookUrl"),
+        heroImageUrl: fieldValue("heroImageUrl"),
+        heroImageAlt: fieldValue("heroImageAlt").slice(0, 240),
+        heroImageFit: fieldValue("heroImageFit"),
+        heroImagePositionX: Math.min(100, Math.max(0, Number(fieldValue("heroImagePositionX")) || 0)),
+        heroImagePositionY: Math.min(100, Math.max(0, Number(fieldValue("heroImagePositionY")) || 0)),
+        heroImageCaption: fieldValue("heroImageCaption").slice(0, 120),
+        heroImageSubcaption: fieldValue("heroImageSubcaption").slice(0, 180)
       };
       const urlValid = (value) => { try { return new URL(value).protocol === "https:"; } catch { return false; } };
       const logoPathValid = (value) => value.startsWith("/assets/images/") && !value.split(/[?#]/, 1)[0].split("/").includes("..")
         || (() => { try { const u = new URL(value); return u.protocol === "https:" && u.hostname === "trp.srmtrichy.edu.in"; } catch { return false; } })();
+      const heroImageValid = (value) => value.startsWith("/assets/images/") && !value.split(/[?#]/, 1)[0].split("/").includes("..") || urlValid(value);
       if (!logoPathValid(updated.collegeLogoUrl)) { message.textContent = "Use a local /assets/images/ logo or an HTTPS logo hosted on trp.srmtrichy.edu.in."; return; }
+      if (!heroImageValid(updated.heroImageUrl)) { message.textContent = "Use a local /assets/images/ banner or a direct HTTPS image URL (or upload a file above)."; return; }
+      if (!["cover", "contain"].includes(updated.heroImageFit)) { message.textContent = "Choose a valid banner image fit."; return; }
+      if (updated.heroImageAlt.length > 240) { message.textContent = "Banner alt text must be 240 characters or fewer."; return; }
       if (!urlValid(updated.collegeWebsiteUrl)) { message.textContent = "The official website must be a valid HTTPS URL."; return; }
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(updated.contactEmail) || updated.contactEmail.length > 120) { message.textContent = "Enter a valid contact email (up to 120 characters)."; return; }
       if (!/^[+0-9()\s-]{8,24}$/.test(updated.phoneDisplay) || updated.phoneDisplay.replace(/\D/g, "").length < 8) { message.textContent = "Enter a phone number with 8–15 digits."; return; }
@@ -1746,18 +1926,22 @@ async function loadAdmins() {
   const region = $("#adminList");
   if (!region) return;
   let rows = [];
+  let ownerActivity = {};
   try {
     const { db } = await sdk();
     const snap = await dbMod.getDocs(dbMod.collection(db, "admin_roles"));
     rows = snap.docs.map((d) => ({ email: d.id, ...d.data() }));
+    ownerActivity = rows.find((row) => row.email === OWNER_EMAIL) || {};
+    rows = rows.filter((row) => row.email !== OWNER_EMAIL);
   } catch (err) { region.innerHTML = `<p class="muted">${esc(err.message)}</p>`; return; }
   region.innerHTML = `
-    <section class="admin-user-card admin-owner-card card" data-owner="true" aria-label="Portal owner">
+    <section class="admin-user-card admin-owner-card card" data-owner="true" data-admin-email="${esc(OWNER_EMAIL)}" aria-label="Portal owner">
       <div class="admin-user-identity"><span class="admin-avatar" aria-hidden="true">O</span><div class="admin-user-copy"><strong title="${esc(OWNER_EMAIL)}">${esc(OWNER_EMAIL)}</strong><span class="muted">Full control · built-in account · cannot be revoked</span></div></div>
       <span class="chip chip-accent admin-owner-badge">Owner</span>
+      <div class="admin-user-activity" data-admin-presence data-last-active="${activityMillis(ownerActivity.lastActiveAt)}" data-last-login="${activityMillis(ownerActivity.lastLoginAt)}"><span class="chip activity-status" data-presence-status></span><span data-last-active-label></span><span data-last-login-label></span></div>
     </section>
     ${rows.map((a) => `
-    <section class="admin-user-card card" data-search="${esc(`${a.email} ${a.name || ""}`.toLowerCase())}" data-role="${esc(a.role || "")}" data-added="${esc((a.addedAt || "").slice(0, 10))}">
+    <section class="admin-user-card card" data-admin-email="${esc(a.email)}" data-search="${esc(`${a.email} ${a.name || ""}`.toLowerCase())}" data-role="${esc(a.role || "")}" data-added="${esc((a.addedAt || "").slice(0, 10))}">
       <div class="admin-user-identity">
         <span class="admin-avatar" aria-hidden="true">${esc((a.name || a.email).trim().charAt(0).toUpperCase())}</span>
         <div class="admin-user-copy"><strong class="admin-user-email" title="${esc(a.email)}">${esc(a.email)}</strong><span class="muted">${esc(a.name || "Name not set")}${a.addedAt ? ` · Added ${(a.addedAt || "").slice(0, 10)}` : ""}</span></div>
@@ -1766,6 +1950,7 @@ async function loadAdmins() {
         ${a.emailVerificationRequired ? `<span class="chip admin-password-due" title="Email must be verified before portal access">✉ Verify email</span>` : ""}
         ${a.mustChangePassword ? `<span class="chip admin-password-due" title="Must change temporary password at next login">🔑 Change password due</span>` : ""}
       </div>` : ""}
+      <div class="admin-user-activity" data-admin-presence data-last-active="${activityMillis(a.lastActiveAt)}" data-last-login="${activityMillis(a.lastLoginAt)}"><span class="chip activity-status" data-presence-status></span><span data-last-active-label></span><span data-last-login-label></span></div>
       <div class="admin-user-actions">
         <label class="admin-role-control"><span>Role</span><select data-rolefor="${esc(a.email)}">
           ${Object.entries(ROLES).filter(([r]) => r !== "owner").map(([r, m]) => `<option value="${r}" ${a.role === r ? "selected" : ""}>${m.label}</option>`).join("")}
@@ -1787,6 +1972,8 @@ async function loadAdmins() {
         <button class="btn btn-primary btn-sm" data-saveperms="${esc(a.email)}">Save permissions</button></div>
       </details>
     </section>`).join("")}`;
+  region.querySelectorAll(".admin-user-card").forEach(paintPresenceCard);
+  void startAdminPresenceWatch();
   const applyAdminFilters = () => {
     const query = $("#adminSearch").value.trim().toLowerCase();
     const selectedRole = $("#adminRoleFilter").value;

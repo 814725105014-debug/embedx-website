@@ -87,7 +87,11 @@ service cloud.firestore {
                  && request.resource.data.mustChangePassword == false)
                 || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['emailVerificationRequired'])
                     && request.resource.data.emailVerificationRequired == false
-                    && request.auth.token.email_verified == true)));
+                    && request.auth.token.email_verified == true)
+                || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastLoginAt'])
+                    && request.resource.data.lastLoginAt == request.time)
+                || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastActiveAt'])
+                    && request.resource.data.lastActiveAt == request.time)));
     }
 
     // ---- permanent content deletion markers: prevent automatic starter sync from resurrecting deletes ----

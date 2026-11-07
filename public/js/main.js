@@ -1,10 +1,10 @@
 // EMBEDX — Page controller. Dispatches renderers by body[data-page].
-import "./layout.js?v=20261107-site-editor";
-import "./forms.js?v=20261107-site-editor";
-import { initAll } from "./ui.js?v=20261107-site-editor";
+import "./layout.js?v=20261107-admin-controls";
+import "./forms.js?v=20261107-admin-controls";
+import { initAll } from "./ui.js?v=20261107-admin-controls";
 import { icon } from "./icons.js";
-import { esc, asset, externalUrl, drivePreviewUrl, skeletons, projectCard, eventCard, teamCard, domainCard, resourceCard, achievementCard, announcementCard, galleryButton } from "./render.js?v=20261107-site-editor";
-import { getProjects, getEvents, getTeam, getGallery, getAnnouncements, getResources, getAchievements, getPageContent, subscribePageContent, applyPageContent, getPageBlocks, subscribePageBlocks, subscribePublicCollection } from "./store.js?v=20261107-site-editor";
+import { esc, asset, externalUrl, drivePreviewUrl, skeletons, projectCard, eventCard, teamCard, domainCard, resourceCard, achievementCard, announcementCard, galleryButton } from "./render.js?v=20261107-admin-controls";
+import { getProjects, getEvents, getTeam, getGallery, getAnnouncements, getResources, getAchievements, getPageContent, subscribePageContent, applyPageContent, getPageBlocks, subscribePageBlocks, subscribePublicCollection } from "./store.js?v=20261107-admin-controls";
 import { domains, tools, careers } from "./data/domains.js";
 
 const $ = (s) => document.querySelector(s);

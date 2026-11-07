@@ -29,7 +29,7 @@ service firebase.storage {
       return isOwner() || (hasRole() && section in permsOf());
     }
     function isAllowedSection(section) {
-      return section in ['events', 'projects', 'team', 'gallery', 'achievements'];
+      return section in ['events', 'projects', 'team', 'gallery', 'achievements', 'site'];
     }
     function validImageUpload() {
       return request.resource.size < 5 * 1024 * 1024
