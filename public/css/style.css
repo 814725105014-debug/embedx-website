@@ -898,3 +898,29 @@ input[type="checkbox"]:disabled { opacity: .55; cursor: not-allowed; }
 
 /* Let the home banner crop around its true center by default */
 .hero-visual { justify-self: center; }
+
+/* Public gallery media lightbox: keep the full photo/video inside the backdrop. */
+.lightbox { z-index: 520; }
+.lightbox-content { width: min(100%, 1000px); max-height: 96dvh; position: relative; display: grid; justify-items: center; gap: .65rem; }
+.lightbox-close { position: absolute; z-index: 2; top: .35rem; right: .35rem; width: 2.75rem; height: 2.75rem; border: 1px solid rgba(255,255,255,.35); border-radius: 50%; background: rgba(8,12,20,.78); color: #fff; font-size: 1.9rem; line-height: 1; cursor: pointer; }
+.lightbox-stage { width: 100%; height: min(82dvh, 820px); display: grid; place-items: center; overflow: hidden; }
+.lightbox-stage img, .lightbox-stage video, .lightbox-stage iframe { display: block; width: auto; height: auto; max-width: 100%; max-height: 100%; object-fit: contain; border: 0; border-radius: var(--r-md); box-shadow: var(--shadow); }
+.lightbox-stage video, .lightbox-stage iframe { width: min(100%, 960px); height: min(76dvh, 600px); background: #05070b; }
+.lightbox-stage iframe { aspect-ratio: 16 / 9; }
+.lightbox-caption { max-width: 90vw; color: #f5f7fb; text-shadow: 0 1px 4px #000; margin: 0; }
+.gallery-video { display: block; width: 100%; }
+.gallery-video-poster { position: relative; display: block; width: 100%; height: 170px; overflow: hidden; background: #101722; }
+.gallery-video-poster img, .gallery-video-poster video { width: 100%; height: 100%; object-fit: cover; }
+.gallery-video-play { position: absolute; inset: 0; display: grid; place-items: center; color: #fff; font-size: 2rem; text-shadow: 0 2px 12px #000; background: linear-gradient(0deg, rgba(0,0,0,.22), transparent 55%); pointer-events: none; }
+.gallery .gallery-video::after { content: none; }
+@media (max-width: 600px) {
+  .lightbox { padding: .65rem; }
+  .lightbox-content { width: 100%; }
+  .lightbox-stage { height: 78dvh; }
+  .lightbox-stage video, .lightbox-stage iframe { height: min(68dvh, 520px); }
+  .gallery-video-poster { height: 130px; }
+}
+
+/* Page content is non-selectable; retain normal editing/selection in form controls. */
+html, body, body * { -webkit-user-select: none; user-select: none; }
+input, textarea, [contenteditable="true"], [role="textbox"] { -webkit-user-select: text; user-select: text; }

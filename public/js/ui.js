@@ -100,7 +100,7 @@ function bindModalEscape() {
     const openModals = document.querySelectorAll(".modal-backdrop.open");
     const open = openModals[openModals.length - 1];
     if (open) { open.classList.remove("open"); syncScrollLock(); open._returnFocus?.focus(); }
-    else document.querySelector(".lightbox.open")?.classList.remove("open");
+    else document.querySelector(".lightbox.open")?._closeLightbox?.();
   });
 }
 
@@ -136,24 +136,83 @@ export function initModal() {
 export function initLightbox() {
   let lb = document.querySelector(".lightbox");
   if (!lb) {
-    lb = document.createElement("figure");
+    lb = document.createElement("div");
     lb.className = "lightbox";
     lb.setAttribute("role", "dialog");
-    lb.setAttribute("aria-label", "Image preview");
-    lb.innerHTML = `<div><img alt="" /><figcaption></figcaption></div>`;
+    lb.setAttribute("aria-modal", "true");
+    lb.setAttribute("aria-label", "Media preview");
+    lb.setAttribute("aria-hidden", "true");
+    const content = document.createElement("div");
+    content.className = "lightbox-content";
+    const close = document.createElement("button");
+    close.type = "button"; close.className = "lightbox-close";
+    close.setAttribute("aria-label", "Close media preview"); close.textContent = "×";
+    const stage = document.createElement("div"); stage.className = "lightbox-stage";
+    const caption = document.createElement("p");
+    caption.className = "lightbox-caption";
+    content.append(close, stage, caption);
+    lb.appendChild(content);
     document.body.append(lb);
-    lb.addEventListener("click", () => lb.classList.remove("open"));
-    addEventListener("keydown", (e) => { if (e.key === "Escape") lb.classList.remove("open"); });
+    const closeLightbox = () => {
+      lb.classList.remove("open");
+      lb.setAttribute("aria-hidden", "true");
+      stage.replaceChildren();
+      syncScrollLock();
+      lb._returnFocus?.focus?.();
+      lb._returnFocus = null;
+    };
+    lb._closeLightbox = closeLightbox;
+    close.addEventListener("click", closeLightbox);
+    lb.addEventListener("click", (event) => { if (event.target === lb) closeLightbox(); });
+    content.addEventListener("click", (event) => event.stopPropagation());
+    addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && lb.classList.contains("open")) closeLightbox();
+    });
   }
-  document.querySelectorAll("[data-lightbox]").forEach((btn) => {
-    if (btn.dataset.lbBound) return;
-    btn.dataset.lbBound = "1";
-    btn.addEventListener("click", () => {
-      const img = lb.querySelector("img");
-      img.src = btn.dataset.lightbox;
-      img.alt = btn.dataset.caption || btn.getAttribute("aria-label") || "Enlarged view";
-      lb.querySelector("figcaption").textContent = btn.dataset.caption || "";
+  document.querySelectorAll("[data-lightbox]").forEach((button) => {
+    if (button.dataset.lbBound) return;
+    button.dataset.lbBound = "1";
+    button.addEventListener("click", () => {
+      const stage = lb.querySelector(".lightbox-stage");
+      const source = button.dataset.lightbox || "";
+      const captionText = button.dataset.caption || button.getAttribute("aria-label") || "Media preview";
+      const isVideo = button.dataset.lightboxType === "video";
+      stage.replaceChildren();
+      if (isVideo) {
+        let driveId = "";
+        try {
+          const url = new URL(source, location.href);
+          if (/^(?:www\.)?drive\.google\.com$/i.test(url.hostname)) {
+            driveId = url.pathname.match(/\/file\/d\/([A-Za-z0-9_-]{10,})/)?.[1] || url.searchParams.get("id") || "";
+          }
+        } catch {}
+        if (driveId && /^[A-Za-z0-9_-]{10,}$/.test(driveId)) {
+          const frame = document.createElement("iframe");
+          frame.src = `https://drive.google.com/file/d/${encodeURIComponent(driveId)}/preview`;
+          frame.title = captionText;
+          frame.allow = "autoplay; encrypted-media; picture-in-picture";
+          frame.allowFullscreen = true;
+          frame.referrerPolicy = "strict-origin-when-cross-origin";
+          stage.appendChild(frame);
+        } else {
+          const video = document.createElement("video");
+          video.controls = true; video.playsInline = true; video.preload = "metadata";
+          video.setAttribute("aria-label", captionText);
+          video.src = source;
+          stage.appendChild(video);
+          video.play().catch(() => {});
+        }
+      } else {
+        const image = document.createElement("img");
+        image.src = source; image.alt = captionText;
+        stage.appendChild(image);
+      }
+      lb.querySelector(".lightbox-caption").textContent = button.dataset.caption || "";
+      lb._returnFocus = button;
       lb.classList.add("open");
+      lb.setAttribute("aria-hidden", "false");
+      syncScrollLock();
+      lb.querySelector(".lightbox-close")?.focus();
     });
   });
 }

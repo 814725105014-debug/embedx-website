@@ -1,9 +1,9 @@
 // EMBEDX — Page controller. Dispatches renderers by body[data-page].
 import "./layout.js?v=20261107-admin-controls";
 import "./forms.js?v=20261107-form-fix";
-import { initAll } from "./ui.js?v=20261107-admin-controls";
+import { initAll } from "./ui.js?v=20261108-gallery-media";
 import { icon } from "./icons.js";
-import { esc, asset, externalUrl, drivePreviewUrl, skeletons, projectCard, eventCard, eventDateLabel, teamCard, domainCard, resourceCard, achievementCard, announcementCard, galleryButton } from "./render.js?v=20261107-drive-thumbnails";
+import { esc, asset, externalUrl, drivePreviewUrl, skeletons, projectCard, eventCard, eventDateLabel, teamCard, domainCard, resourceCard, achievementCard, announcementCard, galleryButton, driveFileId } from "./render.js?v=20261108-gallery-media";
 import { getProjects, getEvents, getTeam, getGallery, getAnnouncements, getResources, getAchievements, getPageContent, subscribePageContent, applyPageContent, getPageBlocks, subscribePageBlocks, subscribePublicCollection } from "./store.js?v=20261107-form-fix";
 import { domains, tools, careers } from "./data/domains.js";
 
@@ -46,8 +46,10 @@ async function home() {
       an.innerHTML = list.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0)).slice(0, 3).map(announcementCard).join("");
     }
   }));
-  if (gg) jobs.push(getGallery().then((shots) => {
-    gg.innerHTML = shots.length ? shots.map(galleryButton).join("") : '<p class="card center muted">Gallery photos will appear here soon.</p>';
+  const eventsPromise = (eg || gg) ? getEvents() : null;
+  if (gg) jobs.push(Promise.all([getGallery(), eventsPromise || Promise.resolve([])]).then(([shots, events]) => {
+    const combined = mergeEventMediaIntoGallery(shots, events);
+    gg.innerHTML = combined.length ? combined.map(galleryButton).join("") : '<p class="card center muted">Gallery photos and videos will appear here soon.</p>';
   }));
   if (ag) jobs.push(getAchievements().then((rows) => {
     ag.innerHTML = rows.length ? rows.slice(0, 2).map(achievementCard).join("") : '<p class="card center muted">New achievements will appear here.</p>';
@@ -56,7 +58,7 @@ async function home() {
     const featured = rows.filter((p) => p.featured).slice(0, 4);
     pg.innerHTML = featured.length ? featured.map(projectCard).join("") : '<p class="card center muted">Featured projects will appear here soon.</p>';
   }));
-  if (eg) jobs.push(getEvents().then((rows) => {
+  if (eg) jobs.push(eventsPromise.then((rows) => {
     eg.innerHTML = rows.length ? rows.map(eventCard).join("") : '<p class="card center muted">There are no events to display right now.</p>';
   }));
   await Promise.all(jobs);
@@ -153,18 +155,62 @@ function eventRegistrationTarget(event) {
   return external ? { href: external, external: true } : null;
 }
 
-function eventGlimpseCard(entry, eventTitle) {
-  const [rawType = "", rawUrl = "", ...captionParts] = String(entry || "").split("|").map((part) => part.trim());
-  const type = rawType.toLowerCase();
-  const caption = captionParts.join(" | ") || `${eventTitle} ${type === "video" ? "clip" : "photo"}`;
-  if (type === "video") {
-    const src = drivePreviewUrl(rawUrl);
-    if (!src) return "";
-    return `<article class="card event-glimpse-card"><div class="event-glimpse-video"><iframe src="${esc(src)}" title="${esc(caption)}" loading="lazy" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="muted">${esc(caption)}</p></article>`;
+function normalizeEventMedia(entry) {
+  if (entry && typeof entry === "object") {
+    const type = String(entry.type || entry.mediaType || (entry.videoUrl ? "video" : "image")).toLowerCase();
+    return {
+      type: type === "video" ? "video" : "image",
+      url: String(entry.url || entry.mediaUrl || entry.videoUrl || entry.imageUrl || "").trim(),
+      caption: String(entry.caption || entry.description || "").trim()
+    };
   }
-  if (type !== "image" && type !== "photo") return "";
-  const src = asset(rawUrl);
-  return `<figure class="card event-glimpse-card"><img src="${esc(src)}" alt="${esc(caption)}" loading="lazy" decoding="async" /><figcaption class="muted">${esc(caption)}</figcaption></figure>`;
+  const [rawType = "", url = "", ...caption] = String(entry || "").split("|").map((part) => part.trim());
+  const type = rawType.toLowerCase();
+  if (!["image", "photo", "video"].includes(type)) return null;
+  return { type: type === "video" ? "video" : "image", url, caption: caption.join(" | ") };
+}
+
+function mergeEventMediaIntoGallery(gallery, events) {
+  const output = [...(Array.isArray(gallery) ? gallery : [])];
+  const mediaKey = (value) => {
+    const url = String(value || "").trim();
+    const driveId = driveFileId(url);
+    return driveId ? `drive:${driveId}` : url.replace(/#.*$/, "");
+  };
+  const keys = new Set(output.map((item) => mediaKey(item.imageUrl || item.mediaUrl || item.videoUrl || item.url)).filter(Boolean));
+  for (const event of Array.isArray(events) ? events : []) {
+    if (event.eventEnded !== true || !Array.isArray(event.glimpses)) continue;
+    for (const entry of event.glimpses) {
+      const media = normalizeEventMedia(entry);
+      const key = mediaKey(media?.url);
+      if (!media?.url || keys.has(key)) continue;
+      keys.add(key);
+      output.push({
+        id: `event-${event.id || event.title || "media"}-${output.length}`,
+        mediaType: media.type,
+        imageUrl: media.url,
+        caption: media.caption || `${event.title || "Event"} ${media.type === "video" ? "clip" : "photo"}`,
+        event: event.title || ""
+      });
+    }
+  }
+  return output;
+}
+
+function eventGlimpseCard(entry, eventTitle) {
+  const media = normalizeEventMedia(entry);
+  if (!media?.url) return "";
+  const caption = media.caption || `${eventTitle} ${media.type === "video" ? "clip" : "photo"}`;
+  if (media.type === "video") {
+    const driveSrc = drivePreviewUrl(media.url);
+    if (driveSrc) {
+      return `<article class="card event-glimpse-card"><div class="event-glimpse-video"><iframe src="${esc(driveSrc)}" title="${esc(caption)}" loading="lazy" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div><p class="muted">${esc(caption)}</p></article>`;
+    }
+    const src = asset(media.url);
+    return `<article class="card event-glimpse-card"><div class="event-glimpse-video"><video controls playsinline preload="metadata" aria-label="${esc(caption)}"><source src="${esc(src)}"></video></div><p class="muted">${esc(caption)} <a href="${esc(src)}" target="_blank" rel="noopener noreferrer">Open video</a></p></article>`;
+  }
+  const src = asset(media.url);
+  return `<figure class="card event-glimpse-card"><button class="event-glimpse-photo" data-lightbox="${esc(src)}" data-lightbox-type="image" data-caption="${esc(caption)}" aria-label="Enlarge: ${esc(caption)}"><img src="${esc(src)}" alt="${esc(caption)}" loading="lazy" decoding="async" /></button><figcaption class="muted">${esc(caption)}</figcaption></figure>`;
 }
 
 /* ---------- event detail ---------- */
@@ -210,7 +256,7 @@ async function eventDetail() {
           </ul></div>` : ""}
       </div>
     </div>
-    ${(Array.isArray(e.glimpses) && e.glimpses.length) ? `<section class="event-glimpses" aria-labelledby="eventGlimpsesTitle"><h2 id="eventGlimpsesTitle">Event Glimpses</h2><p class="muted">Photos and clips from ${esc(e.title)}.</p><div class="grid grid-3">${e.glimpses.map((entry) => eventGlimpseCard(entry, e.title)).filter(Boolean).join("")}</div></section>` : ""}
+    ${(e.eventEnded === true && Array.isArray(e.glimpses) && e.glimpses.length) ? `<section class="event-glimpses" aria-labelledby="eventGlimpsesTitle"><h2 id="eventGlimpsesTitle">Event Glimpses</h2><p class="muted">Photos and clips from ${esc(e.title)}.</p><div class="grid grid-3">${e.glimpses.map((entry) => eventGlimpseCard(entry, e.title)).filter(Boolean).join("")}</div></section>` : ""}
     ${(e.faqs || []).length ? `
     <h2 style="margin-top:2.4rem">Frequently Asked Questions</h2>
     <div class="faq">${e.faqs.map((f) => `<details><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p></details>`).join("")}</div>` : ""}`;

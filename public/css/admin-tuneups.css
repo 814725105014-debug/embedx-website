@@ -33,3 +33,15 @@
 .activity-status.is-active { border-color:rgba(52,211,153,.45); color:var(--ok); background:rgba(52,211,153,.08); }
 .admin-owner-card .admin-user-activity { grid-column:1/-1; }
 @media(max-width:650px) { .admin-owner-card .admin-user-activity { grid-column:auto; } }
+
+.event-media-field[hidden] { display: none !important; }
+.event-media-rows { display: grid; gap: .65rem; }
+.event-media-row { display: grid; grid-template-columns: minmax(110px, .8fr) minmax(180px, 2fr) minmax(150px, 1.5fr) auto; gap: .55rem; align-items: center; padding: .65rem; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--surface); }
+.event-media-row input, .event-media-row select { min-width: 0; }
+.event-media-controls { margin-top: .7rem; }
+.event-media-field > small { display: block; margin-top: .55rem; }
+@media (max-width: 720px) {
+  .event-media-row { grid-template-columns: 1fr 1fr; }
+  .event-media-row input[data-media-part="url"], .event-media-row input[data-media-part="caption"] { grid-column: 1 / -1; }
+  .event-media-row .event-media-remove { justify-self: start; }
+}
