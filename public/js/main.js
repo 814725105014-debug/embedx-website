@@ -1,10 +1,10 @@
 // EMBEDX — Page controller. Dispatches renderers by body[data-page].
-import "./layout.js?v=20261106-mobile-ux";
+import "./layout.js?v=20261107-live-updates";
 import "./forms.js?v=20261106-smooth-render";
 import { initAll } from "./ui.js?v=20261106-smooth-render";
 import { icon } from "./icons.js";
 import { esc, asset, externalUrl, skeletons, projectCard, eventCard, teamCard, domainCard, resourceCard, achievementCard, announcementCard, galleryButton } from "./render.js?v=20261106-smooth-render";
-import { getProjects, getEvents, getTeam, getGallery, getAnnouncements, getResources, getAchievements } from "./store.js?v=20261106-smooth-render";
+import { getProjects, getEvents, getTeam, getGallery, getAnnouncements, getResources, getAchievements, subscribePublicCollection } from "./store.js?v=20261107-live-updates";
 import { domains, tools, careers } from "./data/domains.js";
 
 const $ = (s) => document.querySelector(s);
@@ -318,4 +318,33 @@ const routes = {
   domains: domainsPage, resources: resourcesPage, achievers: achieversPage
 };
 initAll();
-if (routes[page]) routes[page]();
+if (routes[page]) {
+  const liveCollections = {
+    home: ["announcements", "gallery", "achievements", "projects", "events"],
+    projects: ["projects"],
+    "project-detail": ["projects"],
+    events: ["events"],
+    "event-detail": ["events"],
+    team: ["team"],
+    resources: ["resources"],
+    achievers: ["achievements"]
+  };
+  let refreshScheduled = false;
+  let routeReady = false;
+  const liveCollectionNames = new Set(liveCollections[page] || []);
+  const scheduleLiveRefresh = () => {
+    if (!routeReady || refreshScheduled) return;
+    refreshScheduled = true;
+    setTimeout(() => {
+      refreshScheduled = false;
+      if (routes[page]) routes[page]();
+    }, 100);
+  };
+  window.addEventListener("embedx:public-collection-updated", (event) => {
+    if (liveCollectionNames.has(event.detail?.name)) scheduleLiveRefresh();
+  });
+  Promise.resolve(routes[page]()).catch((error) => console.error(`Could not render ${page}`, error)).finally(() => {
+    routeReady = true;
+    for (const collection of liveCollections[page] || []) subscribePublicCollection(collection, scheduleLiveRefresh);
+  });
+}

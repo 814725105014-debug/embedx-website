@@ -1,7 +1,7 @@
 // EMBEDX — Shared chrome: navbar, mobile menu, footer, theme toggle.
 import { icon } from "./icons.js";
 import { initSearch } from "./search.js?v=20261106-smooth-render";
-import { getSiteSettings } from "./store.js?v=20261106-smooth-render";
+import { getSiteSettings, subscribeSiteSettings } from "./store.js?v=20261107-live-updates";
 
 const NAV = [
   ["Home", "/"],
@@ -210,4 +210,7 @@ function applySiteSettings(settings) {
   });
 }
 
-getSiteSettings().then(applySiteSettings).catch((err) => console.warn("Could not apply public website settings", err));
+getSiteSettings()
+  .then(applySiteSettings)
+  .catch((err) => console.warn("Could not apply public website settings", err))
+  .finally(() => subscribeSiteSettings(applySiteSettings));
