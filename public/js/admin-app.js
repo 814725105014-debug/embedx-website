@@ -105,6 +105,7 @@ let items = [], editingId = null, pendingImageField = null, editorState = null;
 let statsCache = null;
 let listRequestId = 0;
 let formsRefreshTimer = null;
+let roleWatchUnsubscribe = null;
 let starterContentSyncUser = "";
 
 async function sdk() {
@@ -361,6 +362,7 @@ async function boot() {
   }
   const { auth } = await sdk();
   authMod.onAuthStateChanged(auth, async (user) => {
+    if (roleWatchUnsubscribe) { roleWatchUnsubscribe(); roleWatchUnsubscribe = null; }
     if (!user) { starterContentSyncUser = ""; showView("out"); return; }
     const rr = await resolveRole(user);
     if (!rr) {
@@ -387,6 +389,27 @@ async function boot() {
       } catch (err) { console.warn("Could not clear verified-email flag yet", err); }
     }
     if (rr.mustChange) { showView("change"); return; }
+    if (role !== "owner") {
+      try {
+        const { db } = await sdk();
+        let firstRoleSnapshot = true;
+        let previousRoleState = "";
+        roleWatchUnsubscribe = dbMod.onSnapshot(dbMod.doc(db, "admin_roles", me), (snapshot) => {
+          const data = snapshot.exists() ? snapshot.data() : null;
+          const state = data ? JSON.stringify({
+            role: data.role || "",
+            perms: (Array.isArray(data.perms) ? data.perms : LEGACY_PERMS[data.role] || []).filter((section) => SECTIONS.includes(section)).sort(),
+            mustChangePassword: data.mustChangePassword === true,
+            emailVerificationRequired: data.emailVerificationRequired === true
+          }) : "missing";
+          if (firstRoleSnapshot) { firstRoleSnapshot = false; previousRoleState = state; return; }
+          if (state !== previousRoleState) {
+            previousRoleState = state;
+            location.reload();
+          }
+        }, (error) => console.warn("Live admin-role updates are unavailable", error));
+      } catch (error) { console.warn("Could not watch admin-role updates", error); }
+    }
     showView("in");
     renderShell();
     renderMain();
@@ -637,7 +660,7 @@ async function renderWebsiteSettings() {
     const snap = await dbMod.getDoc(dbMod.doc(db, "site_settings", "site"));
     const settings = normalizeSiteSettings(snap.exists() ? snap.data() : {});
     if (PAGE !== "site" || !region.isConnected) return;
-    region.innerHTML = `<section class="admin-site-settings card"><div class="admin-form-toolbar"><div><h2>Public contact &amp; social links</h2><p class="muted">Edit these once here; the public footer and Contact page use the saved values after reload.</p></div></div>
+    region.innerHTML = `<section class="admin-site-settings card"><div class="admin-form-toolbar"><div><h2>Public contact &amp; social links</h2><p class="muted">Edit these once here; the public footer and Contact page update live after saving.</p></div></div>
       <div class="admin-site-logo-preview"><img id="siteLogoPreview" src="${esc(settings.collegeLogoUrl)}" alt="College logo preview" /><div><strong>College logo</strong><p class="muted">Transparent artwork displays on a white tile. Use an /assets/images/ path or an HTTPS URL on trp.srmtrichy.edu.in.</p></div></div>
       <div class="form-grid admin-site-grid">
         ${siteSettingField("collegeLogoUrl", "College logo image URL", settings.collegeLogoUrl, "https://trp.srmtrichy.edu.in/... or /assets/images/college.png", "url")}
@@ -678,8 +701,8 @@ async function renderWebsiteSettings() {
       button.disabled = true; button.textContent = "Saving…"; message.textContent = "";
       try {
         await dbMod.setDoc(dbMod.doc(db, "site_settings", "site"), { ...updated, updatedAt: new Date().toISOString() });
-        toast("Website settings saved. Public pages will show them after reload.", "ok");
-        message.textContent = "Saved successfully. Reload a public page to see the updated links.";
+        toast("Website settings saved. Open public pages will update automatically.", "ok");
+        message.textContent = "Saved successfully. Public pages update automatically while open.";
       } catch (err) { message.textContent = `Save failed: ${err.message}`; toast("Could not save website settings.", "err"); }
       finally { button.disabled = false; button.textContent = "Save website settings"; }
     });
@@ -1313,7 +1336,7 @@ async function saveForm(e) {
       if (sec === "tasks" && (previous?.assigneeEmail !== data.assigneeEmail || previous?.assigneeRole !== data.assigneeRole) && (data.assigneeEmail || data.assigneeRole)) {
         const state = await notifyTaskAssignee(editingId);
         toast(state === "requested" ? "Task updated. Assignment email request sent." : state === "unconfigured" ? "Task updated; email notifications are not configured." : "Task updated, but the email request could not be sent.", state === "failed" ? "err" : "ok");
-      } else toast("Updated ✔", "ok");
+      } else toast("Updated ✔ Public pages sync automatically.", "ok");
     } else {
       if (sec === "announcements" || sec === "tasks") data.createdAt = new Date().toISOString();
       if (sec === "tasks") data.createdBy = me;
@@ -1321,7 +1344,7 @@ async function saveForm(e) {
       if (sec === "tasks" && (data.assigneeEmail || data.assigneeRole)) {
         const state = await notifyTaskAssignee(ref.id);
         toast(state === "requested" ? "Task created. Email notification request sent." : state === "unconfigured" ? "Task created; email notifications are not configured." : "Task created, but the email request could not be sent.", state === "failed" ? "err" : "ok");
-      } else toast(sec === "tasks" ? "Task created. No assignee was selected." : "Published ✔", "ok");
+      } else toast(sec === "tasks" ? "Task created. No assignee was selected." : "Published ✔ Public pages sync automatically.", "ok");
     }
     closeModals();
     statsCache = null;
@@ -1373,7 +1396,7 @@ async function removeItem(id) {
       toast("Deleted from Firestore and the live website. It will not be restored from starter content.", "ok");
     } else {
       await dbMod.deleteDoc(dbMod.doc(db, sec, id));
-      toast("Deleted.", "ok");
+      toast("Deleted. Open public pages update automatically.", "ok");
     }
     statsCache = null;
     if (sec === "gallery") await renderCollection(sec);

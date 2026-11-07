@@ -4,6 +4,10 @@ import { firebaseConfig, isConfigured } from "./config.js?v=20261106";
 const SDK = "https://www.gstatic.com/firebasejs/10.12.5";
 const PUBLIC_READ_TIMEOUT_MS = 1800;
 let appPromise = null;
+const publicCollectionCache = new Map();
+const publicCollectionFingerprints = new Map();
+let siteSettingsCache = null;
+let siteSettingsFingerprint = "";
 
 function withDeadline(task, timeout = PUBLIC_READ_TIMEOUT_MS) {
   let timer;
@@ -33,23 +37,64 @@ async function getApp() {
   return appPromise;
 }
 
-async function loadCollection(name, orderField = "order", dir = "asc") {
-  if (!isConfigured) throw new Error("Firestore not configured");
-  const app = await getApp();
-  const { getFirestore, collection, getDocs } = await import(`${SDK}/firebase-firestore.js`);
-  const snap = await getDocs(collection(getFirestore(app), name));
-  const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-  // Sort client-side so older documents missing the indexed field are not silently hidden.
-  if (!orderField) return rows;
+function sortCollection(rows, orderField = "order", dir = "asc") {
+  if (!orderField) return [...rows];
   const sign = dir === "desc" ? -1 : 1;
   const value = (v) => v && typeof v.toDate === "function" ? v.toDate().getTime() : v;
-  return rows.sort((a, b) => {
+  return [...rows].sort((a, b) => {
     const x = value(a[orderField]), y = value(b[orderField]);
     if (x == null) return y == null ? 0 : 1;
     if (y == null) return -1;
     if (typeof x === "number" && typeof y === "number") return (x - y) * sign;
     return String(x).localeCompare(String(y), undefined, { numeric: true }) * sign;
   });
+}
+
+function fingerprint(value) {
+  return JSON.stringify(value, (_key, item) =>
+    item && typeof item.toDate === "function" ? item.toDate().toISOString() : item
+  );
+}
+
+function notifyCollectionUpdate(name) {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("embedx:public-collection-updated", { detail: { name } }));
+  }
+}
+
+async function loadCollection(name, orderField = "order", dir = "asc") {
+  if (!isConfigured) throw new Error("Firestore not configured");
+  if (publicCollectionCache.has(name)) return sortCollection(publicCollectionCache.get(name), orderField, dir);
+  const app = await getApp();
+  const { getFirestore, collection, getDocs } = await import(`${SDK}/firebase-firestore.js`);
+  const snap = await getDocs(collection(getFirestore(app), name));
+  const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  const nextFingerprint = fingerprint(rows);
+  const previousFingerprint = publicCollectionFingerprints.get(name);
+  publicCollectionCache.set(name, rows);
+  publicCollectionFingerprints.set(name, nextFingerprint);
+  if (nextFingerprint !== previousFingerprint) notifyCollectionUpdate(name);
+  return sortCollection(rows, orderField, dir);
+}
+
+// Keep an open public page in sync with Admin writes. The initial server snapshot
+// also replaces any stale bundled fallback that was shown during a slow read.
+export function subscribePublicCollection(name, onChange = () => {}) {
+  let stopped = false;
+  let unsubscribe = () => {};
+  getApp().then(async (app) => {
+    const { getFirestore, collection, onSnapshot } = await import(`${SDK}/firebase-firestore.js`);
+    if (stopped) return;
+    unsubscribe = onSnapshot(collection(getFirestore(app), name), (snapshot) => {
+      const rows = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+      const nextFingerprint = fingerprint(rows);
+      const previousFingerprint = publicCollectionFingerprints.get(name);
+      publicCollectionCache.set(name, rows);
+      publicCollectionFingerprints.set(name, nextFingerprint);
+      if (nextFingerprint !== previousFingerprint) onChange(sortCollection(rows));
+    }, (error) => console.warn(`Live ${name} updates are unavailable`, error));
+  }).catch((error) => console.warn(`Could not subscribe to live ${name} updates`, error));
+  return () => { stopped = true; unsubscribe(); };
 }
 
 async function addDocument(name, data) {
@@ -118,13 +163,36 @@ export function normalizeSiteSettings(overrides = {}) {
 }
 
 export function getSiteSettings() {
+  if (siteSettingsCache) return Promise.resolve(siteSettingsCache);
   if (!isConfigured) return Promise.resolve(normalizeSiteSettings());
   return readOrFallback(async () => {
     const app = await getApp();
     const { getFirestore, doc, getDoc } = await import(`${SDK}/firebase-firestore.js`);
     const snap = await getDoc(doc(getFirestore(app), "site_settings", "site"));
-    return normalizeSiteSettings(snap.exists() ? snap.data() : {});
+    const settings = normalizeSiteSettings(snap.exists() ? snap.data() : {});
+    siteSettingsCache = settings;
+    siteSettingsFingerprint = fingerprint(settings);
+    return settings;
   }, () => normalizeSiteSettings());
+}
+
+export function subscribeSiteSettings(onChange = () => {}) {
+  let stopped = false;
+  let unsubscribe = () => {};
+  if (!isConfigured) return () => {};
+  getApp().then(async (app) => {
+    const { getFirestore, doc, onSnapshot } = await import(`${SDK}/firebase-firestore.js`);
+    if (stopped) return;
+    unsubscribe = onSnapshot(doc(getFirestore(app), "site_settings", "site"), (snapshot) => {
+      const settings = normalizeSiteSettings(snapshot.exists() ? snapshot.data() : {});
+      const nextFingerprint = fingerprint(settings);
+      const previousFingerprint = siteSettingsFingerprint;
+      siteSettingsCache = settings;
+      siteSettingsFingerprint = nextFingerprint;
+      if (nextFingerprint !== previousFingerprint) onChange(settings);
+    }, (error) => console.warn("Live website settings are unavailable", error));
+  }).catch((error) => console.warn("Could not subscribe to live website settings", error));
+  return () => { stopped = true; unsubscribe(); };
 }
 
 // --- public form API ---
