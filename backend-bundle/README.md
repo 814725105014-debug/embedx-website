@@ -12,7 +12,7 @@ No Cloud Functions are required.
 - `data/`: seed-source modules (kept in sync with `public/js/data/`).
 - `scripts/seed.js`: adds missing starter documents in six public content collections plus standard form definitions; never overwrites existing documents or seeds gallery photos.
 - `scripts/create-admin.js`, `grant-admin.js`, `reset-password.js`, `update-admin.js`: trusted Admin SDK owner tools.
-- `appsscript/task-mail.gs` + `appsscript/forms-sync.gs` + `appsscript/appsscript.json`: owner-authorized Sheets sync and a separate Firebase-token-verified task-email endpoint.
+- `appsscript/task-mail.gs`: separate Firebase-token-verified task-email endpoint. `appsscript/forms-sync.gs` only removes any old Sheets sync trigger; it no longer copies responses.
 
 ## Seed content
 
@@ -79,39 +79,21 @@ Firebase Console asks you to enable billing; static `/assets/` files and HTTPS i
 URLs work without it. If a bucket is later initialized on an approved plan, deploy
 Storage rules with `firebase deploy --only storage`.
 
-## Forms and Google Sheets
+## Forms and responses
 
-Admin → Forms & responses supports standard seeded forms, custom form creation,
-star ratings, open/close controls, response monitoring, CSV export, and deletion.
-Public forms write directly to Firestore; the portal reflects those records and
-public clients cannot read them. The join and enquiry forms remain on their existing
-validated collections so existing workflows are preserved.
+Admin → Forms & responses manages built-in and custom forms, editable questions,
+open/close controls, response review, and CSV export. Public responses are stored
+in Firestore. Existing `members_applications`, `contact_messages`, and
+`form_responses` data is retained and remains available in the admin portal. No
+Google Sheets response sync runs.
 
-To create and update the Apps Script project without copying source files by hand,
-run this from `backend-bundle/scripts/`:
-
-```bash
-npm run apps-script:setup
-```
-
-On first run, the helper authenticates with Google, links the source folder to the
-provided **EMBEDX CLUB NEW WEBSITE** project, and uploads all checked-in `.gs` files
-and the manifest with `clasp`. Enable the Apps Script API in Google account settings
-if prompted. Future code updates use `npm run apps-script:push`; that command
-force-syncs the repo's source over the online project, so keep the repository as the
-source of truth. The generated
-`appsscript/.clasp.json` only links your local folder to your Apps Script project and
-is intentionally git-ignored.
-
-Deploy Firestore rules first. Then open the created project and run `setupEmbedxSheets()`
-as the allowlisted owner (the first time, and again after updating the script), and approve
-the requested Google Sheets, Firestore REST, email, and time-trigger scopes. This owner-authorized step creates the
-spreadsheet, installs a one-minute sync trigger, and publishes the sheet URL and
-health to `site_settings/forms` for the admin portal. New Join and Enquiry records are
-emailed to `814725105014@trp.srmtrichy.edu.in` on the next sync, and submitters receive
-a confirmation email when their record is first imported. No Web App endpoint, shared
-secret, Cloud Function, or paid Firebase service is involved. Share the generated
-sheet only with trusted reviewers.
+The old Apps Script project may still have an installed one-minute trigger. Push the
+updated sources with `npm run apps-script:push`, then open that project as the owner
+and run `removeEmbedxSheetsSync()` once to delete the old trigger and its local sheet
+ID property. If the old trigger fires first, the compatibility callback performs the
+same cleanup without syncing or emailing form responses. Existing spreadsheet files
+and Firestore records are not deleted. The separate `task-mail.gs` endpoint remains
+unchanged; keep its web-app deployment and configuration in place.
 
 ## Firebase API key and browser security
 
@@ -144,4 +126,4 @@ token or service credential belongs in the website.
 The owner must archive the old standalone Official Mail Apps Script web-app deployment
 in Apps Script → Deploy → Manage deployments after the website removal is published.
 Removing its source from this repository does not disable an already deployed web app.
-Leave the separate `task-mail.gs` deployment and Forms/Sheets automation untouched.
+Leave the separate `task-mail.gs` deployment untouched. The retired Forms-to-Sheets trigger is cleaned up by `removeEmbedxSheetsSync()`.

@@ -1,6 +1,6 @@
 // EMBEDX — Page controller. Dispatches renderers by body[data-page].
 import "./layout.js?v=20261107-admin-controls";
-import "./forms.js?v=20261107-form-submit-fix";
+import "./forms.js?v=20261108-editable-forms";
 import { initAll } from "./ui.js?v=20261108-gallery-media";
 import { icon } from "./icons.js";
 import { esc, asset, externalUrl, drivePreviewUrl, skeletons, projectCard, eventCard, eventDateLabel, teamCard, domainCard, resourceCard, achievementCard, announcementCard, galleryButton, driveFileId } from "./render.js?v=20261108-gallery-media";
