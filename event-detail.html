@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>EMBEDNOVA Event Details | EMBEDX</title>
-  <meta name="description" content="Official details, 3 challenge tracks, rules, eligibility, timeline, and registration for EMBEDNOVA." />
+  <title>Event Details | EMBEDX</title>
+  <meta name="description" content="Event details, schedules, and registration information for EMBEDX activities." />
   
   <link rel="icon" type="image/png" href="assets/branding/embedx-logo-emblem.png" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
@@ -71,7 +71,7 @@
         <li><a href="about.html" class="mobile-nav-link">About Us</a></li>
         <li><a href="domains.html" class="mobile-nav-link">Technical Domains</a></li>
         <li><a href="projects.html" class="mobile-nav-link">Projects Showcase</a></li>
-        <li><a href="events.html" class="mobile-nav-link active">Events & EmbedNova</a></li>
+        <li><a href="events.html" class="mobile-nav-link active">Events</a></li>
         <li><a href="achievers.html" class="mobile-nav-link">Hall of Achievers</a></li>
         <li><a href="team.html" class="mobile-nav-link">Our Team</a></li>
         <li><a href="resources.html" class="mobile-nav-link">Learning Hub</a></li>
@@ -94,70 +94,7 @@
     </div>
   </main>
 
-  <!-- Registration Modal -->
-  <div class="modal-backdrop" id="registerModal">
-    <div class="modal-dialog">
-      <button class="modal-close-btn">&times;</button>
-      <div class="text-center" style="margin-bottom: 1.5rem;">
-        <img src="assets/branding/embednova-logo.png" alt="EMBEDNOVA" style="max-height: 48px; margin: 0 auto 0.75rem;" />
-        <h3 class="text-navy">EMBEDNOVA Official Registration</h3>
-        <p style="font-size: 0.9rem; color: var(--text-muted);">SRM TRP Engineering College &bull; Department of EEE</p>
-      </div>
 
-      <form id="eventRegForm" onsubmit="event.preventDefault(); alert('Registration submitted! Verification will be confirmed by the organizing committee.'); document.getElementById('registerModal').classList.remove('open');">
-        <div class="form-group">
-          <label class="form-label" for="regLeaderName">Team Lead / Participant Name <span class="required">*</span></label>
-          <input type="text" class="form-control" id="regLeaderName" required placeholder="Enter full name" />
-        </div>
-
-        <div class="grid-2" style="gap: 1rem;">
-          <div class="form-group">
-            <label class="form-label" for="regCollege">Institution / College Name <span class="required">*</span></label>
-            <input type="text" class="form-control" id="regCollege" required placeholder="e.g. SRM TRP Engineering College" />
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="regDept">Department & Year <span class="required">*</span></label>
-            <input type="text" class="form-control" id="regDept" required placeholder="e.g. EEE / III Year" />
-          </div>
-        </div>
-
-        <div class="grid-2" style="gap: 1rem;">
-          <div class="form-group">
-            <label class="form-label" for="regEmail">Email Address <span class="required">*</span></label>
-            <input type="email" class="form-control" id="regEmail" required placeholder="student@institution.edu.in" />
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="regPhone">Mobile / WhatsApp Number <span class="required">*</span></label>
-            <input type="tel" class="form-control" id="regPhone" required placeholder="10-digit mobile number" />
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">Select Challenge Track(s) <span class="required">*</span></label>
-          <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.25rem;">
-            <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.92rem; cursor: pointer;">
-              <input type="checkbox" name="tracks" value="01-tech-challenge" checked />
-              <span><strong>01 — TECH CHALLENGE</strong> (MCQs, Aptitude & Low-Level Logic)</span>
-            </label>
-            <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.92rem; cursor: pointer;">
-              <input type="checkbox" name="tracks" value="02-circuit-wizard" />
-              <span><strong>02 — CIRCUIT WIZARD</strong> (Build. Debug. Perfect.)</span>
-            </label>
-            <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.92rem; cursor: pointer;">
-              <input type="checkbox" name="tracks" value="03-automation-arena" />
-              <span><strong>03 — AUTOMATION ARENA</strong> (Problem Statements & Working Prototypes)</span>
-            </label>
-          </div>
-        </div>
-
-        <div style="margin-top: 2rem;">
-          <button type="submit" class="btn btn-orange" style="width: 100%;">
-            Submit Registration
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
 
   <!-- Footer -->
   <footer class="site-footer">
@@ -186,7 +123,7 @@
             <li><a href="about.html" class="footer-link"><i class="fa-solid fa-angle-right"></i> About Us</a></li>
             <li><a href="domains.html" class="footer-link"><i class="fa-solid fa-angle-right"></i> Technical Domains</a></li>
             <li><a href="projects.html" class="footer-link"><i class="fa-solid fa-angle-right"></i> Projects Showcase</a></li>
-            <li><a href="events.html" class="footer-link"><i class="fa-solid fa-angle-right"></i> Events & EmbedNova</a></li>
+            <li><a href="events.html" class="footer-link"><i class="fa-solid fa-angle-right"></i> Events</a></li>
             <li><a href="achievers.html" class="footer-link"><i class="fa-solid fa-angle-right"></i> Achievers</a></li>
           </ul>
         </div>

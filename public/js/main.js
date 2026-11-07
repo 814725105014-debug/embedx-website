@@ -1,10 +1,10 @@
 // EMBEDX — Page controller. Dispatches renderers by body[data-page].
 import "./layout.js?v=20261107-admin-controls";
-import "./forms.js?v=20261107-admin-controls";
+import "./forms.js?v=20261107-form-fix";
 import { initAll } from "./ui.js?v=20261107-admin-controls";
 import { icon } from "./icons.js";
-import { esc, asset, externalUrl, drivePreviewUrl, skeletons, projectCard, eventCard, eventDateLabel, teamCard, domainCard, resourceCard, achievementCard, announcementCard, galleryButton } from "./render.js?v=20261108-event-dates";
-import { getProjects, getEvents, getTeam, getGallery, getAnnouncements, getResources, getAchievements, getPageContent, subscribePageContent, applyPageContent, getPageBlocks, subscribePageBlocks, subscribePublicCollection } from "./store.js?v=20261107-admin-controls";
+import { esc, asset, externalUrl, drivePreviewUrl, skeletons, projectCard, eventCard, eventDateLabel, teamCard, domainCard, resourceCard, achievementCard, announcementCard, galleryButton } from "./render.js?v=20261107-drive-thumbnails";
+import { getProjects, getEvents, getTeam, getGallery, getAnnouncements, getResources, getAchievements, getPageContent, subscribePageContent, applyPageContent, getPageBlocks, subscribePageBlocks, subscribePublicCollection } from "./store.js?v=20261107-form-fix";
 import { domains, tools, careers } from "./data/domains.js";
 
 const $ = (s) => document.querySelector(s);
@@ -129,35 +129,13 @@ async function projectDetail() {
 
 /* ---------- events ---------- */
 async function eventsPage() {
-  const feat = $("#embednovaFeature");
   const grid = $("#eventsGrid");
   skeletons(grid, 3, 320);
   const list = await getEvents();
-  const em = list.find((e) => e.id === "embednova") || list[0];
-  const emRegistrationTarget = em ? eventRegistrationTarget(em) : null;
-  if (!em) {
-    if (feat) feat.innerHTML = '<p class="card center muted">Event information will be published here soon.</p>';
+  if (!list.length) {
     if (grid) grid.innerHTML = '<p class="card center muted">There are no events to display right now.</p>';
     return;
   }
-  if (feat) feat.innerHTML = `
-    <div>
-      <span class="chip chip-accent">${esc(em.type)}</span>
-      <h1 style="margin:.7rem 0 .3rem">${esc(em.title)}</h1>
-      <p class="grad-text" style="font-weight:700;letter-spacing:.12em">${esc(em.tagline)}</p>
-      <p class="muted">${esc(em.description)}</p>
-      <ul class="event-meta">
-        <li>${icon("calendar")}<span>${esc(eventDateLabel(em))}</span></li>
-        <li>${icon("map-pin")}<span>${esc(em.venue)}</span></li>
-        <li>${icon("users")}<span>${esc(em.eligibility)}</span></li>
-        <li>${icon("shield")}<span>${esc(em.registrationStatus)}</span></li>
-      </ul>
-      <div class="hero-cta">
-        ${emRegistrationTarget ? `<a class="btn btn-primary" href="${esc(emRegistrationTarget.href)}" ${emRegistrationTarget.external ? 'target="_blank" rel="noopener noreferrer"' : ""}>Register Now ${icon("arrow-right")}</a>` : ""}
-        <button class="btn btn-ghost" data-lightbox="${esc(asset(em.imageUrl))}" data-caption="EMBEDNOVA official poster">${icon("image")} View Event Poster</button>
-      </div>
-    </div>
-    <div class="event-poster"><img src="${esc(asset(em.imageUrl))}" alt="EMBEDNOVA official event poster" loading="lazy" decoding="async" /></div>`;
   if (grid) {
     grid.innerHTML = list.map(eventCard).join("");
     initAll();
@@ -166,7 +144,7 @@ async function eventsPage() {
 
 /* ---------- event registration target ---------- */
 function eventRegistrationTarget(event) {
-  const formId = String(event.registrationFormId || (event.id === "embednova" ? "embednova" : "")).trim();
+  const formId = String(event.registrationFormId || "").trim();
   if (formId && /^[A-Za-z0-9_-]{1,120}$/.test(formId)) {
     const query = new URLSearchParams({ form: formId, event: String(event.id || ""), eventTitle: String(event.title || "Event") });
     return { href: `/pages/form.html?${query.toString()}`, external: false };

@@ -16,9 +16,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 2. Hydrate Event Detail Page
   if (document.getElementById('eventDetailContainer') && typeof eventsData !== 'undefined') {
-    const targetId = eventId || 'embednova';
-    const event = eventsData.find(e => e.id === targetId) || eventsData[0];
-    renderEventDetail(event);
+    const event = eventsData.find(e => e.id === eventId) || eventsData[0];
+    if (event) renderEventDetail(event);
+    else {
+      const container = document.getElementById('eventDetailContainer');
+      if (container) container.innerHTML = '<div class="container text-center"><h1 class="text-navy">Event not found</h1><p>Current event details will be published here.</p><a class="btn btn-primary" href="events.html">Browse Events</a></div>';
+    }
   }
 });
 
@@ -145,99 +148,21 @@ function renderProjectDetail(p, allProjects) {
 }
 
 function renderEventDetail(ev) {
-  document.title = `${ev.title} — Official Event | EMBEDX`;
-
   const container = document.getElementById('eventDetailContainer');
-  if (!container) return;
-
+  if (!container || !ev) return;
+  document.title = `${ev.title} — EMBEDX Events | SRM TRP Engineering College`;
+  const description = ev.description || ev.overview || ev.subtitle || "";
+  const poster = ev.imageUrl || ev.poster || "";
   container.innerHTML = `
     <div class="container">
-      <div style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
-        <a href="events.html" class="btn btn-sm btn-outline" style="display: inline-flex; align-items: center; gap: 0.5rem;">
-          <i class="fa-solid fa-arrow-left"></i> Back to Events
-        </a>
-        <div style="font-family: var(--font-heading); font-size: 0.88rem; font-weight: 700; color: var(--text-muted);">
-          EMBEDX &bull; Department of EEE &bull; SRM TRP Engineering College
-        </div>
-      </div>
-
-      <!-- Event Hero Banner -->
-      <div class="embednova-feature-banner" style="margin-bottom: 3.5rem;">
-        <div style="max-width: 800px; position: relative; z-index: 2;">
-          <div class="section-eyebrow" style="background: rgba(255,255,255,0.15); color: #FFFFFF; border-color: rgba(255,255,255,0.3); margin-bottom: 1rem;">
-            ${ev.type} &bull; ${ev.venue}
-          </div>
-          <div style="margin-bottom: 1.25rem;">
-            <img src="${ev.logo}" alt="${ev.title}" style="max-height: 60px; width: auto;" />
-          </div>
-          <h2 style="color: #FFFFFF; font-size: clamp(1.8rem, 3.5vw, 2.5rem); margin-bottom: 0.75rem;">${ev.subtitle}</h2>
-          <p style="font-family: var(--font-heading); font-size: 1.2rem; font-weight: 700; letter-spacing: 0.12em; color: var(--accent-orange); margin-bottom: 1.5rem;">
-            ${ev.tagline}
-          </p>
-          <p style="color: rgba(255, 255, 255, 0.9); font-size: 1.1rem; line-height: 1.8; margin-bottom: 2rem;">${ev.overview}</p>
-          <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-            <button class="btn btn-orange" onclick="document.getElementById('registerModal').classList.add('open')">
-              Register Now <i class="fa-solid fa-arrow-right"></i>
-            </button>
-            <button class="btn btn-outline-white" onclick="openLightbox('${ev.poster}', '${ev.title} Official Poster')">
-              <i class="fa-solid fa-image"></i> View Official Poster
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Why Participate & Skills -->
-      <div style="background: #FFFFFF; border: 1px solid var(--border-card); border-radius: var(--radius-lg); padding: clamp(2rem, 4vw, 3.5rem); box-shadow: var(--shadow-md); margin-bottom: 4rem;">
-        <div class="grid-2" style="gap: 3rem;">
-          <div>
-            <h3 class="text-navy" style="margin-bottom: 1.5rem;"><i class="fa-solid fa-award text-orange" style="margin-right: 0.5rem;"></i> Why Participate in EMBEDNOVA?</h3>
-            <div style="display: flex; flex-direction: column; gap: 1.25rem;">
-              ${ev.whyParticipate.map(w => `
-                <div style="display: flex; align-items: flex-start; gap: 1rem;">
-                  <div style="width: 44px; height: 44px; border-radius: var(--radius-sm); background: rgba(11, 42, 111, 0.06); color: var(--primary-navy); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0;">
-                    <i class="fa-solid ${w.icon}"></i>
-                  </div>
-                  <div>
-                    <h4 style="font-size: 1.1rem; color: var(--primary-navy); margin-bottom: 0.25rem;">${w.title}</h4>
-                    <p style="font-size: 0.92rem; margin: 0;">${w.desc}</p>
-                  </div>
-                </div>
-              `).join('')}
-            </div>
-          </div>
-
-          <div>
-            <h3 class="text-navy" style="margin-bottom: 1.5rem;"><i class="fa-solid fa-list-check text-green" style="margin-right: 0.5rem;"></i> Skills You Will Demonstrate</h3>
-            <ul style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.75rem;">
-              ${ev.skillsDeveloped.map(sk => `
-                <li style="background: var(--bg-secondary); padding: 0.75rem 1rem; border-radius: var(--radius-md); border-left: 3px solid var(--engineering-green); display: flex; align-items: center; gap: 0.75rem; font-weight: 500; color: var(--primary-navy);">
-                  <i class="fa-solid fa-circle-check text-green"></i> ${sk}
-                </li>
-              `).join('')}
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      <!-- FAQ Section -->
-      <div style="margin-bottom: 4rem;">
-        <div class="section-header">
-          <div class="section-eyebrow">Queries & Guidelines</div>
-          <h2 class="section-title">Frequently Asked Questions</h2>
-        </div>
-
-        <div style="max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 1rem;">
-          ${ev.faqs.map(f => `
-            <details style="background: #FFFFFF; border: 1.5px solid var(--border-light); border-radius: var(--radius-md); padding: 1.25rem; box-shadow: var(--shadow-sm); cursor: pointer;">
-              <summary style="font-family: var(--font-heading); font-size: 1.1rem; font-weight: 700; color: var(--primary-navy); list-style: none; display: flex; justify-content: space-between; align-items: center;">
-                <span>${f.q}</span>
-                <i class="fa-solid fa-chevron-down text-blue" style="font-size: 0.9rem;"></i>
-              </summary>
-              <p style="margin-top: 1rem; color: var(--text-muted); line-height: 1.7; font-size: 0.98rem;">${f.a}</p>
-            </details>
-          `).join('')}
-        </div>
-      </div>
-    </div>
-  `;
+      <a href="events.html" class="btn btn-sm btn-outline">Back to Events</a>
+      <section class="card" style="margin:2rem 0;padding:clamp(1.5rem,4vw,3rem)">
+        <span class="section-eyebrow">${ev.type || "Club event"}</span>
+        <h1 class="text-navy">${ev.title || "Event details"}</h1>
+        <p class="section-subtitle">${description}</p>
+        ${poster ? `<img src="${poster}" alt="${ev.title || "Event"}" style="max-width:100%;max-height:520px;object-fit:contain" />` : ""}
+        ${ev.date || ev.eventDate ? `<p><strong>Date:</strong> ${ev.eventDate || ev.date}</p>` : ""}
+        ${ev.venue ? `<p><strong>Venue:</strong> ${ev.venue}</p>` : ""}
+      </section>
+    </div>`;
 }

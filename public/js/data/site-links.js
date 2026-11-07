@@ -16,7 +16,7 @@ export const DEFAULT_SITE_LINKS = Object.freeze({
     { id: "about", label: "About Us", href: "/pages/about.html" },
     { id: "domains", label: "Technical Domains", href: "/pages/domains.html" },
     { id: "projects", label: "Projects Showcase", href: "/pages/projects.html" },
-    { id: "events", label: "Events & EmbedNova", href: "/pages/events.html" },
+    { id: "events", label: "Events", href: "/pages/events.html" },
     { id: "achievers", label: "Hall of Achievers", href: "/pages/achievers.html" }
   ],
   footerCommunity: [
@@ -24,7 +24,6 @@ export const DEFAULT_SITE_LINKS = Object.freeze({
     { id: "resources", label: "Learning Hub", href: "/pages/resources.html" },
     { id: "join", label: "Join EMBEDX", href: "/pages/join.html" },
     { id: "contact", label: "Contact Department", href: "/pages/contact.html" },
-    { id: "embednova-registration", label: "EMBEDNOVA Registration", href: "/pages/event-detail.html?id=embednova#register" }
   ]
 });
 

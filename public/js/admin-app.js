@@ -3,7 +3,7 @@
 // Real security lives in firestore.rules / storage.rules (roles from `admin_roles` collection).
 import { firebaseConfig, isConfigured, taskMail } from "./config.js?v=20261106-remove-official-mail";
 import { toast } from "./ui.js?v=20261107-admin-controls";
-import { esc, asset, driveFileId } from "./render.js?v=20261107-admin-controls";
+import { esc, asset, driveFileId } from "./render.js?v=20261107-drive-thumbnails";
 import { announcements as starterAnnouncements } from "./data/announcements.js?v=20261106-admin-controls";
 import { events as starterEvents } from "./data/events.js?v=20261106-event-forms";
 import { projects as starterProjects } from "./data/projects.js?v=20261106-admin-controls";
@@ -333,7 +333,7 @@ const SCHEMAS = {
     defaults: { isUpcoming: true, featured: false, order: 1, type: "Technical Workshop", registrationFormId: "" },
     image: "imageUrl",
     title: (d) => d.title,
-    sub: (d) => `${d.type || ""} • ${d.eventDate || d.date || "Date not set"} ${d.isUpcoming ? "• upcoming" : ""} • ${d.registrationFormId ? "form assigned" : d.id === "embednova" ? "EMBEDNOVA form" : /^https:\/\//i.test(String(d.registrationLink || "")) && safeHttpsUrl(d.registrationLink) ? "external registration" : "unassigned"}`
+    sub: (d) => `${d.type || ""} • ${d.eventDate || d.date || "Date not set"} ${d.isUpcoming ? "• upcoming" : ""} • ${d.registrationFormId ? "form assigned" : /^https:\/\//i.test(String(d.registrationLink || "")) && safeHttpsUrl(d.registrationLink) ? "external registration" : "unassigned"}`
   },
   projects: {
     label: "project",
@@ -1129,7 +1129,7 @@ async function renderForms() {
     const lastJoin = joinSnap.docs.map((d) => ({ id: d.id, ...d.data(), _collection: "members_applications" })).sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || ""))).slice(0, 5);
     const lastEnquiry = enquirySnap.docs.map((d) => ({ id: d.id, ...d.data(), _collection: "contact_messages" })).sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || ""))).slice(0, 5);
     const events = eventSnap.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => String(a.title || a.id).localeCompare(String(b.title || b.id)));
-    const assignedFormId = (event) => event.registrationFormId || (event.id === "embednova" && forms.some((form) => form.id === "embednova") ? "embednova" : "");
+    const assignedFormId = (event) => event.registrationFormId || "";
     const hasExternalRegistration = (event) => /^https:\/\//i.test(String(event.registrationLink || "")) && safeHttpsUrl(event.registrationLink);
     const unassignedEventCount = events.filter((event) => !assignedFormId(event) && !hasExternalRegistration(event)).length;
     const eventAssignmentRows = events.map((event) => {
@@ -1154,7 +1154,7 @@ async function renderForms() {
         </div>
         ${sheetUrl ? `<a class="btn btn-ghost btn-sm" href="${esc(sheetUrl)}" target="_blank" rel="noopener noreferrer">Open response sheet</a>` : ""}
       </section>
-      <section class="admin-event-assignment card"><div class="admin-event-assignment-head"><div><h2>Event registration forms</h2><p class="muted">${unassignedEventCount} event(s) have no registration form. Assign a dedicated form in Events → Edit; forms can be created and edited below. Unassigned events no longer open the EMBEDNOVA form by mistake.</p></div><a class="btn btn-ghost btn-sm" href="/admin/events">Manage events</a></div><div class="admin-event-assignment-list">${eventAssignmentRows || `<p class="muted">No events are published yet.</p>`}</div></section>
+      <section class="admin-event-assignment card"><div class="admin-event-assignment-head"><div><h2>Event registration forms</h2><p class="muted">${unassignedEventCount} event(s) have no registration form. Assign a dedicated form in Events → Edit; forms can be created and edited below. Unassigned events do not open a form until one is assigned.</p></div><a class="btn btn-ghost btn-sm" href="/admin/events">Manage events</a></div><div class="admin-event-assignment-list">${eventAssignmentRows || `<p class="muted">No events are published yet.</p>`}</div></section>
       <section class="admin-form-toolbar"><div><h2>Managed forms</h2><p class="muted">Standard forms sync automatically when the owner opens Admin. Closed forms reject new responses. Custom forms support star ratings and exportable responses. Responses auto-refresh every 30 seconds.</p></div><div class="admin-form-toolbar-actions"><button class="btn btn-ghost btn-sm" id="refreshForms">Refresh</button>${can("forms") ? `<button class="btn btn-primary btn-sm" id="newManagedForm">+ Create form</button>` : ""}</div></section>
       <div class="admin-managed-forms">${forms.length ? forms.map((form) => `
         <article class="admin-managed-form card">
@@ -1260,7 +1260,7 @@ async function toggleManagedForm(form) {
 }
 
 function copyManagedFormLink(id, form) {
-  const url = form?.kind === "join" ? `${location.origin}/pages/join.html` : form?.kind === "enquiry" ? `${location.origin}/pages/contact.html` : form?.kind === "registration" ? `${location.origin}/pages/form.html?form=${encodeURIComponent(id)}&event=embednova&eventTitle=EMBEDNOVA` : `${location.origin}/pages/form.html?form=${encodeURIComponent(id)}`;
+  const url = form?.kind === "join" ? `${location.origin}/pages/join.html` : form?.kind === "enquiry" ? `${location.origin}/pages/contact.html` : `${location.origin}/pages/form.html?form=${encodeURIComponent(id)}`;
   if (navigator.clipboard?.writeText) navigator.clipboard.writeText(url).then(() => toast("Public form link copied.", "ok")).catch(() => window.prompt("Copy this public form link:", url));
   else window.prompt("Copy this public form link:", url);
 }
@@ -1303,15 +1303,10 @@ async function showManagedResponses(form) {
     if (form.kind === "join") {
       collectionName = "members_applications";
       const snap = await dbMod.getDocs(dbMod.collection(db, collectionName));
-      rows = snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((d) => d.formId === "join" || (!d.formId && !String(d.interest || "").includes("EMBEDNOVA Registration")));
+      rows = snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((d) => d.formId === "join" || !d.formId);
     } else if (form.kind === "registration") {
-      const [legacySnap, responseSnap] = await Promise.all([
-        dbMod.getDocs(dbMod.collection(db, "members_applications")),
-        dbMod.getDocs(dbMod.query(dbMod.collection(db, "form_responses"), dbMod.where("formId", "==", form.id)))
-      ]);
-      const legacyRows = legacySnap.docs.map((d) => ({ id: d.id, ...d.data(), _collection: "members_applications" })).filter((d) => d.formId === "embednova" || (!d.formId && String(d.interest || "").includes("EMBEDNOVA Registration")));
-      const responseRows = responseSnap.docs.map((d) => ({ id: d.id, ...d.data(), _collection: "form_responses" }));
-      rows = [...legacyRows, ...responseRows];
+      const responseSnap = await dbMod.getDocs(dbMod.query(dbMod.collection(db, "form_responses"), dbMod.where("formId", "==", form.id)));
+      rows = responseSnap.docs.map((d) => ({ id: d.id, ...d.data(), _collection: "form_responses" }));
     } else if (form.kind === "enquiry") {
       collectionName = "contact_messages";
       const snap = await dbMod.getDocs(dbMod.collection(db, collectionName));
@@ -1534,7 +1529,7 @@ function buildField(f, v) {
     }
     const driveNote = document.createElement("small");
     driveNote.className = "muted";
-    driveNote.textContent = "Uploads are optimized to browser-friendly WebP before storage, including iPhone HEIC/HEIF photos. Paste a Drive share link only when the file is shared with Anyone with the link.";
+    driveNote.textContent = "Uploads are optimized to browser-friendly WebP before storage, including iPhone HEIC/HEIF photos. Drive images must be shared as Anyone with the link → Viewer; an admin-only preview can appear to work while public visitors see a broken image. We use the Drive thumbnail URL for public display.";
     picker.append(prev, urlInput, row, driveNote);
     wrap.append(picker);
   } else {
@@ -1627,7 +1622,6 @@ async function openForm(id = null) {
     if (!id) data.order = Math.max(0, ...items.map((row) => Number(row.order) || 0)) + 1;
     else if (data.order == null || data.order === "") data.order = Math.max(1, items.findIndex((row) => row.id === id) + 1);
   }
-  if (sec === "events" && !data.registrationFormId && data.id === "embednova") data.registrationFormId = "embednova";
   let fields = schema.fields;
   if (sec === "events") {
     const choices = await eventRegistrationFormOptions(data.registrationFormId || "");

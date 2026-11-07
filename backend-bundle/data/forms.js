@@ -34,22 +34,7 @@ export const forms = [
       { key: "message", label: "Message", type: "textarea", required: true }
     ]
   },
-  {
-    id: "embednova",
-    title: "EMBEDNOVA Registration",
-    description: "Register for EMBEDNOVA and select your challenge tracks.",
-    kind: "registration",
-    builtin: true,
-    status: "open",
-    fields: [
-      { key: "name", label: "Participant name", type: "text", required: true },
-      { key: "institution", label: "Institution", type: "text", required: true },
-      { key: "dept_year", label: "Department and year", type: "text", required: true },
-      { key: "email", label: "Email address", type: "email", required: true },
-      { key: "mobile", label: "Mobile number", type: "tel", required: true },
-      { key: "tracks", label: "Challenge tracks", type: "checkboxes", required: true, options: ["Embedded Systems", "Robotics", "IoT", "Automation"] }
-    ]
-  },
+
   {
     id: "feedback",
     title: "Event Feedback",

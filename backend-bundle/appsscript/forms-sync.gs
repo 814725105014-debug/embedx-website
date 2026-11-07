@@ -2,7 +2,7 @@
  * EMBEDX response-to-Sheets bridge (Spark-compatible; no Cloud Functions).
  * Run setupEmbedxSheets() once as the allowlisted owner, authorize requested
  * Google scopes, then share the created spreadsheet only with the intended team.
- * This script polls Firestore using the owner's OAuth identity every five minutes.
+ * This script polls Firestore using the owner's OAuth identity every minute.
  */
 const EMBEDX_PROJECT_ID = "embedx-club-eee";
 const EMBEDX_OWNER_EMAIL = "814725105014@trp.srmtrichy.edu.in";
@@ -30,7 +30,7 @@ function setupEmbedxSheets() {
   Object.values(EMBEDX_SHEETS).forEach(([name, headers]) => ensureTab_(spreadsheet, name, headers));
   ensureTab_(spreadsheet, "Sync Log", ["Last Sync", "Result", "Details"]);
   ScriptApp.getProjectTriggers().filter((t) => t.getHandlerFunction() === "syncEmbedxFormsToSheets").forEach((t) => ScriptApp.deleteTrigger(t));
-  ScriptApp.newTrigger("syncEmbedxFormsToSheets").timeBased().everyMinutes(5).create();
+  ScriptApp.newTrigger("syncEmbedxFormsToSheets").timeBased().everyMinutes(1).create();
   writeSettings_({ spreadsheetUrl: spreadsheet.getUrl(), spreadsheetId: id, syncEnabled: true, lastSyncedAt: "", lastError: "" });
   syncEmbedxFormsToSheets();
   console.log("EMBEDX response sheet: " + spreadsheet.getUrl());
@@ -43,6 +43,7 @@ function syncEmbedxFormsToSheets() {
   if (!id) throw new Error("Run setupEmbedxSheets() once before syncing.");
   const spreadsheet = SpreadsheetApp.openById(id);
   let added = 0;
+  const ownerNotices = [];
   try {
     Object.keys(EMBEDX_SHEETS).forEach((collection) => {
       const [sheetName] = EMBEDX_SHEETS[collection];
@@ -58,14 +59,13 @@ function syncEmbedxFormsToSheets() {
         seen.add(docId);
         added++;
         notifySubmitter_(collection, record);
+        if (collection === "members_applications" || collection === "contact_messages") ownerNotices.push({ collection: collection, record: record });
       });
     });
     const now = new Date().toISOString();
     writeSettings_({ spreadsheetUrl: spreadsheet.getUrl(), spreadsheetId: id, syncEnabled: true, lastSyncedAt: now, lastError: "" });
-    if (added) {
-      try { MailApp.sendEmail({ to: EMBEDX_OWNER_EMAIL, subject: "EMBEDX | New form response(s)", body: added + " new response(s) were synced to the EMBEDX response spreadsheet. Open the Admin → Forms & responses page to review.", htmlBody: mailCardHtml_("New form responses", added + " response(s) were synced to the EMBEDX response spreadsheet. Open Forms &amp; responses in the admin portal to review.") }); }
-      catch (error) { console.error("Owner notification failed: " + error.message); }
-    }
+    if (ownerNotices.length) notifyOwnerOfSubmissions_(ownerNotices, added);
+    else if (added) notifyOwnerOfOtherResponses_(added);
     logSync_(spreadsheet, "OK", added + " new response(s) imported.");
     return added;
   } catch (error) {
@@ -129,6 +129,38 @@ function rowFor_(collection, id, d) {
   if (collection === "contact_messages") return [id, d.createdAt || "", d.name || "", d.email || "", d.subject || "", d.message || "", d.formId || "enquiry"];
   const answers = d.answers || {};
   return [id, d.submittedAt || "", d.formId || "", d.formTitle || "", answers.name || "", answers.email || "", JSON.stringify(answers)];
+}
+
+function notifyOwnerOfSubmissions_(notices, totalAdded) {
+  const rows = notices.slice(0, 30).map((item) => {
+    const d = item.record || {};
+    const kind = item.collection === "members_applications" ? "Join application" : "Enquiry";
+    const details = item.collection === "members_applications"
+      ? ["Name: " + (d.name || ""), "Email: " + (d.email || ""), "Register No.: " + (d.regNo || ""), "Department: " + (d.department || ""), "Year: " + (d.year || ""), "Interests: " + (d.interest || ""), "Details: " + (d.message || "")]
+      : ["Name: " + (d.name || ""), "Email: " + (d.email || ""), "Subject: " + (d.subject || ""), "Message: " + (d.message || "")];
+    return { kind: kind, details: details };
+  });
+  const text = rows.map((row, index) => (index + 1) + ". " + row.kind + "\n" + row.details.join("\n")).join("\n\n");
+  const html = rows.map((row) => "<h4 style=\"margin:20px 0 6px;color:#0b2a6f\">" + escapeMailHtml_(row.kind) + "</h4><p style=\"line-height:1.6;white-space:pre-line\">" + row.details.map(escapeMailHtml_).join("<br>") + "</p>").join("");
+  try {
+    MailApp.sendEmail({
+      to: EMBEDX_OWNER_EMAIL,
+      subject: "EMBEDX | New Join/Enquiry submission" + (notices.length > 1 ? "s (" + notices.length + ")" : ""),
+      body: "New public form submission(s)\n\n" + text + (totalAdded > notices.length ? "\n\n" + (totalAdded - notices.length) + " additional response(s) were also synced." : "") + "\n\nReview them in Admin → Forms & responses.",
+      htmlBody: mailCardHtml_("New Join & Enquiry submission", html + (totalAdded > notices.length ? "<p>" + (totalAdded - notices.length) + " additional response(s) were also synced.</p>" : "") + "<p>Review these in Admin → Forms &amp; responses.</p>")
+    });
+  } catch (error) { console.error("Owner notification failed: " + error.message); }
+}
+
+function notifyOwnerOfOtherResponses_(count) {
+  try {
+    MailApp.sendEmail({
+      to: EMBEDX_OWNER_EMAIL,
+      subject: "EMBEDX | New form response(s)",
+      body: count + " new custom form response(s) were synced to the EMBEDX response spreadsheet. Open Admin → Forms & responses to review.",
+      htmlBody: mailCardHtml_("New form responses", count + " new custom form response(s) were synced to the EMBEDX response spreadsheet. Open Forms &amp; responses in the admin portal to review.")
+    });
+  } catch (error) { console.error("Owner notification failed: " + error.message); }
 }
 
 function notifySubmitter_(collection, d) {

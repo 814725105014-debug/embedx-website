@@ -7,7 +7,7 @@ export const esc = (s = "") => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&am
 export function driveFileId(value = "") {
   try {
     const url = new URL(String(value || "").trim());
-    if (url.hostname !== "drive.google.com") return "";
+    if (!/^(?:www\.)?drive\.google\.com$/i.test(url.hostname)) return "";
     const match = url.pathname.match(/\/file\/d\/([A-Za-z0-9_-]{10,})/);
     const id = match?.[1] || url.searchParams.get("id") || "";
     return /^[A-Za-z0-9_-]{10,}$/.test(id) ? id : "";
@@ -22,7 +22,7 @@ export function drivePreviewUrl(value = "") {
 export const asset = (value = "") => {
   const u = String(value || "").trim();
   const driveId = driveFileId(u);
-  if (driveId) return `https://drive.google.com/uc?export=view&id=${encodeURIComponent(driveId)}`;
+  if (driveId) return `https://drive.google.com/thumbnail?id=${encodeURIComponent(driveId)}&sz=w2000`;
   if (/^https:\/\//i.test(u)) return u;
   if (u.startsWith("/") && !u.startsWith("//")) return u;
   return "/" + u.replace(/^\/+/, "");
