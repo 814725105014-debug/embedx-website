@@ -220,7 +220,9 @@ published token must be treated as exposed.
 Admin → **Forms & responses** manages the built-in Join and Enquiry forms as well
 as custom forms. Forms admins can edit built-in questions, add or remove questions,
 open/close intake, review submissions, export CSV, and delete custom forms or
-responses. Public built-in forms render their current Firestore definition and save
+responses. Each form shows its public URL, a one-click **Copy link** action, and an
+open/preview link. Anyone with the link can fill an open form without an Admin
+account. Public built-in forms render their current Firestore definition and save
 new submissions in Firestore; the previous `members_applications` and
 `contact_messages` records remain readable alongside the newer responses. Public
 clients cannot read submissions. No response-to-Google-Sheets sync runs; CSV export
