@@ -1636,7 +1636,7 @@ function buildEventMediaField(f, value) {
   });
   controls.append(add, upload, fileInput, status);
   const note = document.createElement("small"); note.className = "muted";
-  note.textContent = "Use a public HTTPS link. Drive videos should be shared as Anyone with the link · Viewer; direct MOV/MP4/WebM links play in supported browsers.";
+  note.textContent = "After saving an ended event, these photos and videos are added to the public home-page Gallery automatically—no separate Gallery entry is needed. Use a public HTTPS link; Drive videos need Anyone with the link · Viewer access.";
   wrap.append(rows, controls, note);
   return wrap;
 }

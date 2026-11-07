@@ -157,17 +157,29 @@ function eventRegistrationTarget(event) {
 
 function normalizeEventMedia(entry) {
   if (entry && typeof entry === "object") {
-    const type = String(entry.type || entry.mediaType || (entry.videoUrl ? "video" : "image")).toLowerCase();
+    const type = String(entry.type || entry.mediaType || entry.kind || (entry.videoUrl ? "video" : "image")).toLowerCase();
     return {
       type: type === "video" ? "video" : "image",
-      url: String(entry.url || entry.mediaUrl || entry.videoUrl || entry.imageUrl || "").trim(),
-      caption: String(entry.caption || entry.description || "").trim()
+      url: String(entry.url || entry.mediaUrl || entry.videoUrl || entry.imageUrl || entry.driveUrl || "").trim(),
+      caption: String(entry.caption || entry.description || entry.alt || "").trim()
     };
   }
   const [rawType = "", url = "", ...caption] = String(entry || "").split("|").map((part) => part.trim());
   const type = rawType.toLowerCase();
   if (!["image", "photo", "video"].includes(type)) return null;
   return { type: type === "video" ? "video" : "image", url, caption: caption.join(" | ") };
+}
+
+function eventMediaIsPublishable(event = {}) {
+  return event.eventEnded === true || event.eventEnded === "true" || event.ended === true || event.isEnded === true
+    // Older event records used isUpcoming without an explicit ended flag.
+    || (event.eventEnded == null && event.isUpcoming === false);
+}
+
+function eventMediaEntries(event = {}) {
+  if (Array.isArray(event.glimpses)) return event.glimpses;
+  if (typeof event.glimpses === "string") return event.glimpses.split(/\r?\n/).map((entry) => entry.trim()).filter(Boolean);
+  return [];
 }
 
 function mergeEventMediaIntoGallery(gallery, events) {
@@ -179,8 +191,9 @@ function mergeEventMediaIntoGallery(gallery, events) {
   };
   const keys = new Set(output.map((item) => mediaKey(item.imageUrl || item.mediaUrl || item.videoUrl || item.url)).filter(Boolean));
   for (const event of Array.isArray(events) ? events : []) {
-    if (event.eventEnded !== true || !Array.isArray(event.glimpses)) continue;
-    for (const entry of event.glimpses) {
+    const entries = eventMediaEntries(event);
+    if (!eventMediaIsPublishable(event) || !entries.length) continue;
+    for (const entry of entries) {
       const media = normalizeEventMedia(entry);
       const key = mediaKey(media?.url);
       if (!media?.url || keys.has(key)) continue;
@@ -256,7 +269,7 @@ async function eventDetail() {
           </ul></div>` : ""}
       </div>
     </div>
-    ${(e.eventEnded === true && Array.isArray(e.glimpses) && e.glimpses.length) ? `<section class="event-glimpses" aria-labelledby="eventGlimpsesTitle"><h2 id="eventGlimpsesTitle">Event Glimpses</h2><p class="muted">Photos and clips from ${esc(e.title)}.</p><div class="grid grid-3">${e.glimpses.map((entry) => eventGlimpseCard(entry, e.title)).filter(Boolean).join("")}</div></section>` : ""}
+    ${(eventMediaIsPublishable(e) && eventMediaEntries(e).length) ? `<section class="event-glimpses" aria-labelledby="eventGlimpsesTitle"><h2 id="eventGlimpsesTitle">Event Glimpses</h2><p class="muted">Photos and clips from ${esc(e.title)}.</p><div class="grid grid-3">${eventMediaEntries(e).map((entry) => eventGlimpseCard(entry, e.title)).filter(Boolean).join("")}</div></section>` : ""}
     ${(e.faqs || []).length ? `
     <h2 style="margin-top:2.4rem">Frequently Asked Questions</h2>
     <div class="faq">${e.faqs.map((f) => `<details><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p></details>`).join("")}</div>` : ""}`;
