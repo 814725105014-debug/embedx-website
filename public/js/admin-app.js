@@ -8,7 +8,6 @@ import { announcements as starterAnnouncements } from "./data/announcements.js?v
 import { events as starterEvents } from "./data/events.js?v=20261106-event-forms";
 import { projects as starterProjects } from "./data/projects.js?v=20261106-admin-controls";
 import { team as starterTeam } from "./data/team.js?v=20261106-admin-controls";
-import { gallery as starterGallery } from "./data/gallery.js?v=20261106-admin-controls";
 import { resources as starterResources } from "./data/resources.js?v=20261106-admin-controls";
 import { achievements as starterAchievements } from "./data/achievements.js?v=20261106-admin-controls";
 import { forms as starterForms } from "./data/forms.js?v=20261106-admin-controls";
@@ -21,7 +20,7 @@ const STARTER_CONTENT = {
   events: starterEvents,
   projects: starterProjects,
   team: starterTeam,
-  gallery: starterGallery,
+  gallery: [],
   resources: starterResources,
   achievements: starterAchievements,
   forms: starterForms
@@ -35,10 +34,10 @@ const OWNER_EMAIL = "814725105014@trp.srmtrichy.edu.in";
 const PAGES = {
   overview:      { h1: "Overview",       hint: "Live counts, your open tasks and access at a glance.", crud: false },
   announcements: { h1: "Announcements",  hint: "Published instantly to the home-page notice board (pinned first).", crud: true },
-  events:        { h1: "Events",         hint: "Edit event details, add Drive photos or clips with captions, and assign a registration form.", crud: true },
+  events:        { h1: "Events",         hint: "Choose event dates, upload HEIC or other photos, add Drive-hosted video clips, and assign registration forms.", crud: true },
   projects:      { h1: "Projects",       hint: "Featured projects appear on the home page grid.", crud: true },
   team:          { h1: "Team",           hint: "Executive council & faculty — swap photos and edit details any time.", crud: true },
-  gallery:       { h1: "Gallery",        hint: "Manage public gallery photos. For a poster or event album, use Events to add photos, video clips, and captions.", crud: true },
+  gallery:       { h1: "Gallery",        hint: "Upload public photos, including iPhone HEIC/HEIF. Event-specific photos and video clips belong under Events.", crud: true },
   resources:     { h1: "Resources",      hint: "Learning Hub guides with category filters.", crud: true },
   achievements:  { h1: "Achievers",      hint: "Hall of Achievers cards.", crud: true },
   forms:         { h1: "Forms & responses", hint: "Design forms, close intake, review submissions, export records, and manage Google Sheets sync.", crud: false },
@@ -239,17 +238,60 @@ function safeHttpsUrl(value) {
   try { return new URL(url).protocol === "https:"; } catch { return false; }
 }
 
-function repositoryImagePath(value) {
-  let source = String(value || "").trim();
-  if (/^https:\/\//i.test(source)) {
-    try {
-      const url = new URL(source);
-      if (!["embedx-club-eee.web.app", "embedx-club-eee.firebaseapp.com"].includes(url.hostname)) return "";
-      source = url.pathname;
-    } catch { return ""; }
-  }
-  if (!source.startsWith("/")) source = `/${source}`;
-  return /^\/assets\/images\/[A-Za-z0-9][A-Za-z0-9._-]*\.(?:webp|png|jpe?g|gif|svg)$/i.test(source) ? source : "";
+let heicConverterPromise = null;
+function loadHeicConverter() {
+  if (typeof window.heic2any === "function") return Promise.resolve(window.heic2any);
+  if (heicConverterPromise) return heicConverterPromise;
+  heicConverterPromise = new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = "/js/vendor/heic2any.min.js?v=20261108-heic";
+    script.async = true;
+    script.onload = () => typeof window.heic2any === "function" ? resolve(window.heic2any) : reject(new Error("HEIC converter did not initialize."));
+    script.onerror = () => reject(new Error("Could not load the HEIC image converter."));
+    document.head.appendChild(script);
+  }).catch((error) => { heicConverterPromise = null; throw error; });
+  return heicConverterPromise;
+}
+async function browserReadableImage(file) {
+  const heic = /\.(?:heic|heif)$/i.test(file.name || "") || /^image\/(?:heic|heif|heic-sequence|heif-sequence)$/i.test(file.type || "");
+  if (!heic) return file;
+  const convert = await loadHeicConverter();
+  const converted = await convert({ blob: file, toType: "image/jpeg", quality: 0.92 });
+  const blob = Array.isArray(converted) ? converted[0] : converted;
+  if (!(blob instanceof Blob) || !blob.size) throw new Error("This HEIC/HEIF image could not be converted.");
+  return blob;
+}
+function loadEditorImage(file) {
+  return browserReadableImage(file).then((blob) => new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(blob);
+    const image = new Image();
+    image.onload = () => { URL.revokeObjectURL(url); resolve(image); };
+    image.onerror = () => { URL.revokeObjectURL(url); reject(new Error("The selected image could not be decoded. Try a JPEG or PNG copy.")); };
+    image.src = url;
+  }));
+}
+async function uploadOptimizedImage(file, section = PAGE) {
+  if (file.size > 25 * 1024 * 1024) throw new Error("Choose an image under 25 MB.");
+  const decoded = await browserReadableImage(file);
+  const bitmap = await createImageBitmap(decoded);
+  try {
+    const scale = Math.min(1, 1920 / bitmap.width, 1920 / bitmap.height);
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    const context = canvas.getContext("2d", { alpha: false });
+    if (!context) throw new Error("Image editor could not allocate a canvas.");
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    let blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/webp", 0.82));
+    if (!blob) throw new Error("Image optimization failed.");
+    if (blob.size >= 5 * 1024 * 1024) blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/webp", 0.68));
+    if (!blob || blob.size >= 5 * 1024 * 1024) throw new Error("Optimized image exceeds the 5 MB upload limit.");
+    const { storage } = await sdk();
+    const path = `images/${section}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.webp`;
+    const ref = stMod.ref(storage, path);
+    await stMod.uploadBytes(ref, blob, { contentType: "image/webp" });
+    return await stMod.getDownloadURL(ref);
+  } finally { bitmap.close?.(); }
 }
 
 /* ---------------- schemas ---------------- */
@@ -275,7 +317,7 @@ const SCHEMAS = {
       { k: "type", t: "text", label: "Type (e.g. Flagship Signature Event)" },
       { k: "subtitle", t: "text", label: "Subtitle" },
       { k: "tagline", t: "text", label: "Tagline" },
-      { k: "date", t: "text", label: "Date label" },
+      { k: "eventDate", t: "date", label: "Event date (select from calendar)" },
       { k: "venue", t: "text", label: "Venue" },
       { k: "registrationStatus", t: "text", label: "Registration status" },
       { k: "registrationFormId", t: "event-form", full: true, label: "Registration form" },
@@ -291,7 +333,7 @@ const SCHEMAS = {
     defaults: { isUpcoming: true, featured: false, order: 1, type: "Technical Workshop", registrationFormId: "" },
     image: "imageUrl",
     title: (d) => d.title,
-    sub: (d) => `${d.type || ""} • ${d.date || ""} ${d.isUpcoming ? "• upcoming" : ""} • ${d.registrationFormId ? "form assigned" : d.id === "embednova" ? "EMBEDNOVA form" : /^https:\/\//i.test(String(d.registrationLink || "")) && safeHttpsUrl(d.registrationLink) ? "external registration" : "unassigned"}`
+    sub: (d) => `${d.type || ""} • ${d.eventDate || d.date || "Date not set"} ${d.isUpcoming ? "• upcoming" : ""} • ${d.registrationFormId ? "form assigned" : d.id === "embednova" ? "EMBEDNOVA form" : /^https:\/\//i.test(String(d.registrationLink || "")) && safeHttpsUrl(d.registrationLink) ? "external registration" : "unassigned"}`
   },
   projects: {
     label: "project",
@@ -797,7 +839,7 @@ async function renderWebsiteSettings() {
         <div class="hero-settings-preview"><img id="heroImagePreview" src="${esc(settings.heroImageUrl)}" alt="Homepage banner preview" style="object-fit:${esc(settings.heroImageFit)};object-position:${settings.heroImagePositionX}% ${settings.heroImagePositionY}%" /><span>Live crop preview</span></div>
         <div class="form-grid admin-site-grid">
           ${siteSettingField("heroImageUrl", "Image URL", settings.heroImageUrl, "/assets/images/... or direct HTTPS image URL", "url")}
-          <div class="field"><label for="heroImageFile">Choose media from your device</label><input id="heroImageFile" type="file" accept="image/png,image/jpeg,image/webp" ${can("site") ? "" : "disabled"} /><small class="muted">Uploads are resized and optimized to WebP (max 5 MB input).</small></div>
+          <div class="field"><label for="heroImageFile">Choose media from your device</label><input id="heroImageFile" type="file" accept="image/png,image/jpeg,image/webp,image/heic,image/heif,.heic,.heif" ${can("site") ? "" : "disabled"} /><small class="muted">Uploads are resized and optimized to WebP (max 25 MB input).</small></div>
           ${siteSettingField("heroImageAlt", "Accessibility alt text", settings.heroImageAlt, "Describe the image clearly", "text")}
           <div class="field"><label for="heroImageFit">Image fit</label><select id="heroImageFit" name="heroImageFit" ${can("site") ? "" : "disabled"}><option value="cover" ${settings.heroImageFit === "cover" ? "selected" : ""}>Fill banner (cover)</option><option value="contain" ${settings.heroImageFit === "contain" ? "selected" : ""}>Show full image (contain)</option></select></div>
           <div class="field"><label for="heroImagePositionX">Horizontal focus <output id="heroImagePositionXValue">${settings.heroImagePositionX}%</output></label><input type="range" id="heroImagePositionX" name="heroImagePositionX" min="0" max="100" value="${settings.heroImagePositionX}" ${can("site") ? "" : "disabled"} /></div>
@@ -827,22 +869,14 @@ async function renderWebsiteSettings() {
     region.querySelector("#heroImageFile")?.addEventListener("change", async (event) => {
       const file = event.currentTarget.files?.[0];
       if (!file) return;
-      if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 5 * 1024 * 1024) {
-        toast("Choose a JPG, PNG, or WebP image under 5 MB.", "err"); event.currentTarget.value = ""; return;
+      const isSupportedImage = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"].includes(file.type)
+        || /\.(?:jpe?g|png|webp|heic|heif)$/i.test(file.name || "");
+      if (!isSupportedImage || file.size > 25 * 1024 * 1024) {
+        toast("Choose a JPG, PNG, WebP, or iPhone HEIC/HEIF image under 25 MB.", "err"); event.currentTarget.value = ""; return;
       }
       const picker = event.currentTarget; picker.disabled = true;
       try {
-        const bitmap = await createImageBitmap(file);
-        const scale = Math.min(1, 1920 / bitmap.width);
-        const canvas = document.createElement("canvas"); canvas.width = Math.round(bitmap.width * scale); canvas.height = Math.round(bitmap.height * scale);
-        canvas.getContext("2d", { alpha: false }).drawImage(bitmap, 0, 0, canvas.width, canvas.height); bitmap.close?.();
-        const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/webp", .82));
-        if (!blob) throw new Error("Image optimization failed.");
-        const { storage } = await sdk();
-        const path = `images/site/hero/${Date.now()}-${Math.random().toString(36).slice(2, 7)}.webp`;
-        const ref = stMod.ref(storage, path);
-        await stMod.uploadBytes(ref, blob, { contentType: "image/webp" });
-        heroUrlInput.value = await stMod.getDownloadURL(ref);
+        heroUrlInput.value = await uploadOptimizedImage(file, "site");
         updateHeroPreview();
         toast("Banner image uploaded and optimized. Save website settings to publish it.", "ok");
       } catch (error) { toast(`Banner upload failed: ${error.message}`, "err"); }
@@ -1451,7 +1485,7 @@ function buildField(f, v) {
   wrap.appendChild(label);
   let input;
   if (f.t === "textarea" || f.t === "list") {
-    input = document.createElement("textarea"); input.value = v ?? "";
+    input = document.createElement("textarea"); input.value = f.t === "list" && Array.isArray(v) ? v.join("\n") : (v ?? "");
     if (f.t === "list") input.placeholder = "Enter one item per line";
   } else if (f.t === "select" || f.t === "event-form") {
     input = document.createElement("select");
@@ -1487,9 +1521,9 @@ function buildField(f, v) {
     driveLink.textContent = "Open Google Drive";
     const fileLabel = document.createElement("label");
     fileLabel.className = "btn btn-ghost btn-sm"; fileLabel.htmlFor = `file-${f.k}`;
-    fileLabel.textContent = "Upload image file";
+    fileLabel.textContent = "Upload image file (HEIC supported)";
     const file = document.createElement("input");
-    file.id = `file-${f.k}`; file.type = "file"; file.accept = "image/jpeg,image/png,image/webp";
+    file.id = `file-${f.k}`; file.type = "file"; file.accept = "image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif";
     file.style.display = "none"; file.dataset.imgfield = f.k;
     row.append(driveLink, fileLabel, file);
     if (v && !driveFileId(v)) {
@@ -1500,12 +1534,12 @@ function buildField(f, v) {
     }
     const driveNote = document.createElement("small");
     driveNote.className = "muted";
-    driveNote.textContent = "Paste a Drive share link above. Set Share access to Anyone with the link · Viewer so it can display publicly.";
+    driveNote.textContent = "Uploads are optimized to browser-friendly WebP before storage, including iPhone HEIC/HEIF photos. Paste a Drive share link only when the file is shared with Anyone with the link.";
     picker.append(prev, urlInput, row, driveNote);
     wrap.append(picker);
   } else {
     input = document.createElement("input");
-    input.type = f.t === "num" ? "number" : f.t === "email" ? "email" : "text";
+    input.type = f.t === "num" ? "number" : f.t === "email" ? "email" : f.t === "date" ? "date" : "text";
     input.value = v ?? "";
   }
   input.id = id; input.name = f.k;
@@ -1524,6 +1558,48 @@ function buildField(f, v) {
     note.textContent = "Copy a Drive share link; set General access to Anyone with the link · Viewer. This link format is supported for photos and video clips.";
     driveRow.append(driveLink, note);
     wrap.appendChild(driveRow);
+    const uploadRow = document.createElement("div");
+    uploadRow.className = "event-media-upload";
+    uploadRow.style.cssText = "display:flex;align-items:center;gap:.65rem;flex-wrap:wrap;margin-top:.75rem";
+    const uploadLabel = document.createElement("label");
+    uploadLabel.className = "btn btn-ghost btn-sm";
+    uploadLabel.htmlFor = "eventGlimpseUploads";
+    uploadLabel.textContent = "Upload event photos (HEIC supported)";
+    const uploadInput = document.createElement("input");
+    uploadInput.id = "eventGlimpseUploads";
+    uploadInput.type = "file";
+    uploadInput.multiple = true;
+    uploadInput.accept = "image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif";
+    uploadInput.style.display = "none";
+    const uploadStatus = document.createElement("span");
+    uploadStatus.className = "muted";
+    uploadStatus.setAttribute("role", "status");
+    uploadInput.addEventListener("change", async () => {
+      const files = [...(uploadInput.files || [])];
+      if (!files.length) return;
+      uploadInput.disabled = true;
+      let completed = 0;
+      for (const file of files) {
+        uploadStatus.textContent = `Uploading ${file.name}…`;
+        try {
+          const url = await uploadOptimizedImage(file, "events");
+          const caption = file.name.replace(/\.[^.]+$/, "").replace(/[|\r\n]/g, " ").trim();
+          input.value = `${input.value.trim()}${input.value.trim() ? "\n" : ""}image | ${url} | ${caption}`;
+          completed++;
+        } catch (error) {
+          console.error("Event photo upload failed", error);
+          uploadStatus.textContent = `Upload failed for ${file.name}: ${error.message}`;
+          toast(`Could not upload ${file.name}: ${error.message}`, "err");
+        }
+      }
+      if (completed) {
+        uploadStatus.textContent = `${completed} photo${completed === 1 ? "" : "s"} uploaded. Save the event to publish them; add video clips using a public Google Drive link above.`;
+      }
+      uploadInput.disabled = false;
+      uploadInput.value = "";
+    });
+    uploadRow.append(uploadLabel, uploadInput, uploadStatus);
+    wrap.appendChild(uploadRow);
   }
   return wrap;
 }
@@ -1569,14 +1645,19 @@ async function openForm(id = null) {
   }
 
   $("#entityFields").querySelectorAll("input[type=file][data-imgfield]").forEach((inp) => {
-    inp.addEventListener("change", () => {
+    inp.addEventListener("change", async () => {
       const file = inp.files[0];
       if (!file) return;
+      if (file.size > 25 * 1024 * 1024) { toast("Choose an image under 25 MB. It will be optimized before upload.", "err"); inp.value = ""; return; }
       pendingImageField = inp.dataset.imgfield;
-      const url = URL.createObjectURL(file);
-      const img = new Image();
-      img.onload = () => { openEditor(img); URL.revokeObjectURL(url); };
-      img.src = url;
+      inp.disabled = true;
+      try {
+        const img = await loadEditorImage(file);
+        openEditor(img);
+      } catch (error) {
+        console.error("Could not open selected image", error);
+        toast(`Could not preview ${file.name}: ${error.message}`, "err");
+      } finally { inp.disabled = false; inp.value = ""; }
     });
   });
   $("#entityFields").querySelectorAll("[data-editimg]").forEach((b) => {
@@ -1708,9 +1789,6 @@ function addContentTombstone(batch, db, section, contentId) {
 async function removeItem(id) {
   const sec = PAGE;
   if (!can(sec)) { toast("Your role can't delete here.", "err"); return; }
-  const item = items.find((row) => row.id === id);
-  const imageUrl = sec === "gallery" ? String(item?.imageUrl || "") : "";
-  const repoImage = repositoryImagePath(imageUrl);
   const starterOwned = Boolean(STARTER_CONTENT[sec]?.some((row) => row.id === id));
   const warning = sec === "gallery"
     ? "Remove this photo from the public gallery?"
@@ -1718,15 +1796,7 @@ async function removeItem(id) {
   if (!confirm(warning)) return;
   try {
     const { db } = await sdk();
-    if (repoImage) {
-      const batch = dbMod.writeBatch(db);
-      const requestRef = dbMod.doc(dbMod.collection(db, "asset_delete_requests"));
-      batch.delete(dbMod.doc(db, sec, id));
-      if (starterOwned) addContentTombstone(batch, db, sec, id);
-      batch.set(requestRef, { galleryId: id, imageUrl: repoImage, requestedBy: me, requestedAt: dbMod.serverTimestamp() });
-      await batch.commit();
-      toast("Photo removed from the public gallery.", "ok");
-    } else if (starterOwned) {
+    if (starterOwned) {
       const batch = dbMod.writeBatch(db);
       batch.delete(dbMod.doc(db, sec, id));
       addContentTombstone(batch, db, sec, id);
@@ -1801,26 +1871,37 @@ function drawEditor() {
   ctx.restore();
 }
 async function applyEditor() {
-  const canvas = $("#editorCanvas");
-  const blob = await new Promise((r) => canvas.toBlob(r, "image/webp", 0.85));
-  if (!blob) { toast("Could not export image.", "err"); return; }
-  const { storage } = await sdk();
-  const path = `images/${PAGE}/${Date.now()}-${Math.random().toString(36).slice(2, 7)}.webp`;
+  const button = $("#editorApply");
+  if (button) { button.disabled = true; button.textContent = "Uploading…"; }
   try {
+    const canvas = $("#editorCanvas");
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/webp", 0.84));
+    if (!blob) throw new Error("The browser could not export the optimized image.");
+    if (blob.size >= 5 * 1024 * 1024) throw new Error("The optimized image is over the 5 MB upload limit. Choose a smaller crop.");
+    const { storage } = await sdk();
+    const path = `images/${PAGE}/${Date.now()}-${Math.random().toString(36).slice(2, 7)}.webp`;
     const ref = stMod.ref(storage, path);
     await stMod.uploadBytes(ref, blob, { contentType: "image/webp" });
     const url = await stMod.getDownloadURL(ref);
     const input = document.getElementById(`f-${pendingImageField}`);
+    if (!input) throw new Error("The image field was closed before the upload completed.");
     input.value = url;
     const urlInput = document.getElementById(`url-${pendingImageField}`);
     if (urlInput) urlInput.value = url;
     const prev = document.getElementById(`prev-${pendingImageField}`);
-    prev.src = url; prev.style.display = "";
+    if (prev) { prev.src = url; prev.style.display = ""; }
     closeModals();
-    toast("Photo uploaded ✔", "ok");
+    toast("Photo uploaded. Save the form to publish it.", "ok");
   } catch (err) {
-    console.error(err);
-    toast(`Upload failed: ${err.message}. If Firebase Storage is not enabled, use a deployed /assets/ path or HTTPS image URL instead.`, "err");
+    console.error("Image upload failed", err);
+    const message = err.code === "storage/unauthorized"
+      ? "Firebase Storage denied this upload. Confirm the Storage rules are deployed and your account has permission for this section."
+      : err.code === "storage/bucket-not-found" || err.code === "storage/no-default-bucket"
+        ? "Firebase Storage is not enabled for this project yet. Enable the configured bucket, then retry."
+        : `Upload failed: ${err.message || err.code || "unknown error"}`;
+    toast(message, "err");
+  } finally {
+    if (button?.isConnected) { button.disabled = false; button.textContent = "Use this image"; }
   }
 }
 

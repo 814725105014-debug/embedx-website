@@ -186,44 +186,6 @@ function renderEventDetail(ev) {
         </div>
       </div>
 
-      <!-- 3 Distinct Challenge Tracks -->
-      <div style="margin-bottom: 4rem;">
-        <div class="section-header">
-          <div class="section-eyebrow eyebrow-orange">Competitive Categories</div>
-          <h2 class="section-title">The 3 EMBEDNOVA Tracks</h2>
-          <p class="section-subtitle">Choose your track or compete across multiple disciplines</p>
-        </div>
-
-        <div class="grid-3" style="gap: 2rem;">
-          ${ev.tracks.map(t => `
-            <div style="background: #FFFFFF; border: 2px solid ${t.color}; border-radius: var(--radius-lg); padding: 2rem; box-shadow: var(--shadow-md); display: flex; flex-direction: column;">
-              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
-                <span class="track-number" style="color: ${t.color};">${t.number}</span>
-                <span class="section-eyebrow" style="color: ${t.color}; background: rgba(0,0,0,0.04);">${t.tagline}</span>
-              </div>
-              <h3 class="text-navy" style="font-size: 1.5rem; margin-bottom: 0.5rem;">${t.name}</h3>
-              <p style="font-family: var(--font-heading); font-size: 0.88rem; font-weight: 700; color: ${t.color}; letter-spacing: 0.05em; margin-bottom: 1rem;">
-                ${t.motto}
-              </p>
-              <p style="font-size: 0.95rem; line-height: 1.7; margin-bottom: 1.5rem;">${t.description}</p>
-              
-              <div style="margin-bottom: 1.5rem;">
-                <h4 style="font-size: 1rem; color: var(--primary-navy); margin-bottom: 0.5rem;">Key Topics & Focus:</h4>
-                <ul style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.45rem; font-size: 0.88rem;">
-                  ${t.topics.map(top => `<li style="display: flex; align-items: flex-start; gap: 0.5rem;"><i class="fa-solid fa-angle-right" style="color: ${t.color}; margin-top: 0.2rem;"></i> <span>${top}</span></li>`).join('')}
-                </ul>
-              </div>
-
-              <div style="margin-top: auto; padding-top: 1rem; border-top: 1px solid var(--border-light);">
-                <button class="btn btn-sm btn-outline" style="width: 100%; border-color: ${t.color}; color: ${t.color};" onclick="document.getElementById('registerModal').classList.add('open')">
-                  Register for Track ${t.number}
-                </button>
-              </div>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-
       <!-- Why Participate & Skills -->
       <div style="background: #FFFFFF; border: 1px solid var(--border-card); border-radius: var(--radius-lg); padding: clamp(2rem, 4vw, 3.5rem); box-shadow: var(--shadow-md); margin-bottom: 4rem;">
         <div class="grid-2" style="gap: 3rem;">

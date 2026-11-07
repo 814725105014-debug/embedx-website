@@ -55,6 +55,18 @@ export function projectCard(p) {
   </article>`;
 }
 
+export function eventDateLabel(event = {}) {
+  const iso = String(event.eventDate || "").slice(0, 10);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+    const [year, month, day] = iso.split("-").map(Number);
+    const date = new Date(Date.UTC(year, month - 1, day));
+    if (date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day) {
+      return new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(date);
+    }
+  }
+  return String(event.date || "");
+}
+
 export function eventCard(e) {
   return `
   <article class="card tilt" data-reveal>
@@ -62,7 +74,7 @@ export function eventCard(e) {
     <h3 style="margin-top:.7rem">${esc(e.title)}</h3>
     <p class="muted" style="font-size:.9rem">${esc(e.subtitle || "")}</p>
     <ul class="event-meta">
-      <li>${icon("calendar")}<span>${esc(e.date || "")}</span></li>
+      <li>${icon("calendar")}<span>${esc(eventDateLabel(e))}</span></li>
       <li>${icon("map-pin")}<span>${esc(e.venue || "")}</span></li>
       <li>${icon("shield")}<span>${esc(e.registrationStatus || "")}</span></li>
     </ul>
