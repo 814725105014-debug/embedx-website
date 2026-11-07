@@ -5,6 +5,15 @@ import { toast } from "./ui.js?v=20261107-admin-controls";
 const RATE_KEY = "embedx_rate";
 const RATE_MAX = 3;
 const RATE_WINDOW = 10 * 60 * 1000;
+const FORM_STATUS_TIMEOUT_MS = 8_000;
+
+function getFormDefinitionWithin(formKey) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(Object.assign(new Error("Form status check timed out."), { code: "deadline-exceeded" })), FORM_STATUS_TIMEOUT_MS);
+  });
+  return Promise.race([getFormDefinition(formKey), timeout]).finally(() => clearTimeout(timer));
+}
 
 function storageGet(storageName, key, fallback = null) {
   try { return window[storageName].getItem(key) ?? fallback; } catch { return fallback; }
@@ -80,7 +89,8 @@ function wire(formId, { build, submit, successMsg, draftKey, formKey }) {
   const form = document.getElementById(formId);
   if (!form) return;
   let activeDefinition = null;
-  if (formKey && isConfigured) getFormDefinition(formKey).then((definition) => {
+  let formClosed = false;
+  if (formKey && isConfigured) getFormDefinitionWithin(formKey).then((definition) => {
     activeDefinition = definition;
     if (!definition) return;
     const titleTarget = document.getElementById(formKey === "join" ? "joinFormTitle" : formKey === "enquiry" ? "enquiryFormTitle" : "");
@@ -88,6 +98,7 @@ function wire(formId, { build, submit, successMsg, draftKey, formKey }) {
     if (titleTarget && definition.title) titleTarget.textContent = definition.title;
     if (descriptionTarget && definition.description) descriptionTarget.textContent = definition.description;
     if (definition.status !== "open") {
+      formClosed = true;
       const notice = document.createElement("p");
       notice.className = "form-closed-notice";
       notice.setAttribute("role", "status");
@@ -95,7 +106,7 @@ function wire(formId, { build, submit, successMsg, draftKey, formKey }) {
       form.prepend(notice);
       form.querySelectorAll("input, select, textarea, button").forEach((control) => { control.disabled = true; });
     }
-  }).catch((err) => console.warn("Could not read form availability", err));
+  }).catch((err) => console.warn("Could not read form availability; submissions will retry the status check", err));
 
   if (draftKey && storageGet("sessionStorage", "embedx_join_submitted") !== "1") {
     try {
@@ -122,32 +133,45 @@ function wire(formId, { build, submit, successMsg, draftKey, formKey }) {
 
     const errors = build.validate(d);
     if (!setErrors(form, errors)) { toast("Please fix the highlighted fields.", "err"); return; }
-    if (formKey && isConfigured) {
-      try { activeDefinition = await getFormDefinition(formKey); }
-      catch (err) { console.warn("Could not refresh form status; Firestore still validates a seeded form ID", err); }
-      if (activeDefinition && activeDefinition.status !== "open") {
-        toast("This form is closed and is no longer accepting responses.", "err");
+
+    // Lock synchronously before any network check to prevent double-click duplicate submissions.
+    form.dataset.sending = "1";
+    const btn = form.querySelector("[type=submit]");
+    const label = btn?.innerHTML || "Submit";
+    if (btn) { btn.disabled = true; btn.setAttribute("aria-busy", "true"); btn.textContent = "Checking form…"; }
+    let status = form.querySelector("[data-form-status]");
+    if (!status) {
+      status = document.createElement("p"); status.dataset.formStatus = "";
+      status.className = "form-submit-status"; status.setAttribute("role", "status"); status.setAttribute("aria-live", "polite"); form.append(status);
+    }
+    status.textContent = "";
+    try {
+      if (formKey && isConfigured) {
+        // Fail closed if the status check times out; never bypass a closed form by dropping formId.
+        activeDefinition = await getFormDefinitionWithin(formKey);
+        if (activeDefinition && activeDefinition.status !== "open") {
+          formClosed = true;
+          status.textContent = "This form is closed and is no longer accepting responses.";
+          form.querySelectorAll("input, select, textarea, button").forEach((control) => { control.disabled = true; });
+          toast(status.textContent, "err");
+          return;
+        }
+        formClosed = false;
+      }
+
+      if (rateLimited(formId)) {
+        status.textContent = "Too many submissions from this device. Please try again in a few minutes.";
+        toast(status.textContent, "err");
         return;
       }
-    }
 
-    if (rateLimited(formId)) {
-      toast("Too many submissions from this device. Please try again in a few minutes.", "err");
-      return;
-    }
-
-    let status = form.querySelector("[data-form-status]");
-    if (!status) { status = document.createElement("p"); status.dataset.formStatus = ""; status.className = "form-submit-status"; status.setAttribute("role", "status"); status.setAttribute("aria-live", "polite"); form.append(status); }
-    status.textContent = "";
-    const btn = form.querySelector("[type=submit]");
-    form.dataset.sending = "1";
-    if (btn) { btn.disabled = true; btn.setAttribute("aria-busy", "true"); }
-    const label = btn?.innerHTML || "Submit";
-    if (btn) btn.textContent = "Sending…";
-    try {
+      if (btn) btn.textContent = "Sending…";
       const payload = build.payload(d);
+      // Built-in legacy forms may operate without a Firestore definition. If a definition
+      // exists, keep formId so Firestore enforces its open status on the actual write.
       if (formKey && !activeDefinition) delete payload.formId;
       await submit(payload);
+      status.textContent = successMsg;
       toast(successMsg, "ok");
       form.reset();
       if (draftKey) storageRemove("sessionStorage", draftKey);
@@ -156,11 +180,15 @@ function wire(formId, { build, submit, successMsg, draftKey, formKey }) {
       console.error("Public form submission failed", { code: err?.code || "unknown", message: err?.message || String(err) });
       const message = submissionFailureMessage(err);
       const errorCode = String(err?.code || "").replace(/^firestore\//, "");
-      if (status) status.textContent = errorCode ? `${message} (Reference: ${errorCode})` : message;
+      status.textContent = errorCode ? `${message} (Reference: ${errorCode})` : message;
       toast(message, "err");
     } finally {
       form.dataset.sending = "0";
-      if (btn) { btn.disabled = false; btn.removeAttribute("aria-busy"); btn.innerHTML = label; }
+      if (btn) {
+        btn.disabled = formClosed;
+        btn.removeAttribute("aria-busy");
+        btn.innerHTML = label;
+      }
     }
   });
 }
