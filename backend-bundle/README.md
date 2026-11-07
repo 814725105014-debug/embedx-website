@@ -10,19 +10,17 @@ No Cloud Functions are required.
 - `storage.rules`: section-scoped image uploads, for projects where Firebase Storage is initialized.
 - `firestore.indexes.json`: indexes used by the site.
 - `data/`: seed-source modules (kept in sync with `public/js/data/`).
-- `scripts/seed.js`: adds missing starter documents in seven public content collections plus standard form definitions; never overwrites existing documents.
+- `scripts/seed.js`: adds missing starter documents in six public content collections plus standard form definitions; never overwrites existing documents or seeds gallery photos.
 - `scripts/create-admin.js`, `grant-admin.js`, `reset-password.js`, `update-admin.js`: trusted Admin SDK owner tools.
 - `appsscript/task-mail.gs` + `appsscript/forms-sync.gs` + `appsscript/appsscript.json`: owner-authorized Sheets sync and a separate Firebase-token-verified task-email endpoint.
-- `scripts/process-image-deletion-requests.mjs`: validates Admin Gallery asset deletions and stages safe repository removals for a GitHub PR; `.github/workflows/gallery-image-deletions.yml` runs it with a private Firebase service-account secret.
 
 ## Seed content
 
-The seeder adds missing docs in seven public content collections and the `forms`
+The seeder adds missing docs in six public content collections and the `forms`
 configuration collection (`join`, `enquiry`, `embednova`, `feedback`). It never seeds
-form responses, `admin_roles`, or tasks. Announcements are intentionally empty until
-real notices are written. The gallery source refers to images already deployed under
-`public/assets/images/`. On owner sign-in, the portal automatically adds missing
-starter docs without overwriting existing edits or requiring Storage. Permanent
+gallery photos, form responses, `admin_roles`, or tasks. Announcements are intentionally
+empty until real notices are written. On owner sign-in, the portal automatically adds
+missing starter docs without overwriting existing edits or requiring Storage. Permanent
 Firestore deletion tombstones keep intentionally deleted starter items from being
 resurrected by portal sync or the trusted CLI seeder.
 

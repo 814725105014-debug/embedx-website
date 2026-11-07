@@ -122,22 +122,6 @@ service cloud.firestore {
             && isTaskAssignee(resource.data));
     }
 
-    // ---- gallery asset deletion requests: public GitHub credentials are never used ----
-    // Gallery admins may queue a static asset removal. A trusted GitHub Action validates
-    // references and opens a pull request; only the Admin SDK updates request status.
-    match /asset_delete_requests/{requestId} {
-      allow read: if canWrite('gallery');
-      allow create: if canWrite('gallery')
-        && request.resource.data.keys().hasAll(['galleryId', 'imageUrl', 'requestedBy', 'requestedAt'])
-        && request.resource.data.keys().hasOnly(['galleryId', 'imageUrl', 'requestedBy', 'requestedAt'])
-        && isStr(request.resource.data.galleryId, 1, 150)
-        && isStr(request.resource.data.imageUrl, 20, 240)
-        && request.resource.data.imageUrl.matches('^/assets/images/[A-Za-z0-9][A-Za-z0-9._-]*\\.(webp|png|jpe?g|gif|svg)$')
-        && request.resource.data.requestedBy == request.auth.token.email
-        && request.resource.data.requestedAt == request.time;
-      allow update, delete: if false;
-    }
-
     // ---- owner-managed forms and public responses ----
     match /forms/{formId} {
       allow read: if true;

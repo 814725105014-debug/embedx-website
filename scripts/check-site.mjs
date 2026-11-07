@@ -130,14 +130,14 @@ for (const match of sitemap.matchAll(/<loc>(https:\/\/embedx-club-eee\.web\.app[
 }
 
 // Ensure the complete public starter dataset stays in sync with both seeders.
-const seedCollections = ["announcements", "events", "projects", "team", "gallery", "resources", "achievements", "forms"];
+const seedCollections = ["announcements", "events", "projects", "team", "resources", "achievements", "forms"];
 for (const seedFile of ["scripts/seed.js", "backend-bundle/scripts/seed.js"]) {
   const source = await readFile(path.join(root, seedFile), "utf8");
   const declared = source.match(/const COLLECTIONS = \[([^\]]*)\]/)?.[1] || "";
   const actual = [...declared.matchAll(/["']([a-z_]+)["']/g)].map((m) => m[1]);
   if (actual.join(",") !== seedCollections.join(",")) fail(`${seedFile}: must seed exactly ${seedCollections.join(", ")}`);
 }
-for (const name of seedCollections) {
+for (const name of [...seedCollections, "gallery"]) {
   const dataFile = path.join(pub, "js", "data", `${name}.js`);
   const mirrorFile = path.join(root, "backend-bundle", "data", `${name}.js`);
   if (!(await exists(dataFile)) || !(await exists(mirrorFile))) { fail(`Seed data missing for ${name}`); continue; }
@@ -147,6 +147,7 @@ for (const name of seedCollections) {
     const mod = await import(pathToFileURL(dataFile).href);
     const rows = mod[name];
     if (!Array.isArray(rows)) { fail(`${name}.js: named export ${name} must be an array`); continue; }
+    if (name === "gallery" && rows.length) fail("gallery.js: bundled starter gallery must remain empty");
     const ids = rows.map((row) => row && row.id).filter(Boolean);
     if (new Set(ids).size !== ids.length) fail(`${name}.js: duplicate stable document IDs`);
     const checkImage = (value, label) => {

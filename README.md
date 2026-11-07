@@ -100,11 +100,11 @@ export FIREBASE_PROJECT_ID=<PROJECT_ID>
 node seed.js
 ```
 
-Seeds seven public content collections (`announcements`, `events`, `projects`,
-`team`, `gallery`, `resources`, `achievements`) plus starter form definitions using
-stable document IDs. It only creates missing IDs and preserves existing Firestore
-documents, so rerunning it will not overwrite admin edits. `announcements` is
-intentionally empty until real notices are written. Form responses, admin roles, and
+Seeds six public content collections (`announcements`, `events`, `projects`,
+`team`, `resources`, `achievements`) plus starter form definitions using stable
+document IDs. It does not seed the Gallery. The seeder only creates missing IDs and
+preserves existing Firestore documents, so rerunning it will not overwrite admin
+edits. `announcements` is intentionally empty until real notices are written. Form responses, admin roles, and
 tasks are never seeded. On owner sign-in, the Admin portal automatically syncs missing
 starter records without a service account. Permanent Firestore tombstones prevent
 intentionally deleted starter records from being re-added by that sync or the trusted
@@ -137,27 +137,24 @@ Image URLs should be **root-absolute local paths** (`/assets/images/foo.webp`) o
 HTTPS URLs. The admin image editor accepts either; file upload/crop is available
 only when a Firebase Storage bucket exists and the project can use it. Keep this
 Spark setup on static/HTTPS image references until then. If Firestore is unreachable,
-the site falls back to bundled data. Admin deletions create Firestore tombstones so
-automatic starter sync cannot resurrect them; bundled gallery fallback rows and files
-are removed through a reviewed GitHub pull request.
+the site falls back to bundled data for supported sections; the Gallery has no bundled
+starter-photo fallback. Admin deletions create Firestore tombstones so automatic starter
+sync cannot resurrect seeded content.
 
 ## 5b. Admin portal (`/admin`)
 
 A built-in CMS at **`https://<PROJECT_ID>.web.app/admin/`** (linked in the site footer).
 It includes content editing, task assignment, media editing, and owner-managed
 per-admin section permissions. Navigation and URLs work without a full page reload.
-On owner sign-in, missing bundled starter records are synced automatically; existing
-Firestore edits are preserved, and tombstones protect Admin-deleted records. The
-Gallery page shows starter-photo sync and deletion status. Deleting a bundled gallery
-photo removes its Firestore entry immediately and queues a guarded GitHub pull
-request. The public gallery reflects the deletion while Firestore is reachable; the
-bundled fallback file and row remain until an authorized reviewer merges the PR.
+On owner sign-in, missing bundled starter records are synced automatically for
+supported content sections; existing Firestore edits are preserved, and tombstones
+protect Admin-deleted starter records. The Gallery is upload-only and has no bundled
+starter-photo status panel or GitHub deletion queue. Deleting a gallery entry removes
+its public Firestore record; repository images are left untouched.
 
 Owners can also open **Website settings** in Admin to edit the public college logo, official portal URL, phone, email, and LinkedIn/Instagram/Facebook links. These values are read publicly by the shared footer, home-page portal card, and Contact page; updates appear after a page reload. Assign the `site` permission to a trusted admin if they should be able to edit these values.
 
 Event registrations are assigned per event under **Events → Edit → Registration form**. Choose an existing form or leave the event unassigned; create custom event-specific forms under **Forms & responses → Create form**. The Forms page shows both events without an assigned form and forms not assigned to any event. Deleting a custom form clears its event assignments and removes its stored responses. Built-in Join/Enquiry schemas remain protected; use custom forms for event-specific questions.
-
-Gallery deletion requests are processed by `.github/workflows/gallery-image-deletions.yml` on a schedule (or via **Actions → Review gallery image deletions → Run workflow**). The workflow validates that a local image file has no remaining Firestore or source-code references, removes its fallback entry, and opens or updates a GitHub PR. The GitHub-hosted file remains until that PR is reviewed and merged. This uses the existing `FIREBASE_SERVICE_ACCOUNT_EMBEDX_CLUB_EEE` GitHub secret plus the built-in Actions token; the service account must have Firestore read/write access. No GitHub token is exposed to the public Admin page.
 
 ### Creating an admin (one click)
 

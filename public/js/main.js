@@ -3,7 +3,7 @@ import "./layout.js?v=20261107-admin-controls";
 import "./forms.js?v=20261107-admin-controls";
 import { initAll } from "./ui.js?v=20261107-admin-controls";
 import { icon } from "./icons.js";
-import { esc, asset, externalUrl, drivePreviewUrl, skeletons, projectCard, eventCard, teamCard, domainCard, resourceCard, achievementCard, announcementCard, galleryButton } from "./render.js?v=20261107-admin-controls";
+import { esc, asset, externalUrl, drivePreviewUrl, skeletons, projectCard, eventCard, eventDateLabel, teamCard, domainCard, resourceCard, achievementCard, announcementCard, galleryButton } from "./render.js?v=20261108-event-dates";
 import { getProjects, getEvents, getTeam, getGallery, getAnnouncements, getResources, getAchievements, getPageContent, subscribePageContent, applyPageContent, getPageBlocks, subscribePageBlocks, subscribePublicCollection } from "./store.js?v=20261107-admin-controls";
 import { domains, tools, careers } from "./data/domains.js";
 
@@ -130,7 +130,6 @@ async function projectDetail() {
 /* ---------- events ---------- */
 async function eventsPage() {
   const feat = $("#embednovaFeature");
-  const tracks = $("#tracksGrid");
   const grid = $("#eventsGrid");
   skeletons(grid, 3, 320);
   const list = await getEvents();
@@ -138,7 +137,6 @@ async function eventsPage() {
   const emRegistrationTarget = em ? eventRegistrationTarget(em) : null;
   if (!em) {
     if (feat) feat.innerHTML = '<p class="card center muted">Event information will be published here soon.</p>';
-    if (tracks) tracks.innerHTML = "";
     if (grid) grid.innerHTML = '<p class="card center muted">There are no events to display right now.</p>';
     return;
   }
@@ -149,7 +147,7 @@ async function eventsPage() {
       <p class="grad-text" style="font-weight:700;letter-spacing:.12em">${esc(em.tagline)}</p>
       <p class="muted">${esc(em.description)}</p>
       <ul class="event-meta">
-        <li>${icon("calendar")}<span>${esc(em.date)}</span></li>
+        <li>${icon("calendar")}<span>${esc(eventDateLabel(em))}</span></li>
         <li>${icon("map-pin")}<span>${esc(em.venue)}</span></li>
         <li>${icon("users")}<span>${esc(em.eligibility)}</span></li>
         <li>${icon("shield")}<span>${esc(em.registrationStatus)}</span></li>
@@ -160,15 +158,6 @@ async function eventsPage() {
       </div>
     </div>
     <div class="event-poster"><img src="${esc(asset(em.imageUrl))}" alt="EMBEDNOVA official event poster" loading="lazy" decoding="async" /></div>`;
-  if (tracks) tracks.innerHTML = (em.tracks || []).map((t) => `
-    <article class="card tilt" data-reveal>
-      <span class="track-num">${esc(t.number)}</span>
-      <h3>${esc(t.name)}</h3>
-      <p class="card-sub">${esc(t.tagline)} — ${esc(t.motto)}</p>
-      <img src="${esc(asset(t.image))}" alt="${esc(t.name)} track illustration" loading="lazy" decoding="async" style="border-radius:var(--r-sm);margin:.6rem 0" />
-      <p class="muted" style="font-size:.92rem">${esc(t.description)}</p>
-      <a class="card-link" href="/pages/event-detail.html?id=embednova#track-${esc(t.number)}">Track Rules &amp; Specs ${icon("arrow-right")}</a>
-    </article>`).join("");
   if (grid) {
     grid.innerHTML = list.map(eventCard).join("");
     initAll();
@@ -222,7 +211,7 @@ async function eventDetail() {
         <p class="grad-text" style="font-weight:700;letter-spacing:.1em">${esc(e.tagline || "")}</p>
         <p class="muted">${esc(e.subtitle || "")}</p>
         <ul class="event-meta">
-          <li>${icon("calendar")}<span>${esc(e.date)}</span></li>
+          <li>${icon("calendar")}<span>${esc(eventDateLabel(e))}</span></li>
           <li>${icon("map-pin")}<span>${esc(e.venue)}</span></li>
           <li>${icon("users")}<span>${esc(e.eligibility || "")}</span></li>
           <li>${icon("shield")}<span>${esc(e.registrationStatus || "")}</span></li>
@@ -244,26 +233,6 @@ async function eventDetail() {
       </div>
     </div>
     ${(Array.isArray(e.glimpses) && e.glimpses.length) ? `<section class="event-glimpses" aria-labelledby="eventGlimpsesTitle"><h2 id="eventGlimpsesTitle">Event Glimpses</h2><p class="muted">Photos and clips from ${esc(e.title)}.</p><div class="grid grid-3">${e.glimpses.map((entry) => eventGlimpseCard(entry, e.title)).filter(Boolean).join("")}</div></section>` : ""}
-    ${(e.tracks || []).length ? `
-    <h2 style="margin-top:2.8rem">The ${e.tracks.length} ${esc(e.title)} Tracks</h2>
-    <p class="muted">Choose your track or compete across multiple disciplines.</p>
-    ${e.tracks.map((t) => `
-      <section class="card" id="track-${esc(t.number)}" style="margin-bottom:1.4rem" data-reveal>
-        <div style="display:flex;gap:1.2rem;flex-wrap:wrap;align-items:flex-start">
-          <img src="${esc(asset(t.image))}" alt="${esc(t.name)} illustration" loading="lazy" decoding="async" style="width:180px;border-radius:var(--r-sm)" />
-          <div style="flex:1;min-width:240px">
-            <span class="track-num">${esc(t.number)}</span>
-            <h3 style="display:inline-block;margin-left:.6rem">${esc(t.name)}</h3>
-            <p class="card-sub">${esc(t.tagline)} ${esc(t.motto)}</p>
-            <p class="muted">${esc(t.description)}</p>
-            <h4>Covered Topics</h4>
-            <ul class="spec-list">${(t.topics || []).map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
-            <h4 style="margin-top:.9rem">Format</h4><p class="muted" style="font-size:.92rem">${esc(t.format)}</p>
-            <h4 style="margin-top:.9rem">Rules</h4>
-            <ul class="spec-list">${(t.rules || []).map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
-          </div>
-        </div>
-      </section>`).join("")}` : ""}
     ${(e.faqs || []).length ? `
     <h2 style="margin-top:2.4rem">Frequently Asked Questions</h2>
     <div class="faq">${e.faqs.map((f) => `<details><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p></details>`).join("")}</div>` : ""}`;

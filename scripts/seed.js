@@ -11,13 +11,13 @@
  *   export FIREBASE_PROJECT_ID=embedx-club-eee
  *   node seed.js
  *
- * Content collections: seven public site collections plus managed form definitions.
+ * Content collections: six public site collections plus managed form definitions; gallery is not seeded.
  * Form responses, admin roles and tasks are never seeded.
  */
 const path = require("path");
 const { pathToFileURL } = require("url");
 
-const COLLECTIONS = ["announcements", "events", "projects", "team", "gallery", "resources", "achievements", "forms"];
+const COLLECTIONS = ["announcements", "events", "projects", "team", "resources", "achievements", "forms"];
 
 async function loadSiteData() {
   const base = path.join(__dirname, "..", "public", "js", "data");
@@ -51,12 +51,8 @@ async function seedMissing(db, collection, rows, deletedKeys) {
   }
   const existing = await db.collection(collection).get();
   const existingIds = new Set(existing.docs.map((doc) => doc.id));
-  const existingGalleryImages = collection === "gallery"
-    ? new Set(existing.docs.map((doc) => doc.get("imageUrl")).filter(Boolean))
-    : new Set();
-  const missing = records.filter(({ id, data }) =>
+  const missing = records.filter(({ id }) =>
     !existingIds.has(id) && !deletedKeys.has(`${collection}/${id}`)
-      && !(collection === "gallery" && existingGalleryImages.has(data.imageUrl))
   );
   const skipped = records.length - missing.length;
   for (let offset = 0; offset < missing.length; offset += 450) {

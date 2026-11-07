@@ -24,7 +24,21 @@ jobs:
           trap 'rm -f "$key_file"' EXIT
           printf '%s' "$FIREBASE_SERVICE_ACCOUNT_JSON" > "$key_file"
           export GOOGLE_APPLICATION_CREDENTIALS="$key_file"
-          npx --yes firebase-tools deploy --only firestore:rules,storage --project embedx-club-eee --non-interactive
+          npx --yes firebase-tools deploy --only firestore:rules --project embedx-club-eee --non-interactive
+      - name: Deploy Storage rules (best effort)
+        id: storage-rules
+        continue-on-error: true
+        env:
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_EMBEDX_CLUB_EEE }}
+        run: |
+          key_file="$RUNNER_TEMP/firebase-service-account.json"
+          trap 'rm -f "$key_file"' EXIT
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT_JSON" > "$key_file"
+          export GOOGLE_APPLICATION_CREDENTIALS="$key_file"
+          npx --yes firebase-tools deploy --only storage --project embedx-club-eee --non-interactive
+      - name: Note Storage rules deployment failure
+        if: steps.storage-rules.outcome == 'failure'
+        run: echo '::warning::Hosting deployed, but Storage rules did not. Check service-account Storage Rules permissions and Firebase Storage setup.'
       - name: Deploy to Firebase Hosting (live)
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
