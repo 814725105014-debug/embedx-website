@@ -150,9 +150,8 @@ service cloud.firestore {
     }
 
     match /site_settings/{settingId} {
-      allow read: if settingId == 'site' || canWrite('forms');
-      allow create, update: if (settingId == 'site' && canWrite('site'))
-        || (settingId == 'forms' && isOwner());
+      allow read: if settingId == 'site';
+      allow create, update: if settingId == 'site' && canWrite('site');
       allow delete: if false;
     }
     match /form_responses/{responseId} {

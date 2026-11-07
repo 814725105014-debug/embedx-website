@@ -40,7 +40,7 @@ const PAGES = {
   gallery:       { h1: "Gallery",        hint: "Upload public photos, including iPhone HEIC/HEIF. Event-specific photos and video clips belong under Events.", crud: true },
   resources:     { h1: "Resources",      hint: "Learning Hub guides with category filters.", crud: true },
   achievements:  { h1: "Achievers",      hint: "Hall of Achievers cards.", crud: true },
-  forms:         { h1: "Forms & responses", hint: "Design forms, close intake, review submissions, export records, and manage Google Sheets sync.", crud: false },
+  forms:         { h1: "Forms & responses", hint: "Edit application and enquiry forms, manage intake, and review or export responses.", crud: false },
   site:          { h1: "Website settings", hint: "Update college contact information, social links, and the official college logo used across the site.", crud: false },
   tasks:         { h1: "Tasks",          hint: "Assign work to a person or a role; assignees mark tasks done.", crud: true },
   admins:        { h1: "Admins & roles", hint: "Add coordinators, HOD and president in one click; reset or revoke any time.", crud: false }
@@ -1193,14 +1193,7 @@ function siteSettingField(name, label, value, placeholder, type) {
   return `<div class="field"><label for="site-${name}">${esc(label)}</label><input id="site-${name}" name="${name}" type="${type}" value="${esc(value || "")}" placeholder="${esc(placeholder)}" autocomplete="off" /></div>`;
 }
 
-/* ---------------- forms, responses, and sheet status ---------------- */
-function safeSpreadsheetUrl(value) {
-  try {
-    const url = new URL(String(value || ""));
-    return url.protocol === "https:" && url.hostname === "docs.google.com" && url.pathname.startsWith("/spreadsheets/") ? url.href : "";
-  } catch { return ""; }
-}
-
+/* ---------------- forms and responses ---------------- */
 async function renderForms() {
   if (formsRefreshTimer) { clearInterval(formsRefreshTimer); formsRefreshTimer = null; }
   const region = $("#pageRegion");
@@ -1208,19 +1201,28 @@ async function renderForms() {
   region.innerHTML = `<div class="skeleton" style="min-height:180px"></div>`;
   try {
     const { db } = await sdk();
-    const [formSnap, settingSnap, joinSnap, enquirySnap, eventSnap] = await Promise.all([
+    const responses = dbMod.collection(db, "form_responses");
+    const [formSnap, joinSnap, enquirySnap, eventSnap, joinResponseSnap, enquiryResponseSnap] = await Promise.all([
       dbMod.getDocs(dbMod.collection(db, "forms")),
-      dbMod.getDoc(dbMod.doc(db, "site_settings", "forms")).catch(() => null),
       dbMod.getDocs(dbMod.collection(db, "members_applications")),
       dbMod.getDocs(dbMod.collection(db, "contact_messages")),
-      dbMod.getDocs(dbMod.collection(db, "events"))
+      dbMod.getDocs(dbMod.collection(db, "events")),
+      dbMod.getDocs(dbMod.query(responses, dbMod.where("formId", "==", "join"))),
+      dbMod.getDocs(dbMod.query(responses, dbMod.where("formId", "==", "enquiry")))
     ]);
     const forms = formSnap.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => String(a.title).localeCompare(String(b.title)));
-    const setting = settingSnap?.exists() ? settingSnap.data() : {};
-    const sheetUrl = safeSpreadsheetUrl(setting.spreadsheetUrl);
-    const sheetState = setting.lastError ? "Needs attention" : sheetUrl ? (setting.syncEnabled === false ? "Paused" : "Connected") : "Not connected";
-    const lastJoin = joinSnap.docs.map((d) => ({ id: d.id, ...d.data(), _collection: "members_applications" })).sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || ""))).slice(0, 5);
-    const lastEnquiry = enquirySnap.docs.map((d) => ({ id: d.id, ...d.data(), _collection: "contact_messages" })).sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || ""))).slice(0, 5);
+    const legacyRows = (snapshot, collection) => snapshot.docs.map((d) => ({ id: d.id, ...d.data(), _collection: collection }));
+    const answerSummary = (answers = {}) => Object.entries(answers).map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(", ") : value}`).join(" · ");
+    const responseRows = (snapshot) => snapshot.docs.map((d) => {
+      const row = { id: d.id, ...d.data(), _collection: "form_responses" };
+      const answers = row.answers || {};
+      return { ...row, name: row.name || answers.full_name || answers.name || "", email: row.email || answers.email || "", message: row.message || answerSummary(answers), createdAt: row.submittedAt || row.createdAt || "" };
+    });
+    const recentRows = (legacy, modern) => [...legacy, ...modern].sort((a, b) => String(b.createdAt || b.submittedAt || "").localeCompare(String(a.createdAt || a.submittedAt || ""))).slice(0, 5);
+    const allJoin = [...legacyRows(joinSnap, "members_applications").filter((d) => d.formId === "join" || !d.formId), ...responseRows(joinResponseSnap)];
+    const allEnquiry = [...legacyRows(enquirySnap, "contact_messages").filter((d) => d.formId === "enquiry" || !d.formId), ...responseRows(enquiryResponseSnap)];
+    const lastJoin = recentRows(legacyRows(joinSnap, "members_applications").filter((d) => d.formId === "join" || !d.formId), responseRows(joinResponseSnap));
+    const lastEnquiry = recentRows(legacyRows(enquirySnap, "contact_messages").filter((d) => d.formId === "enquiry" || !d.formId), responseRows(enquiryResponseSnap));
     const events = eventSnap.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => String(a.title || a.id).localeCompare(String(b.title || b.id)));
     const assignedFormId = (event) => event.registrationFormId || "";
     const hasExternalRegistration = (event) => /^https:\/\//i.test(String(event.registrationLink || "")) && safeHttpsUrl(event.registrationLink);
@@ -1239,27 +1241,19 @@ async function renderForms() {
     };
     if (PAGE !== "forms" || !region.isConnected) return;
     region.innerHTML = `
-      <section class="admin-sheet-status card ${sheetUrl && !setting.lastError ? "is-connected" : "is-pending"}" aria-label="Google Sheets response archive status">
-        <div class="admin-sheet-status-main">
-          <div class="admin-sheet-status-title"><strong>Google Sheets response archive</strong><span class="chip ${sheetUrl && !setting.lastError ? "chip-accent" : ""}">${esc(sheetState)}</span></div>
-          <p class="muted">${setting.lastError ? `Last sync error: ${esc(String(setting.lastError).slice(0, 500))}` : setting.lastSyncedAt ? `Last synced ${esc(setting.lastSyncedAt)}` : sheetUrl ? "Spreadsheet is linked; waiting for the first successful sync." : "No spreadsheet is linked yet. The owner must authorize the one-time Apps Script setup below."}</p>
-          ${sheetUrl ? "" : role === "owner" ? `<div class="admin-sheet-setup"><strong>One-time owner setup</strong><ol><li>Open a standalone Apps Script project and copy the bridge source and manifest.</li><li>Run <code>setupEmbedxSheets()</code> as the owner and approve the requested Google permissions.</li><li>Return here and refresh; the sheet link and five-minute sync health will appear automatically.</li></ol><div class="admin-sheet-links"><a class="btn btn-ghost btn-sm" href="https://script.google.com/home/start" target="_blank" rel="noopener noreferrer">Open Apps Script</a><a class="btn btn-ghost btn-sm" href="https://github.com/814725105014-debug/embedx-website/blob/main/backend-bundle/appsscript/forms-sync.gs" target="_blank" rel="noopener noreferrer">Bridge source</a><a class="btn btn-ghost btn-sm" href="https://github.com/814725105014-debug/embedx-website/blob/main/backend-bundle/appsscript/appsscript.json" target="_blank" rel="noopener noreferrer">Manifest</a></div></div>` : `<p class="muted">Ask the owner to complete the Apps Script setup and authorize the sync.</p>`}
-        </div>
-        ${sheetUrl ? `<a class="btn btn-ghost btn-sm" href="${esc(sheetUrl)}" target="_blank" rel="noopener noreferrer">Open response sheet</a>` : ""}
-      </section>
-      <section class="admin-event-assignment card"><div class="admin-event-assignment-head"><div><h2>Event registration forms</h2><p class="muted">${unassignedEventCount} event(s) have no registration form. Assign a dedicated form in Events → Edit; forms can be created and edited below. Unassigned events do not open a form until one is assigned.</p></div><a class="btn btn-ghost btn-sm" href="/admin/events">Manage events</a></div><div class="admin-event-assignment-list">${eventAssignmentRows || `<p class="muted">No events are published yet.</p>`}</div></section>
-      <section class="admin-form-toolbar"><div><h2>Managed forms</h2><p class="muted">Standard forms sync automatically when the owner opens Admin. Closed forms reject new responses. Custom forms support star ratings and exportable responses. Responses auto-refresh every 30 seconds.</p></div><div class="admin-form-toolbar-actions"><button class="btn btn-ghost btn-sm" id="refreshForms">Refresh</button>${can("forms") ? `<button class="btn btn-primary btn-sm" id="newManagedForm">+ Create form</button>` : ""}</div></section>
+      <section class="admin-event-assignment card"><div class="admin-event-assignment-head"><div><h2>Event registration forms</h2><p class="muted">${unassignedEventCount} event(s) have no registration form. Assign a form in Events → Edit; unassigned events do not open a registration form.</p></div><a class="btn btn-ghost btn-sm" href="/admin/events">Manage events</a></div><div class="admin-event-assignment-list">${eventAssignmentRows || `<p class="muted">No events are published yet.</p>`}</div></section>
+      <section class="admin-form-toolbar"><div><h2>Managed forms</h2><p class="muted">Edit built-in or custom form questions, open/close intake, review responses, or export them as CSV. Responses are stored in Firestore.</p></div><div class="admin-form-toolbar-actions"><button class="btn btn-ghost btn-sm" id="refreshForms">Refresh</button>${can("forms") ? `<button class="btn btn-primary btn-sm" id="newManagedForm">+ Create form</button>` : ""}</div></section>
       <div class="admin-managed-forms">${forms.length ? forms.map((form) => `
         <article class="admin-managed-form card">
-          <div class="admin-managed-form-copy"><div class="admin-form-title-line"><strong>${esc(form.title || form.id)}</strong><span class="chip ${form.status === "open" ? "chip-accent" : ""}">${esc(form.status || "draft")}</span>${form.builtin ? `<span class="chip">Built in</span>` : ""}</div><p class="muted">${esc(form.description || "")}</p><small>${(form.fields || []).length} field(s) · ${esc(form.kind || "custom")}</small><p class="muted form-assignment-note">${esc(formAssignmentText(form.id))}</p></div>
+          <div class="admin-managed-form-copy"><div class="admin-form-title-line"><strong>${esc(form.title || form.id)}</strong><span class="chip ${form.status === "open" ? "chip-accent" : ""}">${esc(form.status || "draft")}</span>${form.builtin ? `<span class="chip">Built in</span>` : ""}</div><p class="muted">${esc(form.description || "")}</p><small>${(form.fields || []).length} question(s) · ${esc(form.kind || "custom")}</small><p class="muted form-assignment-note">${esc(formAssignmentText(form.id))}</p></div>
           <div class="admin-row-actions">
             <button class="btn btn-ghost btn-sm" data-form-responses="${esc(form.id)}">View responses</button>
-            ${can("forms") ? `<button class="btn btn-ghost btn-sm" data-form-edit="${esc(form.id)}">${form.builtin ? "Edit settings" : "Edit"}</button><button class="btn btn-ghost btn-sm" data-form-toggle="${esc(form.id)}">${form.status === "open" ? "Close" : "Open"}</button>${!form.builtin ? `<button class="btn btn-danger btn-sm" data-form-delete="${esc(form.id)}">Delete</button>` : ""}` : ""}
+            ${can("forms") ? `<button class="btn btn-ghost btn-sm" data-form-edit="${esc(form.id)}">Edit form</button><button class="btn btn-ghost btn-sm" data-form-toggle="${esc(form.id)}">${form.status === "open" ? "Close" : "Open"}</button>${!form.builtin ? `<button class="btn btn-danger btn-sm" data-form-delete="${esc(form.id)}">Delete</button>` : ""}` : ""}
             <button class="btn btn-ghost btn-sm" data-form-open="${esc(form.id)}">Open public form</button>
           </div>
-        </article>`).join("") : `<p class="muted">No forms yet. Standard forms sync automatically when the owner opens Admin; you can also create a custom form.</p>`}</div>
-      <section class="admin-legacy-submissions"><div class="admin-form-toolbar"><div><h2>Recent join applications</h2><p class="muted">${joinSnap.size} total · newest first</p></div><button class="btn btn-ghost btn-sm" id="exportJoin">Export CSV</button></div>${renderLegacyPreview(lastJoin, "members_applications")}</section>
-      <section class="admin-legacy-submissions"><div class="admin-form-toolbar"><div><h2>Recent enquiries</h2><p class="muted">${enquirySnap.size} total · newest first</p></div><button class="btn btn-ghost btn-sm" id="exportEnquiries">Export CSV</button></div>${renderLegacyPreview(lastEnquiry, "contact_messages")}</section>
+        </article>`).join("") : `<p class="muted">No forms yet. Standard forms are created automatically when the owner opens Admin.</p>`}</div>
+      <section class="admin-legacy-submissions"><div class="admin-form-toolbar"><div><h2>Recent join applications</h2><p class="muted">${allJoin.length} total · newest first</p></div><button class="btn btn-ghost btn-sm" id="exportJoin">Export CSV</button></div>${renderLegacyPreview(lastJoin, "members_applications")}</section>
+      <section class="admin-legacy-submissions"><div class="admin-form-toolbar"><div><h2>Recent enquiries</h2><p class="muted">${allEnquiry.length} total · newest first</p></div><button class="btn btn-ghost btn-sm" id="exportEnquiries">Export CSV</button></div>${renderLegacyPreview(lastEnquiry, "contact_messages")}</section>
       <div id="formEditorMount"></div><div id="formResponseMount"></div>`;
     region.querySelector("#refreshForms")?.addEventListener("click", () => renderForms());
     region.querySelector("#newManagedForm")?.addEventListener("click", () => showManagedFormEditor(null));
@@ -1269,8 +1263,8 @@ async function renderForms() {
     region.querySelectorAll("[data-form-responses]").forEach((b) => b.addEventListener("click", () => showManagedResponses(forms.find((f) => f.id === b.dataset.formResponses))));
     region.querySelectorAll("[data-form-open]").forEach((b) => b.addEventListener("click", () => openManagedFormLink(b.dataset.formOpen, forms.find((f) => f.id === b.dataset.formOpen))));
     region.querySelectorAll("[data-delete-legacy]").forEach((b) => b.addEventListener("click", () => deleteLegacyResponse(b.dataset.collection, b.dataset.deleteLegacy)));
-    region.querySelector("#exportJoin")?.addEventListener("click", () => exportCsv("embedx-join-applications.csv", joinSnap.docs.map((d) => ({ id: d.id, ...d.data() }))));
-    region.querySelector("#exportEnquiries")?.addEventListener("click", () => exportCsv("embedx-enquiries.csv", enquirySnap.docs.map((d) => ({ id: d.id, ...d.data() }))));
+    region.querySelector("#exportJoin")?.addEventListener("click", () => exportCsv("embedx-join-applications.csv", allJoin));
+    region.querySelector("#exportEnquiries")?.addEventListener("click", () => exportCsv("embedx-enquiries.csv", allEnquiry));
     formsRefreshTimer = setInterval(() => {
       if (PAGE === "forms" && !$("#formEditorMount")?.childElementCount && !$("#formResponseMount")?.childElementCount) renderForms();
     }, 30000);
@@ -1282,7 +1276,7 @@ async function renderForms() {
 
 function renderLegacyPreview(rows, collectionName) {
   if (!rows.length) return `<p class="muted">No responses received yet.</p>`;
-  return `<div class="admin-response-list">${rows.map((row) => `<article class="admin-response-card card"><div><strong>${esc(row.name || "Unnamed")}</strong><span class="muted">${esc(row.email || "")} · ${esc((row.createdAt || "").slice(0, 19).replace("T", " "))}</span><p>${esc(row.message || row.interest || row.subject || "")}</p></div><button class="btn btn-danger btn-sm" data-collection="${collectionName}" data-delete-legacy="${esc(row.id)}">Delete</button></article>`).join("")}</div>`;
+  return `<div class="admin-response-list">${rows.map((row) => `<article class="admin-response-card card"><div><strong>${esc(row.name || "Unnamed")}</strong><span class="muted">${esc(row.email || "")} · ${esc((row.createdAt || "").slice(0, 19).replace("T", " "))}</span><p>${esc(row.message || row.interest || row.subject || "")}</p></div><button class="btn btn-danger btn-sm" data-collection="${esc(row._collection || collectionName)}" data-delete-legacy="${esc(row.id)}">Delete</button></article>`).join("")}</div>`;
 }
 
 
@@ -1291,9 +1285,9 @@ function showManagedFormEditor(form) {
   const mount = $("#formEditorMount");
   if (!mount) return;
   const isBuiltin = !!form?.builtin;
-  mount.innerHTML = `<section class="admin-form-editor card"><div class="admin-form-toolbar"><div><h2>${form ? "Edit form settings" : "Create a form"}</h2><p class="muted">Custom forms are published at a shareable public URL. Star ratings are available as a field type.</p></div><button class="btn btn-ghost btn-sm" id="cancelFormEdit">Close</button></div>
+  mount.innerHTML = `<section class="admin-form-editor card"><div class="admin-form-toolbar"><div><h2>${form ? "Edit form" : "Create a form"}</h2><p class="muted">Edit the title, description, availability, and questions. Changes to built-in questions appear on the public application and enquiry forms.</p></div><button class="btn btn-ghost btn-sm" id="cancelFormEdit">Close</button></div>
     <div class="form-grid"><div class="field"><label for="managedFormTitle">Form title</label><input id="managedFormTitle" maxlength="120" value="${esc(form?.title || "")}" /></div><div class="field"><label for="managedFormStatus">Response status</label><select id="managedFormStatus"><option value="draft">Draft</option><option value="open">Open</option><option value="closed">Closed</option></select></div><div class="field full"><label for="managedFormDescription">Description</label><textarea id="managedFormDescription" maxlength="600">${esc(form?.description || "")}</textarea></div></div>
-    ${isBuiltin ? `<p class="muted">The built-in fields are fixed to preserve the existing application and enquiry schema. You can update the title, description, and open/closed state.</p>` : `<h3>Questions</h3><div id="managedFieldRows">${(form?.fields || []).map(managedFieldRow).join("")}</div><button class="btn btn-ghost btn-sm" id="addManagedField">+ Add question</button>`}
+    <h3>Questions</h3><div id="managedFieldRows">${(form?.fields || []).map(managedFieldRow).join("")}</div><button class="btn btn-ghost btn-sm" id="addManagedField">+ Add question</button>
     <div class="admin-form-editor-actions"><button class="btn btn-primary" id="saveManagedForm">Save form</button></div></section>`;
   $("#managedFormStatus").value = form?.status || "draft";
   mount.querySelector("#cancelFormEdit").addEventListener("click", () => { mount.innerHTML = ""; });
@@ -1304,7 +1298,7 @@ function showManagedFormEditor(form) {
 }
 
 function managedFieldRow(field = {}) {
-  const types = ["text", "textarea", "email", "tel", "url", "date", "select", "checkboxes", "stars"];
+  const types = ["text", "textarea", "email", "tel", "url", "date", "select", "checkbox", "checkboxes", "stars"];
   return `<div class="admin-managed-field" data-field-row data-key="${esc(field.key || "")}"><div class="field"><label>Question label</label><input data-field-label maxlength="120" value="${esc(field.label || "")}" /></div><div class="field"><label>Answer type</label><select data-field-type>${types.map((type) => `<option value="${type}" ${field.type === type ? "selected" : ""}>${type === "stars" ? "Star rating (1–5)" : type}</option>`).join("")}</select></div><label class="check-row"><input data-field-required type="checkbox" ${field.required ? "checked" : ""}/> Required</label><div class="field" ${["select", "checkboxes"].includes(field.type) ? "" : "hidden"}><label>Options (one per line)</label><textarea data-field-options>${esc((field.options || []).join("\n"))}</textarea></div><button type="button" class="btn btn-danger btn-sm" data-remove-question>Remove</button></div>`;
 }
 function bindFieldRow(row) {
@@ -1317,26 +1311,23 @@ async function saveManagedForm(form, isBuiltin) {
   const description = $("#managedFormDescription").value.trim();
   const status = $("#managedFormStatus").value;
   if (!title || title.length > 120) { toast("Add a form title of 1–120 characters.", "err"); return; }
-  let fields = form?.fields || [];
-  if (!isBuiltin) {
-    fields = [...document.querySelectorAll("#managedFieldRows [data-field-row]")].map((row) => {
-      const label = row.querySelector("[data-field-label]").value.trim();
-      const key = row.dataset.key || label.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
-      const type = row.querySelector("[data-field-type]").value;
-      const options = row.querySelector("[data-field-options]").value.split("\n").map((x) => x.trim()).filter(Boolean).slice(0, 30);
-      return { key, label, type, required: row.querySelector("[data-field-required]").checked, ...(options.length ? { options } : {}) };
-    });
-    const reservedKeys = new Set(["__proto__", "constructor", "prototype"]);
-    if (!fields.length || fields.length > 25 || fields.some((f) => !f.label || !f.key || reservedKeys.has(f.key)) || new Set(fields.map((f) => f.key)).size !== fields.length) { toast("Add 1–25 questions with unique, safe labels.", "err"); return; }
-    if (fields.some((f) => ["select", "checkboxes"].includes(f.type) && (!f.options || !f.options.length))) { toast("Add answer options for every select or checkbox question.", "err"); return; }
-  }
+  const fields = [...document.querySelectorAll("#managedFieldRows [data-field-row]")].map((row) => {
+    const label = row.querySelector("[data-field-label]").value.trim();
+    const key = row.dataset.key || label.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
+    const type = row.querySelector("[data-field-type]").value;
+    const options = row.querySelector("[data-field-options]").value.split("\n").map((x) => x.trim()).filter(Boolean).slice(0, 30);
+    return { key, label, type, required: row.querySelector("[data-field-required]").checked, ...(options.length ? { options } : {}) };
+  });
+  const reservedKeys = new Set(["__proto__", "constructor", "prototype"]);
+  if (!fields.length || fields.length > 25 || fields.some((f) => !f.label || !/^[a-z0-9_]{1,60}$/i.test(f.key) || reservedKeys.has(f.key)) || new Set(fields.map((f) => f.key)).size !== fields.length) { toast("Add 1–25 questions with unique, safe labels.", "err"); return; }
+  if (fields.some((f) => ["select", "checkboxes"].includes(f.type) && (!f.options || !f.options.length))) { toast("Add answer options for every select or checkbox question.", "err"); return; }
   try {
     const { db } = await sdk();
     const formId = form?.id || title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80) + "-" + Date.now().toString(36);
     const data = { title, description, status, kind: form?.kind || "custom", builtin: isBuiltin, fields, updatedAt: new Date().toISOString(), updatedBy: me };
     if (form) await dbMod.updateDoc(dbMod.doc(db, "forms", formId), data);
     else await dbMod.setDoc(dbMod.doc(db, "forms", formId), { ...data, createdAt: new Date().toISOString() });
-    toast("Form settings saved.", "ok");
+    toast("Form saved.", "ok");
     await renderForms();
   } catch (err) { toast(`Could not save form: ${err.message}`, "err"); }
 }
@@ -1390,28 +1381,24 @@ async function showManagedResponses(form) {
   mount.innerHTML = `<div class="skeleton" style="min-height:120px"></div>`;
   try {
     const { db } = await sdk();
-    let rows = [];
-    let collectionName = "form_responses";
-    if (form.kind === "join") {
-      collectionName = "members_applications";
-      const snap = await dbMod.getDocs(dbMod.collection(db, collectionName));
-      rows = snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((d) => d.formId === "join" || !d.formId);
-    } else if (form.kind === "registration") {
-      const responseSnap = await dbMod.getDocs(dbMod.query(dbMod.collection(db, "form_responses"), dbMod.where("formId", "==", form.id)));
-      rows = responseSnap.docs.map((d) => ({ id: d.id, ...d.data(), _collection: "form_responses" }));
-    } else if (form.kind === "enquiry") {
-      collectionName = "contact_messages";
-      const snap = await dbMod.getDocs(dbMod.collection(db, collectionName));
-      rows = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    } else {
-      const snap = await dbMod.getDocs(dbMod.query(dbMod.collection(db, "form_responses"), dbMod.where("formId", "==", form.id)));
-      rows = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    }
+    const responseQuery = dbMod.query(dbMod.collection(db, "form_responses"), dbMod.where("formId", "==", form.id));
+    const responsePromise = dbMod.getDocs(responseQuery);
+    const legacyPromise = form.kind === "join"
+      ? dbMod.getDocs(dbMod.collection(db, "members_applications"))
+      : form.kind === "enquiry" ? dbMod.getDocs(dbMod.collection(db, "contact_messages")) : Promise.resolve(null);
+    const [responseSnap, legacySnap] = await Promise.all([responsePromise, legacyPromise]);
+    const rows = responseSnap.docs.map((d) => ({ id: d.id, ...d.data(), _collection: "form_responses" }));
+    if (legacySnap && form.kind === "join") rows.push(...legacySnap.docs.map((d) => ({ id: d.id, ...d.data(), _collection: "members_applications" })).filter((d) => d.formId === "join" || !d.formId));
+    if (legacySnap && form.kind === "enquiry") rows.push(...legacySnap.docs.map((d) => ({ id: d.id, ...d.data(), _collection: "contact_messages" })).filter((d) => d.formId === "enquiry" || !d.formId));
     rows.sort((a, b) => String(b.submittedAt || b.createdAt || "").localeCompare(String(a.submittedAt || a.createdAt || "")));
     const ratingKeys = (form.fields || []).filter((field) => field.type === "stars").map((field) => field.key);
     const ratings = rows.flatMap((row) => ratingKeys.map((key) => Number((row.answers || {})[key])).filter((value) => Number.isFinite(value) && value >= 1 && value <= 5));
-    const ratingSummary = ratings.length ? ` · Average rating ${ (ratings.reduce((sum, value) => sum + value, 0) / ratings.length).toFixed(1) }/5 (${ratings.length} ratings)` : "";
-    mount.innerHTML = `<section class="admin-form-responses card"><div class="admin-form-toolbar"><div><h2>Responses — ${esc(form.title || form.id)}</h2><p class="muted">${rows.length} response(s)${ratingSummary}. Export opens as CSV in spreadsheet software.</p></div><div><button class="btn btn-ghost btn-sm" id="exportFormResponses">Export CSV</button><button class="btn btn-ghost btn-sm" id="closeFormResponses">Close</button></div></div>${rows.length ? `<div class="admin-response-list">${rows.map((row) => { const answers = row.answers || {}; return `<article class="admin-response-card"><div><strong>${esc(row.name || answers.name || row.email || answers.email || "Response")}</strong><span class="muted">${esc(row.email || answers.email || "")} · ${esc((row.submittedAt || row.createdAt || "").slice(0, 19).replace("T", " "))}</span><p>${esc(row.message || row.subject || answers.message || JSON.stringify(answers))}</p></div><button class="btn btn-danger btn-sm" data-response-delete="${esc(row.id)}" data-response-collection="${row._collection || collectionName}">Delete</button></article>`; }).join("")}</div>` : `<p class="muted">No responses yet.</p>`}</section>`;
+    const ratingSummary = ratings.length ? ` · Average rating ${(ratings.reduce((sum, value) => sum + value, 0) / ratings.length).toFixed(1)}/5 (${ratings.length} ratings)` : "";
+    const answerText = (answers) => Object.entries(answers || {}).map(([key, value]) => {
+      const label = form.fields?.find((field) => field.key === key)?.label || key;
+      return `${label}: ${Array.isArray(value) ? value.join(", ") : value}`;
+    }).join(" · ");
+    mount.innerHTML = `<section class="admin-form-responses card"><div class="admin-form-toolbar"><div><h2>Responses — ${esc(form.title || form.id)}</h2><p class="muted">${rows.length} response(s)${ratingSummary}. Export opens as CSV in spreadsheet software.</p></div><div><button class="btn btn-ghost btn-sm" id="exportFormResponses">Export CSV</button><button class="btn btn-ghost btn-sm" id="closeFormResponses">Close</button></div></div>${rows.length ? `<div class="admin-response-list">${rows.map((row) => { const answers = row.answers || {}; return `<article class="admin-response-card"><div><strong>${esc(row.name || answers.full_name || answers.name || row.email || answers.email || "Response")}</strong><span class="muted">${esc(row.email || answers.email || "")} · ${esc((row.submittedAt || row.createdAt || "").slice(0, 19).replace("T", " "))}</span><p>${esc(row.message || row.subject || answers.message || answerText(answers))}</p></div><button class="btn btn-danger btn-sm" data-response-delete="${esc(row.id)}" data-response-collection="${esc(row._collection || "form_responses")}">Delete</button></article>`; }).join("")}</div>` : `<p class="muted">No responses yet.</p>`}</section>`;
     mount.querySelector("#closeFormResponses").addEventListener("click", () => { mount.innerHTML = ""; });
     mount.querySelector("#exportFormResponses").addEventListener("click", () => exportCsv(`embedx-${form.id}-responses.csv`, rows));
     mount.querySelectorAll("[data-response-delete]").forEach((button) => button.addEventListener("click", async () => {

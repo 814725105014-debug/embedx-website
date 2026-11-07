@@ -53,7 +53,7 @@ try {
   if (action === "push" && !existsSync(linkFile)) throw new Error("No project is linked yet. Run `npm run apps-script:setup` first.");
   console.log("Uploading the owner forms/task Apps Script sources and appsscript.json...");
   clasp(["push", "--force"]);
-  console.log("Owner Apps Script source is up to date. Run setupEmbedxSheets() once in the Apps Script editor to authorize scopes and create the response spreadsheet.");
+  console.log("Owner Apps Script source is up to date. Run removeEmbedxSheetsSync() once in the Apps Script editor to remove any old response-sync trigger; task mail remains separate.");
 } catch (error) {
   console.error(`Apps Script setup failed: ${error.message}`);
   process.exit(1);

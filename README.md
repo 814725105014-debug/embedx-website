@@ -127,10 +127,9 @@ Storage.
 | `achievements` | `badge, title, subtitle, description, image, team, institution, projectId, highlights[], order` | written by the admin portal; Hall of Achievers |
 | `announcements` | `title, kind, body, pinned, createdAt` | written by the admin portal; home notice board (pinned first) |
 | `forms` | owner-managed form definitions, seeded with Join, Enquiry, and Feedback forms | public can read open/closed definitions; role-scoped admin writes |
-| `form_responses` | custom registrations, surveys, and feedback (including 1–5 star ratings) | public create only while a form is open; assigned Forms admins monitor/export/delete |
-| `members_applications` | written by Join form submissions | public create; assigned Forms admins monitor/export/delete |
-| `contact_messages` | written by Contact form | public create; assigned Forms admins monitor/export/delete |
-| `site_settings/forms` | Google Sheets sync URL and last-run health | Forms admins can read; owner/Apps Script owner writes |
+| `form_responses` | new built-in/custom submissions, registrations, surveys, and feedback (including ratings) | public create only while the matching form is open; assigned Forms admins monitor/export/delete |
+| `members_applications` | legacy Join submissions and fallback writes when no managed definition exists | public create; assigned Forms admins monitor/export/delete |
+| `contact_messages` | legacy Contact submissions and fallback writes when no managed definition exists | public create; assigned Forms admins monitor/export/delete |
 | `site_settings/site` | Public logo, official portal, phone, email, and social links | Public read; assigned `site` admins write through Website settings |
 
 Image URLs should be **root-absolute local paths** (`/assets/images/foo.webp`) or
@@ -216,42 +215,23 @@ published token must be treated as exposed.
   restrict the API key to approved website referrers and configure/enforce Firebase
   App Check for the web app before relying on client-side public form writes.
 
-### Forms, registrations, and Google Sheets
+### Forms and responses
 
-The Admin → **Forms & responses** page seeds and manages the built-in Join,
-Enquiry and Feedback forms, plus custom forms. Owners and
-admins explicitly assigned the `forms` permission can edit custom questions,
+Admin → **Forms & responses** manages the built-in Join and Enquiry forms as well
+as custom forms. Forms admins can edit built-in questions, add or remove questions,
 open/close intake, review submissions, export CSV, and delete custom forms or
-responses. Feedback forms support accessible 1–5 star rating questions. Join and
-enquiry submissions stay in their existing Firestore collections and are now
-visible to authorized Forms admins; public users cannot read submissions.
+responses. Public built-in forms render their current Firestore definition and save
+new submissions in Firestore; the previous `members_applications` and
+`contact_messages` records remain readable alongside the newer responses. Public
+clients cannot read submissions. No response-to-Google-Sheets sync runs; CSV export
+is available from the admin portal.
 
-Create and sync the Apps Script project without manually copying any files:
-
-```bash
-cd backend-bundle/scripts
-npm run apps-script:setup
-```
-
-On first run, the helper opens Google sign-in once, links to the provided standalone
-project **EMBEDX CLUB NEW WEBSITE**, and uploads every checked-in `.gs` source plus
-`appsscript.json` using the official `clasp` CLI. Enable the Apps Script API in your
-Google account settings if prompted. For later code updates, run
-`npm run apps-script:push`; this syncs the repo source as a batch (the checked-in files
-are the source of truth, so online-only edits are replaced).
-
-The one-time Google authorization still requires the project owner: open the new
-project in Apps Script, run `setupEmbedxSheets()` once, and approve the requested
-Firestore, Sheets, mail, and trigger scopes. It creates the spreadsheet and response
-tabs, syncs every five minutes, and publishes the sheet URL and sync health to Admin
-→ Forms & responses.
-
-Deploy Firestore rules first. The Apps Script reads Firestore as the allowlisted
-owner and stores only the response archive; Firestore remains the live source for
-portal monitoring. Notifications and applicant confirmations are sent by the
-script when a new response is synchronized. This requires no web-app URL, shared
-token, Cloud Function, or Firebase billing upgrade. Share the generated sheet only
-with trusted reviewers.
+The former Apps Script Sheets sync has been retired. After publishing the updated
+Apps Script sources, the owner should open the existing Apps Script project and run
+`removeEmbedxSheetsSync()` once to remove its old one-minute trigger. The compatibility
+callback also removes the trigger without copying or emailing responses the next time
+it fires. This cleanup leaves existing Firestore responses and any already-created
+spreadsheet file untouched. The separate task-email Apps Script endpoint is unchanged.
 
 ## 6. GitHub auto-deploy
 

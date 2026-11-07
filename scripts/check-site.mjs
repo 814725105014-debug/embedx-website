@@ -103,6 +103,13 @@ try {
     }
   }
 } catch (err) { fail(`firestore.indexes.json: invalid index schema (${err.message})`); }
+const formsSource = await readFile(path.join(pub, "js/forms.js"), "utf8");
+if (/await\s+submit\(payload\)/.test(formsSource)) fail("public/js/forms.js: public form submit handler must call a defined Firestore writer");
+if (!formsSource.includes("submitApplication(payload)") || !formsSource.includes("submitContact(payload)") || !formsSource.includes("submitFormResponse({ formId: formKey")) fail("public/js/forms.js: built-in forms must support legacy fallback and managed Firestore responses");
+const adminFormsSource = await readFile(path.join(pub, "js/admin-app.js"), "utf8");
+if (!adminFormsSource.includes('id="managedFieldRows"') || !adminFormsSource.includes('data-field-row')) fail("public/js/admin-app.js: managed form questions must be editable");
+const retiredSyncSource = await readFile(path.join(root, "backend-bundle", "appsscript", "forms-sync.gs"), "utf8");
+if (/SpreadsheetApp|spreadsheets\.googleapis\.com|setupEmbedxSheets|function\s+writeSettings_/.test(retiredSyncSource)) fail("backend-bundle/appsscript/forms-sync.gs: response-to-Sheets sync must remain retired");
 const config = await readFile(path.join(pub, "js/config.js"), "utf8");
 if (/taskMail\s*=\s*\{[^}]*\btoken\s*:/s.test(config)) fail("public/js/config.js: public task-mail token must not be shipped");
 if (!config.includes("export const taskMail =")) fail("public/js/config.js: task notification compatibility endpoint is missing");

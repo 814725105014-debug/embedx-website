@@ -1,6 +1,7 @@
 // EMBEDX — Form handling: validation, honeypot, rate limiting, Firestore writes, toasts.
 import { submitApplication, submitContact, getFormDefinition, submitFormResponse, isConfigured } from "./store.js?v=20261107-form-fix";
 import { toast } from "./ui.js?v=20261107-admin-controls";
+import { forms as bundledForms } from "./data/forms.js?v=20261108-editable-forms";
 
 const RATE_KEY = "embedx_rate";
 const RATE_MAX = 3;
@@ -85,16 +86,81 @@ function readForm(form) {
   return data;
 }
 
-function wire(formId, { build, submit, successMsg, draftKey, formKey }) {
+function renderBuiltinFields(form, definition) {
+  const grid = form.querySelector(".form-grid");
+  if (!grid || !Array.isArray(definition?.fields)) return;
+  const previous = readForm(form);
+  const honey = grid.querySelector(".hp-field");
+  const submitButton = form.querySelector("[type=submit]");
+  const submitWrap = submitButton?.parentElement;
+  grid.replaceChildren();
+  definition.fields.slice(0, 25).forEach((field) => grid.appendChild(renderPublicField(field)));
+  form.querySelectorAll("input,select,textarea").forEach((control) => {
+    if (!control.name || control.name === "company_url" || previous[control.name] === undefined) return;
+    const value = previous[control.name];
+    if (control.type === "checkbox") control.checked = Array.isArray(value) ? value.includes(control.value) : Boolean(value);
+    else if (control.type === "radio") control.checked = String(value) === control.value;
+    else if (!Array.isArray(value)) control.value = value;
+  });
+  if (honey) grid.appendChild(honey);
+  if (submitWrap) grid.appendChild(submitWrap);
+}
+
+function validateDefinitionFields(form, fields = []) {
+  const errors = {};
+  for (const field of fields.slice(0, 25)) {
+    const controls = [...form.querySelectorAll(`[name="${CSS.escape(field.key)}"]`)];
+    const label = field.label || "This field";
+    const value = controls[0]?.type === "checkbox" && field.type === "checkbox"
+      ? controls[0].checked
+      : field.type === "checkboxes" ? controls.filter((control) => control.checked).map((control) => control.value)
+        : field.type === "stars" ? controls.find((control) => control.checked)?.value || ""
+          : String(controls[0]?.value || "").trim();
+    if (field.required && (field.type === "checkboxes" ? !value.length : field.type === "checkbox" ? !value : !String(value).trim())) {
+      errors[field.key] = field.type === "checkboxes" ? "Select at least one option." : field.type === "checkbox" ? "Please check this box." : `${label} is required.`;
+      continue;
+    }
+    if (!value || (Array.isArray(value) && !value.length) || field.type === "checkbox") continue;
+    const text = Array.isArray(value) ? value.join(", ") : String(value);
+    const max = field.type === "email" ? 120 : field.type === "textarea" ? 2000 : field.type === "url" ? 300 : field.type === "tel" ? 40 : 500;
+    if (text.length > max) { errors[field.key] = `${label} must be ${max} characters or fewer.`; continue; }
+    if (field.type === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(text)) { errors[field.key] = "Enter a valid email address."; continue; }
+    if (field.type === "tel" && !/^[0-9+\-\s()]{8,20}$/.test(text)) { errors[field.key] = "Enter a valid phone number."; continue; }
+    if (field.type === "url") {
+      try { const url = new URL(text); if (!["http:", "https:"].includes(url.protocol)) throw new Error(); }
+      catch { errors[field.key] = "Enter a valid HTTPS or HTTP link."; continue; }
+    }
+    if (field.type === "stars" && (!Number.isInteger(Number(value)) || Number(value) < 1 || Number(value) > 5)) errors[field.key] = "Choose a rating from 1 to 5.";
+  }
+  return errors;
+}
+
+function answersFromForm(form, fields) {
+  const answers = {};
+  for (const field of fields.slice(0, 25)) {
+    const controls = [...form.querySelectorAll(`[name="${CSS.escape(field.key)}"]`)];
+    if (field.type === "checkboxes") answers[field.key] = controls.filter((control) => control.checked).map((control) => control.value);
+    else if (field.type === "checkbox") answers[field.key] = !!controls[0]?.checked;
+    else if (field.type === "stars") answers[field.key] = Number(controls.find((control) => control.checked)?.value || 0);
+    else answers[field.key] = String(controls[0]?.value || "").trim().slice(0, field.type === "textarea" ? 2000 : 500);
+  }
+  return answers;
+}
+
+function wire(formId, { build, successMsg, draftKey, formKey }) {
   const form = document.getElementById(formId);
   if (!form) return;
-  let activeDefinition = null;
+  const fallbackDefinition = bundledForms.find((item) => item.id === formKey) || null;
+  let activeDefinition = fallbackDefinition;
+  let remoteDefinitionKnown = false;
+  let hasRemoteDefinition = false;
   let formClosed = false;
-  if (formKey && isConfigured) getFormDefinitionWithin(formKey).then((definition) => {
-    activeDefinition = definition;
+  const applyDefinition = (definition) => {
     if (!definition) return;
-    const titleTarget = document.getElementById(formKey === "join" ? "joinFormTitle" : formKey === "enquiry" ? "enquiryFormTitle" : "");
-    const descriptionTarget = document.getElementById(formKey === "join" ? "joinFormDescription" : formKey === "enquiry" ? "enquiryFormDescription" : "");
+    activeDefinition = definition;
+    renderBuiltinFields(form, definition);
+    const titleTarget = document.getElementById(formKey === "join" ? "joinFormTitle" : "enquiryFormTitle");
+    const descriptionTarget = document.getElementById(formKey === "join" ? "joinFormDescription" : "enquiryFormDescription");
     if (titleTarget && definition.title) titleTarget.textContent = definition.title;
     if (descriptionTarget && definition.description) descriptionTarget.textContent = definition.description;
     if (definition.status !== "open") {
@@ -103,38 +169,38 @@ function wire(formId, { build, submit, successMsg, draftKey, formKey }) {
       notice.className = "form-closed-notice";
       notice.setAttribute("role", "status");
       notice.textContent = "This form is currently closed and is not accepting responses.";
-      form.prepend(notice);
+      if (!form.querySelector(".form-closed-notice")) form.prepend(notice);
       form.querySelectorAll("input, select, textarea, button").forEach((control) => { control.disabled = true; });
+    } else {
+      formClosed = false;
+      form.querySelector(".form-closed-notice")?.remove();
+      form.querySelectorAll("input, select, textarea, button").forEach((control) => { control.disabled = false; });
     }
-  }).catch((err) => console.warn("Could not read form availability; submissions will retry the status check", err));
+  };
+  if (formKey && fallbackDefinition) applyDefinition(fallbackDefinition);
+  if (formKey && isConfigured) getFormDefinitionWithin(formKey).then((definition) => {
+    remoteDefinitionKnown = true;
+    hasRemoteDefinition = !!definition;
+    if (definition) applyDefinition(definition);
+  }).catch((err) => console.warn("Could not read form availability; submit will retry the status check", err));
 
   if (draftKey && storageGet("sessionStorage", "embedx_join_submitted") !== "1") {
     try {
       const draft = JSON.parse(storageGet("sessionStorage", draftKey, "{}"));
       form.querySelectorAll("input,select,textarea").forEach((el) => {
-        if (el.type === "checkbox") {
-          el.checked = Array.isArray(draft[el.name]) ? draft[el.name].includes(el.value) : Boolean(draft[el.name]);
-        } else if (draft[el.name] !== undefined) el.value = draft[el.name];
+        if (el.type === "checkbox") el.checked = Array.isArray(draft[el.name]) ? draft[el.name].includes(el.value) : Boolean(draft[el.name]);
+        else if (draft[el.name] !== undefined && !Array.isArray(draft[el.name])) el.value = draft[el.name];
       });
     } catch { /* ignore corrupt draft */ }
-    form.addEventListener("input", () => {
-      const d = readForm(form);
-      storageSet("sessionStorage", draftKey, JSON.stringify(d));
-    });
+    form.addEventListener("input", () => storageSet("sessionStorage", draftKey, JSON.stringify(readForm(form))));
   }
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    if (form.dataset.sending === "1") return;
-    const d = readForm(form);
+    if (form.dataset.sending === "1" || formClosed) return;
+    if (readForm(form).company_url) return;
 
-    // honeypot — bots fill this, humans never see it
-    if (d.company_url) return;
-
-    const errors = build.validate(d);
-    if (!setErrors(form, errors)) { toast("Please fix the highlighted fields.", "err"); return; }
-
-    // Lock synchronously before any network check to prevent double-click duplicate submissions.
+    // Lock before asynchronous status checks to prevent duplicate submissions.
     form.dataset.sending = "1";
     const btn = form.querySelector("[type=submit]");
     const label = btn?.innerHTML || "Submit";
@@ -147,18 +213,27 @@ function wire(formId, { build, submit, successMsg, draftKey, formKey }) {
     status.textContent = "";
     try {
       if (formKey && isConfigured) {
-        // Fail closed if the status check times out; never bypass a closed form by dropping formId.
-        activeDefinition = await getFormDefinitionWithin(formKey);
-        if (activeDefinition && activeDefinition.status !== "open") {
+        try {
+          const latest = await getFormDefinitionWithin(formKey);
+          remoteDefinitionKnown = true;
+          hasRemoteDefinition = !!latest;
+          if (latest) applyDefinition(latest);
+        } catch (err) {
+          if (!remoteDefinitionKnown) throw err;
+          console.warn("Using the last loaded form definition after a status refresh failed", err);
+        }
+        if (hasRemoteDefinition && activeDefinition?.status !== "open") {
           formClosed = true;
           status.textContent = "This form is closed and is no longer accepting responses.";
           form.querySelectorAll("input, select, textarea, button").forEach((control) => { control.disabled = true; });
           toast(status.textContent, "err");
           return;
         }
-        formClosed = false;
       }
 
+      const data = readForm(form);
+      const errors = formKey ? validateDefinitionFields(form, activeDefinition?.fields || []) : build.validate(data);
+      if (!setErrors(form, errors)) { status.textContent = "Please fix the highlighted fields."; toast(status.textContent, "err"); return; }
       if (rateLimited(formId)) {
         status.textContent = "Too many submissions from this device. Please try again in a few minutes.";
         toast(status.textContent, "err");
@@ -166,11 +241,15 @@ function wire(formId, { build, submit, successMsg, draftKey, formKey }) {
       }
 
       if (btn) btn.textContent = "Sending…";
-      const payload = build.payload(d);
-      // Built-in legacy forms may operate without a Firestore definition. If a definition
-      // exists, keep formId so Firestore enforces its open status on the actual write.
-      if (formKey && !activeDefinition) delete payload.formId;
-      await submit(payload);
+      if (formKey && hasRemoteDefinition) {
+        const answers = answersFromForm(form, activeDefinition.fields || []);
+        await submitFormResponse({ formId: formKey, formTitle: String(activeDefinition.title || formKey).slice(0, 160), answers, submittedAt: new Date().toISOString() });
+      } else {
+        const payload = build.payload(data);
+        // A missing built-in definition uses the legacy, schema-validated collection path.
+        if (formKey && !hasRemoteDefinition) delete payload.formId;
+        await (formKey === "join" ? submitApplication(payload) : submitContact(payload));
+      }
       status.textContent = successMsg;
       toast(successMsg, "ok");
       form.reset();
@@ -184,11 +263,7 @@ function wire(formId, { build, submit, successMsg, draftKey, formKey }) {
       toast(message, "err");
     } finally {
       form.dataset.sending = "0";
-      if (btn) {
-        btn.disabled = formClosed;
-        btn.removeAttribute("aria-busy");
-        btn.innerHTML = label;
-      }
+      if (btn) { btn.disabled = formClosed; btn.removeAttribute("aria-busy"); btn.innerHTML = label; }
     }
   });
 }
@@ -261,11 +336,12 @@ wire("contactForm", {
 function renderPublicField(field) {
   const wrapper = document.createElement(field.type === "checkboxes" || field.type === "stars" ? "fieldset" : "div");
   wrapper.className = "field";
+  if (["checkboxes", "stars", "textarea", "checkbox"].includes(field.type)) wrapper.classList.add("full");
   if (field.type === "checkboxes" || field.type === "stars") {
-    wrapper.classList.add("full", field.type === "stars" ? "public-rating-field" : "public-checks-field");
+    wrapper.classList.add(field.type === "stars" ? "public-rating-field" : "public-checks-field");
     wrapper.setAttribute("aria-required", String(!!field.required));
   }
-  const label = document.createElement(field.type === "checkboxes" || field.type === "stars" ? "legend" : "label");
+  const label = document.createElement(field.type === "checkboxes" || field.type === "stars" ? "legend" : field.type === "checkbox" ? "span" : "label");
   label.textContent = `${field.label || "Question"}${field.required ? " *" : ""}`;
   wrapper.appendChild(label);
   if (field.type === "stars") {
@@ -299,6 +375,11 @@ function renderPublicField(field) {
       const selected = rating.querySelector("input:checked"); paintRating(selected?.value); hint.textContent = selected ? `${selected.value} out of 5` : "Choose 1–5 stars";
     });
     const control = document.createElement("div"); control.className = "star-rating-control"; control.append(rating, hint); wrapper.appendChild(control);
+  } else if (field.type === "checkbox") {
+    const row = document.createElement("label"); row.className = "check-row";
+    const input = document.createElement("input"); input.type = "checkbox"; input.name = field.key; input.value = "true"; input.required = !!field.required;
+    row.append(input, document.createTextNode(` ${field.label || "Question"}${field.required ? " *" : ""}`));
+    wrapper.replaceChildren(row);
   } else if (field.type === "checkboxes") {
     const choices = document.createElement("div"); choices.className = "checks";
     (field.options || []).forEach((choice, index) => {
@@ -320,6 +401,7 @@ function renderPublicField(field) {
     input.name = field.key; input.required = !!field.required; input.autocomplete = field.type === "email" ? "email" : "off";
     wrapper.appendChild(input);
   }
+  const error = document.createElement("span"); error.className = "error-msg"; wrapper.appendChild(error);
   return wrapper;
 }
 
@@ -377,6 +459,7 @@ async function mountPublicForm() {
       fields.forEach((field) => {
         const selected = [...form.querySelectorAll(`[name="${CSS.escape(field.key)}"]`)];
         if (field.type === "checkboxes") answers[field.key] = selected.filter((el) => el.checked).map((el) => el.value);
+        else if (field.type === "checkbox") answers[field.key] = !!selected[0]?.checked;
         else if (field.type === "stars") answers[field.key] = Number(selected.find((el) => el.checked)?.value || 0);
         else answers[field.key] = (new FormData(form).get(field.key) || "").toString().trim().slice(0, field.type === "textarea" ? 2000 : 500);
       });

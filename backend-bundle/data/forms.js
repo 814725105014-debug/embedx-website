@@ -17,7 +17,8 @@ export const forms = [
       { key: "interests", label: "Areas of technical interest", type: "checkboxes", required: true, options: ["Embedded Systems", "RTOS & Firmware", "Robotics & Motion", "IoT & Cloud", "PCB Design", "PLC & SCADA", "Edge AI / TinyML"] },
       { key: "technical_skills", label: "Technical skills", type: "textarea", required: false },
       { key: "motivation", label: "Why do you want to join EMBEDX?", type: "textarea", required: true },
-      { key: "portfolio", label: "Portfolio link", type: "url", required: false }
+      { key: "portfolio", label: "Portfolio link", type: "url", required: false },
+      { key: "agree", label: "I agree to actively participate in club technical workshops, laboratory sessions, and project sprints.", type: "checkbox", required: true }
     ]
   },
   {
