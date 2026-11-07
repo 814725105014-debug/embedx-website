@@ -13,6 +13,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Deploy Firestore rules
+        env:
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_EMBEDX_CLUB_EEE }}
+        run: |
+          key_file="$RUNNER_TEMP/firebase-service-account.json"
+          trap 'rm -f "$key_file"' EXIT
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT_JSON" > "$key_file"
+          export GOOGLE_APPLICATION_CREDENTIALS="$key_file"
+          npx --yes firebase-tools deploy --only firestore:rules --project embedx-club-eee --non-interactive
       - name: Deploy to Firebase Hosting (live)
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:

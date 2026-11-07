@@ -139,6 +139,14 @@ service cloud.firestore {
       allow read: if true;
       allow create, update, delete: if canWrite('forms');
     }
+
+    match /page_content/{pageId} {
+      allow read: if true;
+      allow create, update: if canWrite('site')
+        && request.resource.data.keys().hasOnly(['navHome', 'navAbout', 'navDomains', 'navProjects', 'navEvents', 'navAchievers', 'navTeam', 'navResources', 'navContact', 'navJoin', 'footerNavHeading', 'footerHome', 'footerAbout', 'footerDomains', 'footerProjects', 'footerEvents', 'footerAchievers', 'footerCommunityHeading', 'footerTeam', 'footerResources', 'footerJoin', 'footerContact', 'footerEventRegistration', 'footerConnectHeading', 'footerConnectDescription', 'footerTagline', 'footerCopyright', 'heroEyebrow', 'heroTitle', 'heroDescription', 'heroTechline', 'aboutTitle', 'aboutDescription', 'communityTitle', 'communityDescription', 'journeyTitle', 'projectsEyebrow', 'projectsTitle', 'projectsDescription', 'achieversEyebrow', 'achieversTitle', 'achieversDescription', 'eventsEyebrow', 'eventsTitle', 'eventsDescription', 'eyebrow', 'title', 'intro', 'overviewTitle', 'overviewDescription', 'missionTitle', 'visionTitle', 'journeyEyebrow', 'journeyDescription', 'toolsEyebrow', 'toolsTitle', 'toolsDescription', 'careersEyebrow', 'careersTitle', 'eligibilityTitle', 'eligibilityDescription', 'processTitle', 'departmentHeading', 'addressLabel', 'address', 'socialHeading', 'updatedAt']);
+      allow delete: if false;
+    }
+
     match /site_settings/{settingId} {
       allow read: if settingId == 'site' || canWrite('forms');
       allow create, update: if (settingId == 'site' && canWrite('site'))

@@ -1,7 +1,7 @@
 // EMBEDX — Instant site search (Ctrl/⌘+K or nav button). Indexes Firestore-first content.
 import { icon } from "./icons.js";
-import { esc } from "./render.js?v=20261106-smooth-render";
-import { getProjects, getEvents, getTeam, getResources, getAchievements } from "./store.js?v=20261106-smooth-render";
+import { esc } from "./render.js?v=20261107-page-cms";
+import { getProjects, getEvents, getTeam, getResources, getAchievements } from "./store.js?v=20261107-page-cms";
 
 let index = null;
 let indexPromise = null;

@@ -26,7 +26,7 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' https://trp.srmtrichy.edu.in data: https://firebasestorage.googleapis.com https://www.google-analytics.com; connect-src 'self' https://www.gstatic.com https://www.google-analytics.com https://analytics.google.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://firebasestorage.googleapis.com https://www.googleapis.com; object-src 'none'; base-uri 'self'; form-action 'self'" />
   <link rel="stylesheet" href="/css/style.css?v=20261106-mobile-ux" />
   <script src="/js/theme.js?v=20261106"></script>
-  <script type="module" src="/js/main.js?v=20261107-live-updates"></script>
+  <script type="module" src="/js/main.js?v=20261107-page-cms"></script>
   <link rel="stylesheet" href="/css/corporate.css?v=20261106-mobile-ux" />
 </head>
 <body data-page="home">
@@ -37,9 +37,9 @@
   <section class="hero">
     <div class="wrap hero-grid">
       <div class="hero-copy">
-        <p class="eyebrow">Department of EEE • SRM TRP Engineering College</p>
-        <h1>EMBED<span class="grad-text">X</span><br />Embedded Systems &amp; Automation Club</h1>
-        <p class="hero-tag">Building practical skills, intelligent embedded systems, robotic mechanisms, and real-world engineering solutions through hands-on innovation.</p>
+        <p class="eyebrow" data-page-copy="home:heroEyebrow">Department of EEE • SRM TRP Engineering College</p>
+        <h1>EMBED<span class="grad-text">X</span><br /><span data-page-copy="home:heroTitle">Embedded Systems &amp; Automation Club</span></h1>
+        <p class="hero-tag" data-page-copy="home:heroDescription">Building practical skills, intelligent embedded systems, robotic mechanisms, and real-world engineering solutions through hands-on innovation.</p>
         <div class="hero-motto">
           <span class="chip chip-accent">INNOVATE</span><span class="chip chip-accent">INTEGRATE</span><span class="chip chip-accent">INSPIRE</span>
         </div>
@@ -47,7 +47,7 @@
           <a class="btn btn-primary" href="/pages/about.html">Explore EMBEDX</a>
           <a class="btn btn-ghost" href="/pages/join.html">Join the Club</a>
         </div>
-        <p class="muted hero-techline">Embedded C • ARM • RTOS &nbsp;|&nbsp; Robotics &amp; Industrial PLC &nbsp;|&nbsp; Practical Engineering</p>
+        <p class="muted hero-techline" data-page-copy="home:heroTechline">Embedded C • ARM • RTOS &nbsp;|&nbsp; Robotics &amp; Industrial PLC &nbsp;|&nbsp; Practical Engineering</p>
         <div class="hero-stats">
           <div class="stat glass"><b class="grad-text" data-count="12" data-suffix="+">0</b><span>Technical Domains</span></div>
           <div class="stat glass"><b class="grad-text" data-count="2026">0</b><span>National Level Innovation</span></div>
@@ -78,8 +78,8 @@
     <div class="wrap">
       <div class="section-head" data-reveal>
         <p class="eyebrow">Engineering Beyond the Classroom</p>
-        <h2>Fostering the Next Generation of <span class="grad-text">Embedded &amp; Automation Engineers</span></h2>
-        <p>EMBEDX is the official technical club of the Department of Electrical and Electronics Engineering at SRM TRP Engineering College, focusing on Embedded Systems, Automation, IoT, Robotics, Control Systems, Electronics, and emerging smart technologies.</p>
+        <h2 data-page-copy="home:aboutTitle">Fostering the Next Generation of <span class="grad-text">Embedded &amp; Automation Engineers</span></h2>
+        <p data-page-copy="home:aboutDescription">EMBEDX is the official technical club of the Department of Electrical and Electronics Engineering at SRM TRP Engineering College, focusing on Embedded Systems, Automation, IoT, Robotics, Control Systems, Electronics, and emerging smart technologies.</p>
       </div>
       <div class="grid grid-4">
         <article class="card tilt" data-reveal><div class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"/><path d="M22 10v6"/><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/></svg></div><h3>Learn</h3><p class="muted" style="font-size:.92rem">Deep hands-on technical learning covering microcontrollers, register architectures, embedded programming, and industrial protocols.</p></article>
@@ -88,9 +88,9 @@
         <article class="card tilt" data-reveal><div class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1.3.5 2.6 1.5 3.5.8.8 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg></div><h3>Innovate</h3><p class="muted" style="font-size:.92rem">Turn bold conceptual engineering ideas into scalable, real-world solutions that create genuine technological and social impact.</p></article>
       </div>
       <div class="card community-card" style="margin-top:1.6rem" data-reveal>
-        <h3>About Our Community</h3>
-        <p class="muted">We operate as an agile, student-driven engineering powerhouse supported by departmental faculty mentorship, state-of-the-art laboratory infrastructure, and an unwavering commitment to hands-on craftsmanship. The club aims to build technical skills, inspire innovation, and prepare students for real-world engineering challenges.</p>
-        <h3 style="margin-top:1.4rem">The EMBEDX Engineering Journey</h3>
+        <h3 data-page-copy="home:communityTitle">About Our Community</h3>
+        <p class="muted" data-page-copy="home:communityDescription">We operate as an agile, student-driven engineering powerhouse supported by departmental faculty mentorship, state-of-the-art laboratory infrastructure, and an unwavering commitment to hands-on craftsmanship. The club aims to build technical skills, inspire innovation, and prepare students for real-world engineering challenges.</p>
+        <h3 style="margin-top:1.4rem" data-page-copy="home:journeyTitle">The EMBEDX Engineering Journey</h3>
         <div class="timeline">
           <div class="step"><h4>Learn</h4><p>Register-level MCU programming, C/C++, circuit theorems, sensor protocols.</p></div>
           <div class="step"><h4>Experiment</h4><p>Lab testing with oscilloscopes, logic analyzers, simulation suites.</p></div>
@@ -120,9 +120,9 @@
   <section class="section" id="projects">
     <div class="wrap">
       <div class="section-head" data-reveal>
-        <p class="eyebrow">Hands-On Engineering</p>
-        <h2>Featured Club Projects</h2>
-        <p>Real embedded prototypes engineered by EMBEDX student teams tackling autonomous mobility, healthcare, waste management, and robotics interfaces.</p>
+        <p class="eyebrow" data-page-copy="home:projectsEyebrow">Hands-On Engineering</p>
+        <h2 data-page-copy="home:projectsTitle">Featured Club Projects</h2>
+        <p data-page-copy="home:projectsDescription">Real embedded prototypes engineered by EMBEDX student teams tackling autonomous mobility, healthcare, waste management, and robotics interfaces.</p>
       </div>
       <div class="grid grid-4" id="projectsGrid"></div>
       <p style="margin-top:1.6rem"><a class="btn btn-ghost" href="/pages/projects.html">View All Projects &amp; Blueprints</a></p>
@@ -133,9 +133,9 @@
   <section class="section" id="achievers">
     <div class="wrap">
       <div class="section-head" data-reveal>
-        <p class="eyebrow">Competitive Excellence</p>
-        <h2>Hall of Achievers</h2>
-        <p>Celebrating the hard work, competitive representation, and engineering triumphs of EMBEDX club members across national and regional stages.</p>
+        <p class="eyebrow" data-page-copy="home:achieversEyebrow">Competitive Excellence</p>
+        <h2 data-page-copy="home:achieversTitle">Hall of Achievers</h2>
+        <p data-page-copy="home:achieversDescription">Celebrating the hard work, competitive representation, and engineering triumphs of EMBEDX club members across national and regional stages.</p>
       </div>
       <div class="grid grid-2" id="achieversGrid"></div>
       <p style="margin-top:1.6rem"><a class="btn btn-ghost" href="/pages/achievers.html">Explore Achievers &amp; Recognitions</a></p>
@@ -146,9 +146,9 @@
   <section class="section" id="events">
     <div class="wrap">
       <div class="section-head" data-reveal>
-        <p class="eyebrow">Flagship Signature Event</p>
-        <h2>EMBEDNOVA — A Tech-Powered Event for Innovative Minds</h2>
-        <p>INNOVATE • INTEGRATE • AUTOMATE. EMBEDNOVA is the premier technical competition by EMBEDX, bringing together engineering students across the state to tackle rapid embedded challenges, circuit troubleshooting, and innovative automation systems.</p>
+        <p class="eyebrow" data-page-copy="home:eventsEyebrow">Flagship Signature Event</p>
+        <h2 data-page-copy="home:eventsTitle">EMBEDNOVA — A Tech-Powered Event for Innovative Minds</h2>
+        <p data-page-copy="home:eventsDescription">INNOVATE • INTEGRATE • AUTOMATE. EMBEDNOVA is the premier technical competition by EMBEDX, bringing together engineering students across the state to tackle rapid embedded challenges, circuit troubleshooting, and innovative automation systems.</p>
       </div>
       <div class="grid grid-3">
         <article class="card tilt" data-reveal><span class="track-num">01</span><h3>TECH CHALLENGE</h3><p class="card-sub">MCQs &amp; Logic</p><p class="muted" style="font-size:.92rem">Test your Embedded Knowledge! MCQs, Aptitude, Low-Level Logic, and Real-World Scenarios.</p><a class="card-link" href="/pages/event-detail.html?id=embednova#track-01">Track specs →</a></article>
