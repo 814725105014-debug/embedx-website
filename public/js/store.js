@@ -1,5 +1,6 @@
 // EMBEDX — Data store: Firestore first, graceful static fallback.
 import { firebaseConfig, isConfigured } from "./config.js?v=20261106";
+import { getPageContentDefaults } from "./data/page-content.js?v=20261107-page-cms";
 
 const SDK = "https://www.gstatic.com/firebasejs/10.12.5";
 const PUBLIC_READ_TIMEOUT_MS = 1800;
@@ -125,6 +126,51 @@ export function getAchievements() {
 }
 export function getAnnouncements() {
   return readOrFallback(() => loadCollection("announcements", "createdAt", "desc"), async () => (await import("./data/announcements.js")).announcements);
+}
+
+const pageContentCache = new Map();
+function normalizePageContent(page, value = {}) {
+  const defaults = getPageContentDefaults(page);
+  const safeValues = Object.fromEntries(Object.keys(defaults).map((key) => [key,
+    typeof value?.[key] === "string" ? value[key] : defaults[key]
+  ]));
+  return { ...defaults, ...safeValues };
+}
+export async function getPageContent(page) {
+  if (pageContentCache.has(page)) return pageContentCache.get(page);
+  if (!isConfigured) return normalizePageContent(page);
+  return readOrFallback(async () => {
+    const app = await getApp();
+    const { getFirestore, doc, getDoc } = await import(`${SDK}/firebase-firestore.js`);
+    const snap = await getDoc(doc(getFirestore(app), "page_content", page));
+    const content = normalizePageContent(page, snap.exists() ? snap.data() : {});
+    pageContentCache.set(page, content);
+    return content;
+  }, () => normalizePageContent(page));
+}
+export function applyPageContent(page, content) {
+  const values = normalizePageContent(page, content);
+  for (const [key, value] of Object.entries(values)) {
+    document.querySelectorAll(`[data-page-copy="${page}:${key}"]`).forEach((element) => {
+      element.textContent = value;
+    });
+  }
+}
+export function subscribePageContent(page, onChange = () => {}) {
+  let stopped = false;
+  let unsubscribe = () => {};
+  if (!isConfigured) return () => {};
+  getApp().then(async (app) => {
+    const { getFirestore, doc, onSnapshot } = await import(`${SDK}/firebase-firestore.js`);
+    if (stopped) return;
+    unsubscribe = onSnapshot(doc(getFirestore(app), "page_content", page), (snapshot) => {
+      const content = normalizePageContent(page, snapshot.exists() ? snapshot.data() : {});
+      const previous = pageContentCache.get(page);
+      pageContentCache.set(page, content);
+      if (fingerprint(content) !== fingerprint(previous)) onChange(content);
+    }, (error) => console.warn(`Live ${page} page-copy updates are unavailable`, error));
+  }).catch((error) => console.warn(`Could not subscribe to ${page} page-copy updates`, error));
+  return () => { stopped = true; unsubscribe(); };
 }
 
 const LEGACY_COLLEGE_LOGO_URLS = new Set([

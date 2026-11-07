@@ -1,10 +1,10 @@
 // EMBEDX — Page controller. Dispatches renderers by body[data-page].
-import "./layout.js?v=20261107-live-updates";
-import "./forms.js?v=20261106-smooth-render";
-import { initAll } from "./ui.js?v=20261106-smooth-render";
+import "./layout.js?v=20261107-page-cms";
+import "./forms.js?v=20261107-page-cms";
+import { initAll } from "./ui.js?v=20261107-page-cms";
 import { icon } from "./icons.js";
-import { esc, asset, externalUrl, skeletons, projectCard, eventCard, teamCard, domainCard, resourceCard, achievementCard, announcementCard, galleryButton } from "./render.js?v=20261106-smooth-render";
-import { getProjects, getEvents, getTeam, getGallery, getAnnouncements, getResources, getAchievements, subscribePublicCollection } from "./store.js?v=20261107-live-updates";
+import { esc, asset, externalUrl, skeletons, projectCard, eventCard, teamCard, domainCard, resourceCard, achievementCard, announcementCard, galleryButton } from "./render.js?v=20261107-page-cms";
+import { getProjects, getEvents, getTeam, getGallery, getAnnouncements, getResources, getAchievements, getPageContent, subscribePageContent, applyPageContent, subscribePublicCollection } from "./store.js?v=20261107-page-cms";
 import { domains, tools, careers } from "./data/domains.js";
 
 const $ = (s) => document.querySelector(s);
@@ -312,6 +312,11 @@ async function achieversPage() {
 
 /* ---------- boot ---------- */
 const page = document.body.dataset.page;
+const editableCopyPages = new Set(["home", "about", "domains", "projects", "events", "achievers", "team", "resources", "contact", "join"]);
+if (editableCopyPages.has(page)) {
+  getPageContent(page).then((content) => applyPageContent(page, content));
+  subscribePageContent(page, (content) => applyPageContent(page, content));
+}
 const routes = {
   home, projects: projectsPage, "project-detail": projectDetail,
   events: eventsPage, "event-detail": eventDetail, team: teamPage,

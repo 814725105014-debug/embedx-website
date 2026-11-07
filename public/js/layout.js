@@ -1,18 +1,18 @@
 // EMBEDX — Shared chrome: navbar, mobile menu, footer, theme toggle.
 import { icon } from "./icons.js";
-import { initSearch } from "./search.js?v=20261106-smooth-render";
-import { getSiteSettings, subscribeSiteSettings } from "./store.js?v=20261107-live-updates";
+import { initSearch } from "./search.js?v=20261107-page-cms";
+import { getSiteSettings, subscribeSiteSettings, getPageContent, subscribePageContent, applyPageContent } from "./store.js?v=20261107-page-cms";
 
 const NAV = [
-  ["Home", "/"],
-  ["About", "/pages/about.html"],
-  ["Domains", "/pages/domains.html"],
-  ["Projects", "/pages/projects.html"],
-  ["Events", "/pages/events.html"],
-  ["Achievers", "/pages/achievers.html"],
-  ["Team", "/pages/team.html"],
-  ["Resources", "/pages/resources.html"],
-  ["Contact", "/pages/contact.html"]
+  ["navHome", "Home", "/"],
+  ["navAbout", "About", "/pages/about.html"],
+  ["navDomains", "Domains", "/pages/domains.html"],
+  ["navProjects", "Projects", "/pages/projects.html"],
+  ["navEvents", "Events", "/pages/events.html"],
+  ["navAchievers", "Achievers", "/pages/achievers.html"],
+  ["navTeam", "Team", "/pages/team.html"],
+  ["navResources", "Resources", "/pages/resources.html"],
+  ["navContact", "Contact", "/pages/contact.html"]
 ];
 
 // Normalize a path so "/pages/about", "/pages/about.html" and "/" compare equal.
@@ -28,9 +28,9 @@ export function currentPage() {
 function injectChrome() {
   const here = currentPage();
   const cur = (href) => (normalize(href) === here ? 'aria-current="page"' : "");
-  const links = NAV.map(([label, href]) => `<a href="${href}" ${cur(href)}>${label}</a>`).join("");
-  const mlinks = NAV.map(([label, href]) => `<a href="${href}" ${cur(href)}>${label}</a>`).join("") +
-    `<a href="/pages/join.html" class="btn btn-primary">Join EMBEDX</a>`;
+  const links = NAV.map(([key, label, href]) => `<a href="${href}" data-page-copy="global:${key}" ${cur(href)}>${label}</a>`).join("");
+  const mlinks = NAV.map(([key, label, href]) => `<a href="${href}" data-page-copy="global:${key}" ${cur(href)}>${label}</a>`).join("") +
+    `<a href="/pages/join.html" class="btn btn-primary" data-page-copy="global:navJoin">Join EMBEDX</a>`;
 
   const header = document.createElement("header");
   header.className = "nav";
@@ -48,7 +48,7 @@ function injectChrome() {
       <div class="nav-actions">
         <button class="icon-btn" id="searchOpen" aria-label="Search the site (Ctrl+K)" title="Search (Ctrl+K)">${icon("search")}</button>
         <button class="icon-btn" id="themeToggle" aria-label="Toggle light / dark theme">${icon("moon")}</button>
-        <a class="btn btn-primary btn-sm nav-join" href="/pages/join.html">Join EMBEDX</a>
+        <a class="btn btn-primary btn-sm nav-join" href="/pages/join.html" data-page-copy="global:navJoin">Join EMBEDX</a>
         <button class="icon-btn nav-burger" id="burger" aria-label="Open menu" aria-expanded="false" aria-controls="mobileMenu">${icon("menu")}</button>
       </div>
     </div>`;
@@ -75,19 +75,19 @@ function injectChrome() {
           </div>
           <div class="college-mark-lockup"><span class="college-logo-frame"><img class="college-mark" data-site-src="collegeLogoUrl" src="/assets/images/srm-trp-college-attached.png" alt="SRM TRP Engineering College logo" loading="lazy" decoding="async" /></span><span>SRM TRP Engineering College</span></div>
           <p class="muted footer-institution">Department of Electrical and Electronics Engineering (EEE)<br />SRM TRP Engineering College (Autonomous)<br />SRM Nagar, Samayapuram, Tiruchirappalli – 621 105.</p>
-          <p class="chip chip-accent" style="margin-top:.4rem">INNOVATE • INTEGRATE • INSPIRE</p>
+          <p class="chip chip-accent" style="margin-top:.4rem" data-page-copy="global:footerTagline">INNOVATE • INTEGRATE • INSPIRE</p>
         </div>
         <div>
-          <h4>Navigation</h4>
-          <a href="/">Home</a><br /><a href="/pages/about.html">About Us</a><br /><a href="/pages/domains.html">Technical Domains</a><br /><a href="/pages/projects.html">Projects Showcase</a><br /><a href="/pages/events.html">Events &amp; EmbedNova</a><br /><a href="/pages/achievers.html">Hall of Achievers</a>
+          <h4 data-page-copy="global:footerNavHeading">Navigation</h4>
+          <a href="/" data-page-copy="global:footerHome">Home</a><br /><a href="/pages/about.html" data-page-copy="global:footerAbout">About Us</a><br /><a href="/pages/domains.html" data-page-copy="global:footerDomains">Technical Domains</a><br /><a href="/pages/projects.html" data-page-copy="global:footerProjects">Projects Showcase</a><br /><a href="/pages/events.html" data-page-copy="global:footerEvents">Events &amp; EmbedNova</a><br /><a href="/pages/achievers.html" data-page-copy="global:footerAchievers">Hall of Achievers</a>
         </div>
         <div>
-          <h4>Community</h4>
-          <a href="/pages/team.html">Meet the Team</a><br /><a href="/pages/resources.html">Learning Hub</a><br /><a href="/pages/join.html">Join EMBEDX</a><br /><a href="/pages/contact.html">Contact Department</a><br /><a href="/pages/event-detail.html?id=embednova#register">EMBEDNOVA Registration</a>
+          <h4 data-page-copy="global:footerCommunityHeading">Community</h4>
+          <a href="/pages/team.html" data-page-copy="global:footerTeam">Meet the Team</a><br /><a href="/pages/resources.html" data-page-copy="global:footerResources">Learning Hub</a><br /><a href="/pages/join.html" data-page-copy="global:footerJoin">Join EMBEDX</a><br /><a href="/pages/contact.html" data-page-copy="global:footerContact">Contact Department</a><br /><a href="/pages/event-detail.html?id=embednova#register" data-page-copy="global:footerEventRegistration">EMBEDNOVA Registration</a>
         </div>
         <div>
-          <h4>Connect With Us</h4>
-          <p class="muted" style="font-size:.9rem">Follow departmental technical initiatives, competition updates, and workshop announcements.</p>
+          <h4 data-page-copy="global:footerConnectHeading">Connect With Us</h4>
+          <p class="muted" style="font-size:.9rem" data-page-copy="global:footerConnectDescription">Follow departmental technical initiatives, competition updates, and workshop announcements.</p>
           <p style="font-size:.9rem">${icon("phone", "i")} Tel: <a data-site-href="phoneHref" href="tel:04312908050" data-site-text="phoneDisplay">0431-2908050</a><br />${icon("globe", "i")} Portal: <a data-site-href="collegeWebsiteUrl" href="https://trp.srmtrichy.edu.in" rel="noopener noreferrer" target="_blank" data-site-text="collegeWebsiteLabel">trp.srmtrichy.edu.in</a><br />${icon("mail", "i")} Email: <a data-site-email href="mailto:hod.eee@trp.srmtrichy.edu.in">hod.eee@trp.srmtrichy.edu.in</a></p>
           <div class="socials">
             <a class="icon-btn" data-site-href="linkedinUrl" href="https://www.linkedin.com/school/srm-trp-engineering-college" rel="noopener noreferrer" target="_blank" aria-label="LinkedIn">${icon("linkedin")}</a>
@@ -97,7 +97,7 @@ function injectChrome() {
         </div>
       </div>
       <div class="footer-bottom">
-        <span>© 2026 EMBEDX – Embedded Systems and Automation Club • Department of EEE.</span>
+        <span data-page-copy="global:footerCopyright">© 2026 EMBEDX – Embedded Systems and Automation Club • Department of EEE.</span>
         <span>SRM TRP Engineering College (An Autonomous Institution, Affiliated to Anna University) · <a href="/admin/" style="display:inline">Admin Portal</a></span>
       </div>
     </div>`;
@@ -175,6 +175,8 @@ function injectChrome() {
 }
 
 injectChrome();
+getPageContent("global").then((content) => applyPageContent("global", content));
+subscribePageContent("global", (content) => applyPageContent("global", content));
 
 function validSiteHref(key, value) {
   const text = String(value || "").trim();

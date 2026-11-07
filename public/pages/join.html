@@ -20,7 +20,7 @@
   <link rel="stylesheet" href="/css/style.css?v=20261106-mobile-ux" />
   <link rel="stylesheet" href="/css/forms.css?v=20261106-event-forms" />
   <script src="/js/theme.js?v=20261106"></script>
-  <script type="module" src="/js/main.js?v=20261107-live-updates"></script>
+  <script type="module" src="/js/main.js?v=20261107-page-cms"></script>
   <link rel="stylesheet" href="/css/corporate.css?v=20261106-mobile-ux" />
 </head>
 <body data-page="join">
@@ -29,9 +29,9 @@
   <section class="page-head">
     <div class="wrap">
       <nav class="breadcrumbs" aria-label="Breadcrumb"><a href="/">Home</a> / Join</nav>
-      <p class="eyebrow">Membership &amp; Recruitment</p>
-      <h1>BECOME PART OF <span class="grad-text">EMBEDX</span></h1>
-      <p>Learn. Build. Experiment. Compete. Innovate.<br />Join a vibrant practical technology community where students build real embedded systems, robotic mechanisms, and smart automation solutions.</p>
+      <p class="eyebrow" data-page-copy="join:eyebrow">Membership &amp; Recruitment</p>
+      <h1 data-page-copy="join:title">BECOME PART OF <span class="grad-text">EMBEDX</span></h1>
+      <p data-page-copy="join:intro">Learn. Build. Experiment. Compete. Innovate. Join a vibrant practical technology community where students build real embedded systems, robotic mechanisms, and smart automation solutions.</p>
     </div>
   </section>
 
@@ -39,8 +39,8 @@
     <div class="wrap">
       <div class="grid grid-2">
         <div class="card tilt" data-reveal>
-          <h3>Eligibility — Who Can Join EMBEDX?</h3>
-          <p class="muted">Membership is open to enthusiastic engineering students across all years and departments interested in:</p>
+          <h3 data-page-copy="join:eligibilityTitle">Eligibility — Who Can Join EMBEDX?</h3>
+          <p class="muted" data-page-copy="join:eligibilityDescription">Membership is open to enthusiastic engineering students across all years and departments interested in:</p>
           <ul class="spec-list">
             <li>Embedded Systems &amp; Firmware</li>
             <li>Electronics &amp; Circuit Prototyping</li>
@@ -52,7 +52,7 @@
           </ul>
         </div>
         <div class="card tilt" data-reveal>
-          <h3>Selection Process — How It Works</h3>
+          <h3 data-page-copy="join:processTitle">Selection Process — How It Works</h3>
           <div class="timeline timeline-join">
             <div class="step"><h4>01 Online Application</h4><p>Submit the registration form with your background and domain interests.</p></div>
             <div class="step"><h4>02 Orientation &amp; Domain Sprint</h4><p>Attend the introductory club session and explore domain hardware.</p></div>

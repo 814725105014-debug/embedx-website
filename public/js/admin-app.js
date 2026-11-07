@@ -2,8 +2,8 @@
 // One page per section (/admin/, /admin/events, /admin/admins, …) sharing this module.
 // Real security lives in firestore.rules / storage.rules (roles from `admin_roles` collection).
 import { firebaseConfig, isConfigured, taskMail } from "./config.js?v=20261106-remove-official-mail";
-import { toast } from "./ui.js?v=20261106-smooth-render";
-import { esc, asset } from "./render.js?v=20261106-smooth-render";
+import { toast } from "./ui.js?v=20261107-page-cms";
+import { esc, asset } from "./render.js?v=20261107-page-cms";
 import { announcements as starterAnnouncements } from "./data/announcements.js?v=20261106-admin-controls";
 import { events as starterEvents } from "./data/events.js?v=20261106-event-forms";
 import { projects as starterProjects } from "./data/projects.js?v=20261106-admin-controls";
@@ -12,7 +12,8 @@ import { gallery as starterGallery } from "./data/gallery.js?v=20261106-admin-co
 import { resources as starterResources } from "./data/resources.js?v=20261106-admin-controls";
 import { achievements as starterAchievements } from "./data/achievements.js?v=20261106-admin-controls";
 import { forms as starterForms } from "./data/forms.js?v=20261106-admin-controls";
-import { DEFAULT_SITE_SETTINGS, getSiteSettings, normalizeSiteSettings } from "./store.js?v=20261106-smooth-render";
+import { DEFAULT_SITE_SETTINGS, getSiteSettings, normalizeSiteSettings } from "./store.js?v=20261107-page-cms";
+import { PAGE_CONTENT, getPageContentDefaults } from "./data/page-content.js?v=20261107-page-cms";
 
 const STARTER_CONTENT = {
   announcements: starterAnnouncements,
@@ -672,7 +673,8 @@ async function renderWebsiteSettings() {
         ${siteSettingField("facebookUrl", "Facebook URL", settings.facebookUrl, "https://www.facebook.com/...", "url")}
       </div>
       ${can("site") ? `<div class="admin-site-actions"><p class="muted" id="siteSettingsMessage" role="status"></p><button class="btn btn-primary" id="saveSiteSettings">Save website settings</button></div>` : `<p class="muted">Read only — ask the owner to grant Website settings permission.</p>`}
-    </section>`;
+    </section><div id="pageCopyEditor"></div>`;
+    await renderPageCopyEditor($("#pageCopyEditor"), db);
     const logoInput = region.querySelector("[name=collegeLogoUrl]");
     logoInput?.addEventListener("input", () => { const preview = region.querySelector("#siteLogoPreview"); if (preview) preview.src = logoInput.value.trim(); });
     region.querySelector("#saveSiteSettings")?.addEventListener("click", async (event) => {
@@ -710,6 +712,50 @@ async function renderWebsiteSettings() {
     console.error("Website settings failed", err);
     region.innerHTML = `<p class="muted">Could not load website settings: ${esc(err.message)}</p>`;
   }
+}
+
+async function renderPageCopyEditor(region, db) {
+  if (!region) return;
+  const groups = Object.entries(PAGE_CONTENT);
+  region.innerHTML = `<section class="admin-site-settings card" style="margin-top:1.2rem"><div class="admin-form-toolbar"><div><h2>Public page copy</h2><p class="muted">Edit navigation, footer and page headings or descriptions. Copy is plain text and updates on open pages after saving.</p></div></div>
+    <div class="field" style="max-width:420px"><label for="pageCopySelect">Choose a page or shared area</label><select id="pageCopySelect">${groups.map(([id, group]) => `<option value="${esc(id)}">${esc(group.label)}</option>`).join("")}</select></div>
+    <div id="pageCopyFields" class="form-grid admin-site-grid" style="margin-top:1rem"></div>
+    ${can("site") ? `<div class="admin-site-actions"><p class="muted" id="pageCopyMessage" role="status"></p><button class="btn btn-primary" id="savePageCopy">Save page copy</button></div>` : `<p class="muted">Read only — ask the owner to grant Website settings permission.</p>`}
+  </section>`;
+  const select = region.querySelector("#pageCopySelect");
+  const fieldsRegion = region.querySelector("#pageCopyFields");
+  const message = region.querySelector("#pageCopyMessage");
+  let activeContent = {};
+  const paint = async (pageId) => {
+    const defaults = getPageContentDefaults(pageId);
+    let stored = {};
+    try {
+      const snap = await dbMod.getDoc(dbMod.doc(db, "page_content", pageId));
+      if (snap.exists()) stored = snap.data();
+    } catch (error) { console.warn(`Could not read ${pageId} page copy`, error); }
+    if (!region.isConnected || select.value !== pageId) return;
+    activeContent = Object.fromEntries(Object.keys(defaults).map((key) => [key, typeof stored[key] === "string" ? stored[key] : defaults[key]]));
+    fieldsRegion.innerHTML = PAGE_CONTENT[pageId].fields.map(([key, label]) => `<div class="field full"><label for="copy-${esc(key)}">${esc(label)}</label><textarea id="copy-${esc(key)}" data-copy-key="${esc(key)}" rows="${activeContent[key].length > 180 ? 4 : 2}" maxlength="3000">${esc(activeContent[key])}</textarea></div>`).join("");
+    if (message) message.textContent = "";
+  };
+  select.addEventListener("change", () => { void paint(select.value); });
+  await paint(select.value);
+  region.querySelector("#savePageCopy")?.addEventListener("click", async (event) => {
+    if (!can("site")) return;
+    const button = event.currentTarget;
+    const updated = { ...activeContent };
+    fieldsRegion.querySelectorAll("[data-copy-key]").forEach((field) => { updated[field.dataset.copyKey] = field.value.trim(); });
+    button.disabled = true; button.textContent = "Saving…";
+    if (message) message.textContent = "";
+    try {
+      await dbMod.setDoc(dbMod.doc(db, "page_content", select.value), { ...updated, updatedAt: new Date().toISOString() });
+      toast(`${PAGE_CONTENT[select.value].label} copy saved. Public pages update automatically.`, "ok");
+      if (message) message.textContent = "Saved successfully. Open pages update automatically.";
+    } catch (error) {
+      if (message) message.textContent = `Save failed: ${error.message}`;
+      toast("Could not save page copy.", "err");
+    } finally { button.disabled = false; button.textContent = "Save page copy"; }
+  });
 }
 
 function siteSettingField(name, label, value, placeholder, type) {
