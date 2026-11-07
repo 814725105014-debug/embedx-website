@@ -2,8 +2,8 @@
 // One page per section (/admin/, /admin/events, /admin/admins, …) sharing this module.
 // Real security lives in firestore.rules / storage.rules (roles from `admin_roles` collection).
 import { firebaseConfig, isConfigured, taskMail } from "./config.js?v=20261106-remove-official-mail";
-import { toast } from "./ui.js?v=20261107-page-cms";
-import { esc, asset, driveFileId } from "./render.js?v=20261107-drive-glimpses";
+import { toast } from "./ui.js?v=20261107-site-editor";
+import { esc, asset, driveFileId } from "./render.js?v=20261107-site-editor";
 import { announcements as starterAnnouncements } from "./data/announcements.js?v=20261106-admin-controls";
 import { events as starterEvents } from "./data/events.js?v=20261106-event-forms";
 import { projects as starterProjects } from "./data/projects.js?v=20261106-admin-controls";
@@ -12,8 +12,9 @@ import { gallery as starterGallery } from "./data/gallery.js?v=20261106-admin-co
 import { resources as starterResources } from "./data/resources.js?v=20261106-admin-controls";
 import { achievements as starterAchievements } from "./data/achievements.js?v=20261106-admin-controls";
 import { forms as starterForms } from "./data/forms.js?v=20261106-admin-controls";
-import { DEFAULT_SITE_SETTINGS, getSiteSettings, normalizeSiteSettings } from "./store.js?v=20261107-page-cms";
-import { PAGE_CONTENT, getPageContentDefaults } from "./data/page-content.js?v=20261107-page-cms";
+import { DEFAULT_SITE_SETTINGS, getSiteSettings, normalizeSiteSettings } from "./store.js?v=20261107-site-editor";
+import { PAGE_CONTENT, getPageContentDefaults } from "./data/page-content.js?v=20261107-site-editor";
+import { DEFAULT_SITE_LINKS, SITE_LINK_GROUPS, normalizeSiteLinks } from "./data/site-links.js?v=20261107-editor";
 
 const STARTER_CONTENT = {
   announcements: starterAnnouncements,
@@ -718,45 +719,167 @@ async function renderWebsiteSettings() {
 async function renderPageCopyEditor(region, db) {
   if (!region) return;
   const groups = Object.entries(PAGE_CONTENT);
-  region.innerHTML = `<section class="admin-site-settings card" style="margin-top:1.2rem"><div class="admin-form-toolbar"><div><h2>Public page copy</h2><p class="muted">Edit navigation, footer and page headings or descriptions. Copy is plain text and updates on open pages after saving.</p></div></div>
+  region.innerHTML = `<section class="admin-site-settings card editor-section" style="margin-top:1.2rem">
+    <div class="admin-form-toolbar"><div><h2>Navigation &amp; footer links</h2><p class="muted">Inspect each visible link, edit its label or destination, remove unwanted links, and add new ones. Unsafe destinations are rejected on the public site.</p></div></div>
+    <div id="siteLinkGroups"></div>
+    ${can("site") ? `<div class="admin-site-actions"><p class="muted" id="siteLinksMessage" role="status"></p><button class="btn btn-primary" id="saveSiteLinks">Save links</button></div>` : `<p class="muted">Read only — ask the owner to grant Website settings permission.</p>`}
+  </section>
+  <section class="admin-site-settings card editor-section" style="margin-top:1.2rem">
+    <div class="admin-form-toolbar"><div><h2>Public page content &amp; features</h2><p class="muted">Edit page copy, then add or remove heading, text, feature, link, image, or video blocks. Blocks appear below the page’s existing content.</p></div></div>
     <div class="field" style="max-width:420px"><label for="pageCopySelect">Choose a page or shared area</label><select id="pageCopySelect">${groups.map(([id, group]) => `<option value="${esc(id)}">${esc(group.label)}</option>`).join("")}</select></div>
     <div id="pageCopyFields" class="form-grid admin-site-grid" style="margin-top:1rem"></div>
-    ${can("site") ? `<div class="admin-site-actions"><p class="muted" id="pageCopyMessage" role="status"></p><button class="btn btn-primary" id="savePageCopy">Save page copy</button></div>` : `<p class="muted">Read only — ask the owner to grant Website settings permission.</p>`}
+    <div id="pageBlocksSection"><div class="admin-site-actions"><h3>Additional page features</h3></div><div id="pageBlocksEditor"></div></div>
+    ${can("site") ? `<div class="admin-site-actions"><p class="muted" id="pageCopyMessage" role="status"></p><button class="btn btn-primary" id="savePageCopy">Save page content</button></div>` : `<p class="muted">Read only — ask the owner to grant Website settings permission.</p>`}
   </section>`;
+
+  const canEdit = can("site");
+  const linksRegion = region.querySelector("#siteLinkGroups");
+  const linksMessage = region.querySelector("#siteLinksMessage");
+  let currentLinks = normalizeSiteLinks(DEFAULT_SITE_LINKS);
+  const linkMarkup = (group, row = {}) => `<div class="admin-link-row" data-link-row>
+    <div class="field"><label>Visible label</label><input data-link-label maxlength="100" value="${esc(row.label || "")}" placeholder="e.g. Join the club" ${canEdit ? "" : "disabled"}></div>
+    <div class="field"><label>Link destination</label><input data-link-href maxlength="500" value="${esc(row.href || "")}" placeholder="/pages/about.html or https://example.edu" ${canEdit ? "" : "disabled"}></div>
+    ${canEdit ? `<button class="btn btn-ghost" type="button" data-remove-link aria-label="Remove link">Remove</button>` : ""}
+  </div>`;
+  const paintLinks = () => {
+    linksRegion.innerHTML = SITE_LINK_GROUPS.map(([group, title]) => `<section class="admin-link-group" data-link-group="${esc(group)}"><div class="admin-form-toolbar"><h3>${esc(title)}</h3>${canEdit ? `<button class="btn btn-ghost" type="button" data-add-link="${esc(group)}">Add link</button>` : ""}</div><div class="admin-link-list">${currentLinks[group].map((row) => linkMarkup(group, row)).join("")}</div></section>`).join("");
+  };
+  try {
+    const snap = await dbMod.getDoc(dbMod.doc(db, "site_links", "links"));
+    if (snap.exists()) currentLinks = normalizeSiteLinks(snap.data());
+  } catch (error) { console.warn("Could not load navigation links", error); }
+  paintLinks();
+  linksRegion.addEventListener("click", (event) => {
+    const add = event.target.closest("[data-add-link]");
+    const remove = event.target.closest("[data-remove-link]");
+    if (add && canEdit) {
+      const group = add.dataset.addLink;
+      const container = linksRegion.querySelector(`[data-link-group="${group}"] .admin-link-list`);
+      const maxRows = group === "headerJoin" ? 5 : 25;
+      if (container.children.length >= maxRows) { linksMessage.textContent = `This group is limited to ${maxRows} links.`; return; }
+      const row = { id: `link-${Date.now()}`, label: "", href: "" };
+      container.insertAdjacentHTML("beforeend", linkMarkup(group, row));
+      container.lastElementChild.querySelector("[data-link-label]")?.focus();
+    }
+    if (remove && canEdit) remove.closest("[data-link-row]").remove();
+  });
+  region.querySelector("#saveSiteLinks")?.addEventListener("click", async (event) => {
+    if (!canEdit) return;
+    const button = event.currentTarget;
+    const updated = {};
+    for (const [group] of SITE_LINK_GROUPS) {
+      updated[group] = [...linksRegion.querySelectorAll(`[data-link-group="${group}"] [data-link-row]`)].map((row, index) => ({
+        id: `link-${group}-${index + 1}`,
+        label: row.querySelector("[data-link-label]").value.trim(),
+        href: row.querySelector("[data-link-href]").value.trim()
+      })).filter((row) => row.label || row.href);
+      for (const row of updated[group]) {
+        if (!row.label || !row.href || !safeEditableHref(row.href)) {
+          linksMessage.textContent = `In ${SITE_LINK_GROUPS.find(([key]) => key === group)[1]}, every link needs a label and a safe path, HTTPS URL, mailto address, or tel number.`;
+          return;
+        }
+      }
+    }
+    button.disabled = true; button.textContent = "Saving…"; linksMessage.textContent = "";
+    try {
+      await dbMod.setDoc(dbMod.doc(db, "site_links", "links"), { ...normalizeSiteLinks(updated), updatedAt: new Date().toISOString() });
+      toast("Navigation and footer links saved.", "ok"); linksMessage.textContent = "Saved. Open public pages update automatically.";
+    } catch (error) { linksMessage.textContent = `Save failed: ${error.message}`; toast("Could not save links.", "err"); }
+    finally { button.disabled = false; button.textContent = "Save links"; }
+  });
+
   const select = region.querySelector("#pageCopySelect");
   const fieldsRegion = region.querySelector("#pageCopyFields");
+  const blocksRegion = region.querySelector("#pageBlocksEditor");
   const message = region.querySelector("#pageCopyMessage");
   let activeContent = {};
+  let activeBlocks = [];
+  const blockTypes = ["heading", "text", "feature", "link", "image", "video"];
+  const paintBlocks = () => {
+    blocksRegion.innerHTML = `${activeBlocks.map((block, index) => `<article class="admin-content-block" data-content-block data-block-index="${index}">
+      <div class="admin-form-toolbar"><strong>${esc(block.type[0].toUpperCase() + block.type.slice(1))} block</strong>${canEdit ? `<button class="btn btn-ghost" type="button" data-remove-block>Remove</button>` : ""}</div>
+      <div class="form-grid admin-site-grid"><div class="field"><label>Block type</label><select data-block-field="type" ${canEdit ? "" : "disabled"}>${blockTypes.map((type) => `<option value="${type}" ${block.type === type ? "selected" : ""}>${type[0].toUpperCase() + type.slice(1)}</option>`).join("")}</select></div>
+      <div class="field"><label>Title</label><input data-block-field="title" maxlength="180" value="${esc(block.title)}" ${canEdit ? "" : "disabled"}></div>
+      <div class="field full"><label>Text / description</label><textarea data-block-field="body" maxlength="3000" rows="3" ${canEdit ? "" : "disabled"}>${esc(block.body)}</textarea></div>
+      <div class="field"><label>Link label</label><input data-block-field="label" maxlength="100" value="${esc(block.label)}" ${canEdit ? "" : "disabled"}></div>
+      <div class="field"><label>Link / media URL</label><input data-block-field="url" maxlength="1000" value="${esc(block.url)}" placeholder="https://…" ${canEdit ? "" : "disabled"}></div>
+      <div class="field full"><label>Caption</label><input data-block-field="caption" maxlength="300" value="${esc(block.caption)}" ${canEdit ? "" : "disabled"}></div></div>
+    </article>`).join("")}${canEdit ? `<div class="admin-site-actions"><label class="field"><span>Add a page feature</span><select id="newBlockType">${blockTypes.map((type) => `<option value="${type}">${type[0].toUpperCase() + type.slice(1)}</option>`).join("")}</select></label><button class="btn btn-ghost" id="addPageBlock" type="button">Add block</button></div>` : ""}`;
+  };
+  const syncBlocksFromForm = () => {
+    const rows = [...blocksRegion.querySelectorAll("[data-content-block]")];
+    activeBlocks = rows.map((row, index) => ({
+      id: activeBlocks[index]?.id || `block-${index + 1}`,
+      ...Object.fromEntries([...row.querySelectorAll("[data-block-field]")].map((field) => [field.dataset.blockField, field.value.trim()]))
+    }));
+  };
   const paint = async (pageId) => {
     const defaults = getPageContentDefaults(pageId);
     let stored = {};
     try {
       const snap = await dbMod.getDoc(dbMod.doc(db, "page_content", pageId));
       if (snap.exists()) stored = snap.data();
-    } catch (error) { console.warn(`Could not read ${pageId} page copy`, error); }
+    } catch (error) { console.warn(`Could not read ${pageId} page content`, error); }
     if (!region.isConnected || select.value !== pageId) return;
+    region.querySelector("#pageBlocksSection").hidden = pageId === "global";
     activeContent = Object.fromEntries(Object.keys(defaults).map((key) => [key, typeof stored[key] === "string" ? stored[key] : defaults[key]]));
-    fieldsRegion.innerHTML = PAGE_CONTENT[pageId].fields.map(([key, label]) => `<div class="field full"><label for="copy-${esc(key)}">${esc(label)}</label><textarea id="copy-${esc(key)}" data-copy-key="${esc(key)}" rows="${activeContent[key].length > 180 ? 4 : 2}" maxlength="3000">${esc(activeContent[key])}</textarea></div>`).join("");
+    activeBlocks = normalizeEditableBlocks(stored.blocks);
+    fieldsRegion.innerHTML = PAGE_CONTENT[pageId].fields.map(([key, label]) => `<div class="field full"><label for="copy-${esc(key)}">${esc(label)}</label><textarea id="copy-${esc(key)}" data-copy-key="${esc(key)}" rows="${activeContent[key].length > 180 ? 4 : 2}" maxlength="3000" ${canEdit ? "" : "disabled"}>${esc(activeContent[key])}</textarea></div>`).join("");
+    paintBlocks();
     if (message) message.textContent = "";
   };
   select.addEventListener("change", () => { void paint(select.value); });
+  blocksRegion.addEventListener("click", (event) => {
+    if (!canEdit) return;
+    if (event.target.closest("#addPageBlock")) {
+      syncBlocksFromForm();
+      if (activeBlocks.length >= 50) { if (message) message.textContent = "A page can contain up to 50 additional blocks."; return; }
+      activeBlocks.push({ id: `block-${Date.now()}`, type: blocksRegion.querySelector("#newBlockType").value, title: "", body: "", label: "", url: "", caption: "" });
+      paintBlocks();
+    }
+    const remove = event.target.closest("[data-remove-block]");
+    if (remove) { const index = Number(remove.closest("[data-content-block]").dataset.blockIndex); syncBlocksFromForm(); activeBlocks.splice(index, 1); paintBlocks(); }
+  });
   await paint(select.value);
   region.querySelector("#savePageCopy")?.addEventListener("click", async (event) => {
-    if (!can("site")) return;
+    if (!canEdit) return;
     const button = event.currentTarget;
     const updated = { ...activeContent };
     fieldsRegion.querySelectorAll("[data-copy-key]").forEach((field) => { updated[field.dataset.copyKey] = field.value.trim(); });
+    const blocks = [...blocksRegion.querySelectorAll("[data-content-block]")].map((row) => Object.fromEntries([...row.querySelectorAll("[data-block-field]")].map((field) => [field.dataset.blockField, field.value.trim()]))).map((block, index) => ({ ...block, id: activeBlocks[index]?.id || `block-${index + 1}` }));
+    for (const block of blocks) {
+      if (["link", "image", "video"].includes(block.type) && block.url && !safeEditableHref(block.url, block.type === "image")) {
+        message.textContent = `The ${block.type} block URL must use a safe HTTPS destination (or a local site path).`; return;
+      }
+    }
     button.disabled = true; button.textContent = "Saving…";
     if (message) message.textContent = "";
     try {
-      await dbMod.setDoc(dbMod.doc(db, "page_content", select.value), { ...updated, updatedAt: new Date().toISOString() });
-      toast(`${PAGE_CONTENT[select.value].label} copy saved. Public pages update automatically.`, "ok");
+      await dbMod.setDoc(dbMod.doc(db, "page_content", select.value), { ...updated, blocks: normalizeEditableBlocks(blocks), updatedAt: new Date().toISOString() });
+      toast(`${PAGE_CONTENT[select.value].label} content saved.`, "ok");
       if (message) message.textContent = "Saved successfully. Open pages update automatically.";
-    } catch (error) {
-      if (message) message.textContent = `Save failed: ${error.message}`;
-      toast("Could not save page copy.", "err");
-    } finally { button.disabled = false; button.textContent = "Save page copy"; }
+    } catch (error) { if (message) message.textContent = `Save failed: ${error.message}`; toast("Could not save page content.", "err"); }
+    finally { button.disabled = false; button.textContent = "Save page content"; }
   });
+}
+
+function safeEditableHref(value, allowLocal = true) {
+  const text = String(value || "").trim();
+  if (!text || text.includes("\\") || text.startsWith("//")) return false;
+  if (allowLocal && (text.startsWith("/") || text.startsWith("#"))) return true;
+  try { return new URL(text).protocol === "https:"; } catch { return /^(mailto:[^\s@]+@[^\s@]+\.[^\s@]+|tel:\+?[0-9().\s-]{6,30})$/i.test(text); }
+}
+function normalizeEditableBlocks(value) {
+  const types = new Set(["heading", "text", "feature", "link", "image", "video"]);
+  if (!Array.isArray(value)) return [];
+  return value.filter((block) => block && types.has(block.type)).slice(0, 50).map((block, index) => ({
+    id: String(block.id || `block-${index + 1}`).slice(0, 80), type: block.type,
+    title: typeof block.title === "string" ? block.title.slice(0, 180) : "",
+    body: typeof block.body === "string" ? block.body.slice(0, 3000) : "",
+    label: typeof block.label === "string" ? block.label.slice(0, 100) : "",
+    url: typeof block.url === "string" ? block.url.slice(0, 1000) : "",
+    caption: typeof block.caption === "string" ? block.caption.slice(0, 300) : ""
+  }));
 }
 
 function siteSettingField(name, label, value, placeholder, type) {

@@ -850,3 +850,15 @@ details.perm-edit summary { padding: .55rem 0; min-height: 44px; display: flex; 
     backdrop-filter: none; -webkit-backdrop-filter: none;
   }
 }
+
+/* Editable page blocks and links managed from the website settings portal */
+.footer-link-list a { display: table; }
+.page-custom-blocks { display: grid; gap: 1.25rem; padding-top: 1.5rem; }
+.page-custom-blocks > h2, .page-custom-blocks > section { margin: 0; }
+.page-feature-block { padding: clamp(1.2rem, 3vw, 2rem); }
+.page-feature-block h3, .page-link-block h3 { margin-top: 0; }
+.page-link-block { border: 1px solid var(--border); border-radius: var(--r-md); padding: 1.25rem; background: var(--surface); }
+.page-media-block { margin: 0; }
+.page-media-block img, .page-media-block video { width: 100%; max-height: 560px; object-fit: contain; border-radius: var(--r-md); background: #080b12; }
+.page-media-block figcaption { margin-top: .55rem; color: var(--text-muted); font-size: .9rem; }
+.form-submit-status { color: var(--danger, #ef4444); font-weight: 600; margin-top: .8rem; }

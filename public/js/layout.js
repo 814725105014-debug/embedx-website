@@ -1,19 +1,53 @@
 // EMBEDX — Shared chrome: navbar, mobile menu, footer, theme toggle.
 import { icon } from "./icons.js";
 import { initSearch } from "./search.js?v=20261107-page-cms";
-import { getSiteSettings, subscribeSiteSettings, getPageContent, subscribePageContent, applyPageContent } from "./store.js?v=20261107-page-cms";
+import { getSiteSettings, subscribeSiteSettings, getPageContent, subscribePageContent, applyPageContent, getSiteLinks, subscribeSiteLinks } from "./store.js?v=20261107-site-editor";
+import { DEFAULT_SITE_LINKS } from "./data/site-links.js?v=20261107-editor";
 
-const NAV = [
-  ["navHome", "Home", "/"],
-  ["navAbout", "About", "/pages/about.html"],
-  ["navDomains", "Domains", "/pages/domains.html"],
-  ["navProjects", "Projects", "/pages/projects.html"],
-  ["navEvents", "Events", "/pages/events.html"],
-  ["navAchievers", "Achievers", "/pages/achievers.html"],
-  ["navTeam", "Team", "/pages/team.html"],
-  ["navResources", "Resources", "/pages/resources.html"],
-  ["navContact", "Contact", "/pages/contact.html"]
-];
+function safeNavigationHref(value) {
+  const href = String(value || "").trim();
+  if (!href || href.startsWith("//") || href.includes("\\")) return "";
+  if (href.startsWith("/") || href.startsWith("#")) return href;
+  try { const url = new URL(href); return ["https:", "mailto:", "tel:"].includes(url.protocol) ? url.href : ""; }
+  catch { return ""; }
+}
+function makeNavigationLink(item, { button = false, current = false } = {}) {
+  const href = safeNavigationHref(item.href);
+  if (!href || !item.label) return null;
+  const anchor = document.createElement("a");
+  anchor.href = href;
+  anchor.textContent = item.label;
+  if (button) anchor.className = "btn btn-primary btn-sm nav-join";
+  if (current && !/^https:/i.test(href) && normalize(new URL(href, location.origin).pathname) === currentPage()) anchor.setAttribute("aria-current", "page");
+  if (/^https:/i.test(href) && new URL(href).origin !== location.origin) { anchor.target = "_blank"; anchor.rel = "noopener noreferrer"; }
+  return anchor;
+}
+function renderSiteLinks(links) {
+  const nav = document.querySelector("#primaryNavLinks");
+  const mobile = document.querySelector("#mobileNavLinks");
+  const footerNav = document.querySelector("#footerNavigationLinks");
+  const footerCommunity = document.querySelector("#footerCommunityLinks");
+  const join = document.querySelector("#headerJoinLink");
+  if (!nav || !mobile || !footerNav || !footerCommunity || !join) return;
+  const fill = (region, rows, options = {}) => {
+    region.replaceChildren(...rows.map((row) => makeNavigationLink(row, options)).filter(Boolean));
+  };
+  fill(nav, links.primary, { current: true });
+  fill(mobile, links.primary, { current: true });
+  fill(footerNav, links.footerNavigation);
+  fill(footerCommunity, links.footerCommunity);
+  const joinLink = makeNavigationLink(links.headerJoin[0] || {}, { button: true });
+  if (joinLink) { joinLink.id = "headerJoinLink"; join.replaceWith(joinLink); }
+  else { join.hidden = true; join.removeAttribute("href"); join.textContent = ""; }
+  const mobileJoin = makeNavigationLink(links.headerJoin[0] || {}, { button: true });
+  if (mobileJoin) mobileJoin.className = "btn btn-primary mobile-join";
+  const mobileMenu = document.querySelector("#mobileMenu");
+  if (mobileMenu) {
+    const previous = mobileMenu.querySelector(".mobile-join");
+    if (previous) previous.remove();
+    if (mobileJoin) mobileMenu.append(mobileJoin);
+  }
+}
 
 // Normalize a path so "/pages/about", "/pages/about.html" and "/" compare equal.
 function normalize(p) {
@@ -26,12 +60,6 @@ export function currentPage() {
 }
 
 function injectChrome() {
-  const here = currentPage();
-  const cur = (href) => (normalize(href) === here ? 'aria-current="page"' : "");
-  const links = NAV.map(([key, label, href]) => `<a href="${href}" data-page-copy="global:${key}" ${cur(href)}>${label}</a>`).join("");
-  const mlinks = NAV.map(([key, label, href]) => `<a href="${href}" data-page-copy="global:${key}" ${cur(href)}>${label}</a>`).join("") +
-    `<a href="/pages/join.html" class="btn btn-primary" data-page-copy="global:navJoin">Join EMBEDX</a>`;
-
   const header = document.createElement("header");
   header.className = "nav";
   header.innerHTML = `
@@ -44,11 +72,11 @@ function injectChrome() {
           <span class="brand-institution">SRM TRP Engineering College</span>
         </span>
       </a>
-      <nav class="nav-links" aria-label="Primary">${links}</nav>
+      <nav class="nav-links" id="primaryNavLinks" aria-label="Primary"></nav>
       <div class="nav-actions">
         <button class="icon-btn" id="searchOpen" aria-label="Search the site (Ctrl+K)" title="Search (Ctrl+K)">${icon("search")}</button>
         <button class="icon-btn" id="themeToggle" aria-label="Toggle light / dark theme">${icon("moon")}</button>
-        <a class="btn btn-primary btn-sm nav-join" href="/pages/join.html" data-page-copy="global:navJoin">Join EMBEDX</a>
+        <a class="btn btn-primary btn-sm nav-join" id="headerJoinLink" href="/pages/join.html">Join EMBEDX</a>
         <button class="icon-btn nav-burger" id="burger" aria-label="Open menu" aria-expanded="false" aria-controls="mobileMenu">${icon("menu")}</button>
       </div>
     </div>`;
@@ -60,7 +88,7 @@ function injectChrome() {
   mobile.setAttribute("aria-label", "Mobile");
   mobile.setAttribute("aria-hidden", "true");
   mobile.inert = true;
-  mobile.innerHTML = mlinks;
+  mobile.innerHTML = `<div id="mobileNavLinks"></div>`;
   header.after(mobile);
 
   const footer = document.createElement("footer");
@@ -79,11 +107,11 @@ function injectChrome() {
         </div>
         <div>
           <h4 data-page-copy="global:footerNavHeading">Navigation</h4>
-          <a href="/" data-page-copy="global:footerHome">Home</a><br /><a href="/pages/about.html" data-page-copy="global:footerAbout">About Us</a><br /><a href="/pages/domains.html" data-page-copy="global:footerDomains">Technical Domains</a><br /><a href="/pages/projects.html" data-page-copy="global:footerProjects">Projects Showcase</a><br /><a href="/pages/events.html" data-page-copy="global:footerEvents">Events &amp; EmbedNova</a><br /><a href="/pages/achievers.html" data-page-copy="global:footerAchievers">Hall of Achievers</a>
+          <div id="footerNavigationLinks" class="footer-link-list"></div>
         </div>
         <div>
           <h4 data-page-copy="global:footerCommunityHeading">Community</h4>
-          <a href="/pages/team.html" data-page-copy="global:footerTeam">Meet the Team</a><br /><a href="/pages/resources.html" data-page-copy="global:footerResources">Learning Hub</a><br /><a href="/pages/join.html" data-page-copy="global:footerJoin">Join EMBEDX</a><br /><a href="/pages/contact.html" data-page-copy="global:footerContact">Contact Department</a><br /><a href="/pages/event-detail.html?id=embednova#register" data-page-copy="global:footerEventRegistration">EMBEDNOVA Registration</a>
+          <div id="footerCommunityLinks" class="footer-link-list"></div>
         </div>
         <div>
           <h4 data-page-copy="global:footerConnectHeading">Connect With Us</h4>
@@ -175,6 +203,9 @@ function injectChrome() {
 }
 
 injectChrome();
+renderSiteLinks(DEFAULT_SITE_LINKS);
+getSiteLinks().then(renderSiteLinks);
+subscribeSiteLinks(renderSiteLinks);
 getPageContent("global").then((content) => applyPageContent("global", content));
 subscribePageContent("global", (content) => applyPageContent("global", content));
 

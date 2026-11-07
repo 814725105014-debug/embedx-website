@@ -1,6 +1,6 @@
 // EMBEDX — Form handling: validation, honeypot, rate limiting, Firestore writes, toasts.
-import { submitApplication, submitContact, getFormDefinition, submitFormResponse, isConfigured } from "./store.js?v=20261107-page-cms";
-import { toast } from "./ui.js?v=20261107-page-cms";
+import { submitApplication, submitContact, getFormDefinition, submitFormResponse, isConfigured } from "./store.js?v=20261107-site-editor";
+import { toast } from "./ui.js?v=20261107-site-editor";
 
 const RATE_KEY = "embedx_rate";
 const RATE_MAX = 3;
@@ -50,10 +50,21 @@ function setErrors(form, errors) {
 
 const validators = {
   required: (v, label) => (v.trim() ? "" : `${label} is required.`),
+  min: (v, n, label) => (v.trim().length >= n ? "" : `${label} must be at least ${n} characters.`),
   email: (v) => (v.trim().length <= 120 && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim()) ? "" : "Enter a valid email address (maximum 120 characters)."),
   phone: (v) => (/^[0-9+\-\s()]{8,15}$/.test(v.trim()) ? "" : "Enter a valid phone number."),
   max: (v, n) => (v.length <= n ? "" : `Keep this under ${n} characters.`)
 };
+
+function submissionFailureMessage(error) {
+  const code = String(error?.code || "").replace("firestore/", "");
+  if (!isConfigured) return "This form is temporarily unavailable. Please try again later or contact the department.";
+  if (code === "permission-denied") return "The form service rejected this submission. Please contact the department and include the time of your attempt.";
+  if (["unavailable", "deadline-exceeded", "network-request-failed", "cancelled"].includes(code)) return "Could not reach the form service. Check your connection and try again.";
+  if (code === "resource-exhausted") return "The form service is temporarily busy. Please wait a few minutes and retry.";
+  if (code === "invalid-argument") return "Some submission details were not accepted. Please review the fields and try again.";
+  return "Submission could not be completed. Please retry, or contact the department if this continues.";
+}
 
 function readForm(form) {
   const data = {};
@@ -125,6 +136,9 @@ function wire(formId, { build, submit, successMsg, draftKey, formKey }) {
       return;
     }
 
+    let status = form.querySelector("[data-form-status]");
+    if (!status) { status = document.createElement("p"); status.dataset.formStatus = ""; status.className = "form-submit-status"; status.setAttribute("role", "status"); status.setAttribute("aria-live", "polite"); form.append(status); }
+    status.textContent = "";
     const btn = form.querySelector("[type=submit]");
     form.dataset.sending = "1";
     if (btn) { btn.disabled = true; btn.setAttribute("aria-busy", "true"); }
@@ -139,10 +153,10 @@ function wire(formId, { build, submit, successMsg, draftKey, formKey }) {
       if (draftKey) storageRemove("sessionStorage", draftKey);
       if (formId === "joinForm") storageSet("sessionStorage", "embedx_join_submitted", "1");
     } catch (err) {
-      console.error(err);
-      toast(isConfigured
-        ? "Submission failed. Please check your connection and retry."
-        : "This form is temporarily unavailable. Please try again later or contact the department.", "err");
+      console.error("Public form submission failed", { code: err?.code || "unknown", message: err?.message || String(err) });
+      const message = submissionFailureMessage(err);
+      if (status) status.textContent = message;
+      toast(message, "err");
     } finally {
       form.dataset.sending = "0";
       if (btn) { btn.disabled = false; btn.removeAttribute("aria-busy"); btn.innerHTML = label; }
@@ -159,7 +173,7 @@ wire("joinForm", {
     validate: (d) => {
       const e = {};
       const checks = {
-        full_name: req(d, "full_name", "Full name", 80),
+        full_name: validators.required(d.full_name || "", "Full name") || validators.min(d.full_name || "", 2, "Full name") || validators.max(d.full_name || "", 80),
         regNo: validators.max(d.regNo || "", 40),
         department: validators.required(d.department || "", "Department") || validators.max(d.department || "", 120),
         year: validators.required(d.year || "", "Year of study") || validators.max(d.year || "", 40),
@@ -195,10 +209,10 @@ wire("contactForm", {
     validate: (d) => {
       const e = {};
       const c = {
-        name: req(d, "name", "Your name", 80),
+        name: validators.required(d.name || "", "Your name") || validators.min(d.name || "", 2, "Your name") || validators.max(d.name || "", 80),
         email: validators.required(d.email || "", "Email") || validators.email(d.email || ""),
         subject: validators.max(d.subject || "", 160),
-        message: req(d, "message", "Message", 2000)
+        message: validators.required(d.message || "", "Message") || validators.min(d.message || "", 3, "Message") || validators.max(d.message || "", 2000)
       };
       for (const [k, v] of Object.entries(c)) if (v) e[k] = v;
       return e;
@@ -315,7 +329,9 @@ async function mountPublicForm() {
     honey.append(honeyLabel, honeyInput);
     const submitWrap = document.createElement("div"); submitWrap.className = "full";
     const submitButton = document.createElement("button"); submitButton.type = "submit"; submitButton.className = "btn btn-primary"; submitButton.textContent = "Submit response";
-    submitWrap.appendChild(submitButton); grid.append(honey, submitWrap); form.appendChild(grid); card.append(title, description);
+    submitWrap.appendChild(submitButton); grid.append(honey, submitWrap); form.appendChild(grid);
+    const submitStatus = document.createElement("p"); submitStatus.dataset.formStatus = ""; submitStatus.className = "form-submit-status"; submitStatus.setAttribute("role", "status"); submitStatus.setAttribute("aria-live", "polite"); form.appendChild(submitStatus);
+    card.append(title, description);
     if (eventTitle) { const context = document.createElement("p"); context.className = "event-form-context"; context.textContent = `Registration for ${eventTitle}`; card.appendChild(context); }
     card.appendChild(form); mount.replaceChildren(card);
     form.addEventListener("submit", async (event) => {
@@ -337,7 +353,7 @@ async function mountPublicForm() {
       });
       if (eventId) { answers._eventId = eventId; if (eventTitle) answers._eventTitle = eventTitle; }
       if (rateLimited(`custom-${formId}`)) { toast("Too many submissions from this device. Please try again later.", "err"); return; }
-      form.dataset.sending = "1"; submitButton.disabled = true; submitButton.textContent = "Submitting…";
+      form.dataset.sending = "1"; submitButton.disabled = true; submitButton.textContent = "Submitting…"; submitStatus.textContent = "";
       try {
         const responseTitle = `${eventTitle ? `${eventTitle} — ` : ""}${definition.title || "Form"}`.slice(0, 160);
         await submitFormResponse({ formId, formTitle: responseTitle, answers, submittedAt: new Date().toISOString() });
@@ -349,7 +365,11 @@ async function mountPublicForm() {
         success.append(icon, heading, message);
         if (eventId) { const back = document.createElement("a"); back.className = "btn btn-ghost"; back.href = `/pages/event-detail.html?id=${encodeURIComponent(eventId)}`; back.textContent = "Back to event"; success.appendChild(back); }
         card.replaceChildren(success);
-      } catch (err) { console.error(err); toast("We could not submit your response. Please retry or contact EMBEDX.", "err"); submitButton.disabled = false; submitButton.textContent = "Submit response"; }
+      } catch (err) {
+        console.error("Custom public form submission failed", { code: err?.code || "unknown", message: err?.message || String(err) });
+        const message = submissionFailureMessage(err); submitStatus.textContent = message; toast(message, "err");
+        submitButton.disabled = false; submitButton.textContent = "Submit response";
+      }
       finally { form.dataset.sending = "0"; }
     });
   } catch (err) { console.error("Public form load failed", err); mount.innerHTML = `<div class="card"><h2>Form could not load</h2><p class="muted">Check your connection and try again later.</p></div>`; }

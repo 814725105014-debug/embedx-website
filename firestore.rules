@@ -143,7 +143,21 @@ service cloud.firestore {
     match /page_content/{pageId} {
       allow read: if true;
       allow create, update: if canWrite('site')
-        && request.resource.data.keys().hasOnly(['navHome', 'navAbout', 'navDomains', 'navProjects', 'navEvents', 'navAchievers', 'navTeam', 'navResources', 'navContact', 'navJoin', 'footerNavHeading', 'footerHome', 'footerAbout', 'footerDomains', 'footerProjects', 'footerEvents', 'footerAchievers', 'footerCommunityHeading', 'footerTeam', 'footerResources', 'footerJoin', 'footerContact', 'footerEventRegistration', 'footerConnectHeading', 'footerConnectDescription', 'footerTagline', 'footerCopyright', 'heroEyebrow', 'heroTitle', 'heroDescription', 'heroTechline', 'aboutTitle', 'aboutDescription', 'communityTitle', 'communityDescription', 'journeyTitle', 'projectsEyebrow', 'projectsTitle', 'projectsDescription', 'achieversEyebrow', 'achieversTitle', 'achieversDescription', 'eventsEyebrow', 'eventsTitle', 'eventsDescription', 'eyebrow', 'title', 'intro', 'overviewTitle', 'overviewDescription', 'missionTitle', 'visionTitle', 'journeyEyebrow', 'journeyDescription', 'toolsEyebrow', 'toolsTitle', 'toolsDescription', 'careersEyebrow', 'careersTitle', 'eligibilityTitle', 'eligibilityDescription', 'processTitle', 'departmentHeading', 'addressLabel', 'address', 'socialHeading', 'updatedAt']);
+        && request.resource.data.keys().hasOnly(['navHome', 'navAbout', 'navDomains', 'navProjects', 'navEvents', 'navAchievers', 'navTeam', 'navResources', 'navContact', 'navJoin', 'footerNavHeading', 'footerHome', 'footerAbout', 'footerDomains', 'footerProjects', 'footerEvents', 'footerAchievers', 'footerCommunityHeading', 'footerTeam', 'footerResources', 'footerJoin', 'footerContact', 'footerEventRegistration', 'footerConnectHeading', 'footerConnectDescription', 'footerTagline', 'footerCopyright', 'heroEyebrow', 'heroTitle', 'heroDescription', 'heroTechline', 'aboutTitle', 'aboutDescription', 'communityTitle', 'communityDescription', 'journeyTitle', 'projectsEyebrow', 'projectsTitle', 'projectsDescription', 'achieversEyebrow', 'achieversTitle', 'achieversDescription', 'eventsEyebrow', 'eventsTitle', 'eventsDescription', 'eyebrow', 'title', 'intro', 'overviewTitle', 'overviewDescription', 'missionTitle', 'visionTitle', 'journeyEyebrow', 'journeyDescription', 'toolsEyebrow', 'toolsTitle', 'toolsDescription', 'careersEyebrow', 'careersTitle', 'eligibilityTitle', 'eligibilityDescription', 'processTitle', 'departmentHeading', 'addressLabel', 'address', 'socialHeading', 'blocks', 'updatedAt'])
+        && (!('blocks' in request.resource.data) || (request.resource.data.blocks is list && request.resource.data.blocks.size() <= 50));
+      allow delete: if false;
+    }
+
+    match /site_links/{linkId} {
+      allow read: if true;
+      allow create, update: if linkId == 'links' && canWrite('site')
+        && request.resource.data.keys().hasAll(['primary', 'headerJoin', 'footerNavigation', 'footerCommunity', 'updatedAt'])
+        && request.resource.data.keys().hasOnly(['primary', 'headerJoin', 'footerNavigation', 'footerCommunity', 'updatedAt'])
+        && request.resource.data.primary is list && request.resource.data.primary.size() <= 25
+        && request.resource.data.headerJoin is list && request.resource.data.headerJoin.size() <= 5
+        && request.resource.data.footerNavigation is list && request.resource.data.footerNavigation.size() <= 25
+        && request.resource.data.footerCommunity is list && request.resource.data.footerCommunity.size() <= 25
+        && isIsoDate(request.resource.data.updatedAt);
       allow delete: if false;
     }
 

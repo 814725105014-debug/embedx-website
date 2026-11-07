@@ -1,6 +1,7 @@
 // EMBEDX — Data store: Firestore first, graceful static fallback.
 import { firebaseConfig, isConfigured } from "./config.js?v=20261106";
-import { getPageContentDefaults } from "./data/page-content.js?v=20261107-page-cms";
+import { getPageContentDefaults } from "./data/page-content.js?v=20261107-site-editor";
+import { DEFAULT_SITE_LINKS, normalizeSiteLinks } from "./data/site-links.js?v=20261107-editor";
 
 const SDK = "https://www.gstatic.com/firebasejs/10.12.5";
 const PUBLIC_READ_TIMEOUT_MS = 1800;
@@ -170,6 +171,65 @@ export function subscribePageContent(page, onChange = () => {}) {
       if (fingerprint(content) !== fingerprint(previous)) onChange(content);
     }, (error) => console.warn(`Live ${page} page-copy updates are unavailable`, error));
   }).catch((error) => console.warn(`Could not subscribe to ${page} page-copy updates`, error));
+  return () => { stopped = true; unsubscribe(); };
+}
+
+const PAGE_BLOCK_TYPES = new Set(["heading", "text", "feature", "link", "image", "video"]);
+export function normalizePageBlocks(value) {
+  if (!Array.isArray(value)) return [];
+  return value.filter((block) => block && PAGE_BLOCK_TYPES.has(block.type)).slice(0, 50).map((block, index) => ({
+    id: String(block.id || `block-${index + 1}`).slice(0, 80),
+    type: block.type,
+    title: typeof block.title === "string" ? block.title.slice(0, 180) : "",
+    body: typeof block.body === "string" ? block.body.slice(0, 3000) : "",
+    label: typeof block.label === "string" ? block.label.slice(0, 100) : "",
+    url: typeof block.url === "string" ? block.url.slice(0, 1000) : "",
+    caption: typeof block.caption === "string" ? block.caption.slice(0, 300) : ""
+  }));
+}
+export async function getPageBlocks(page) {
+  if (!isConfigured) return [];
+  return readOrFallback(async () => {
+    const app = await getApp();
+    const { getFirestore, doc, getDoc } = await import(`${SDK}/firebase-firestore.js`);
+    const snap = await getDoc(doc(getFirestore(app), "page_content", page));
+    return normalizePageBlocks(snap.exists() ? snap.get("blocks") : []);
+  }, () => []);
+}
+export function subscribePageBlocks(page, onChange = () => {}) {
+  let stopped = false;
+  let unsubscribe = () => {};
+  if (!isConfigured) return () => {};
+  getApp().then(async (app) => {
+    const { getFirestore, doc, onSnapshot } = await import(`${SDK}/firebase-firestore.js`);
+    if (stopped) return;
+    unsubscribe = onSnapshot(doc(getFirestore(app), "page_content", page), (snapshot) => {
+      onChange(normalizePageBlocks(snapshot.exists() ? snapshot.get("blocks") : []));
+    }, (error) => console.warn(`Live ${page} page features are unavailable`, error));
+  }).catch((error) => console.warn(`Could not subscribe to ${page} page features`, error));
+  return () => { stopped = true; unsubscribe(); };
+}
+
+export async function getSiteLinks() {
+  if (!isConfigured) return normalizeSiteLinks(DEFAULT_SITE_LINKS);
+  return readOrFallback(async () => {
+    const app = await getApp();
+    const { getFirestore, doc, getDoc } = await import(`${SDK}/firebase-firestore.js`);
+    const snap = await getDoc(doc(getFirestore(app), "site_links", "links"));
+    return normalizeSiteLinks(snap.exists() ? snap.data() : {});
+  }, () => normalizeSiteLinks(DEFAULT_SITE_LINKS));
+}
+export function subscribeSiteLinks(onChange = () => {}) {
+  let stopped = false;
+  let unsubscribe = () => {};
+  if (!isConfigured) return () => {};
+  getApp().then(async (app) => {
+    const { getFirestore, doc, onSnapshot } = await import(`${SDK}/firebase-firestore.js`);
+    if (stopped) return;
+    unsubscribe = onSnapshot(doc(getFirestore(app), "site_links", "links"), (snapshot) => {
+      onChange(normalizeSiteLinks(snapshot.exists() ? snapshot.data() : {}));
+    }, (error) => console.warn("Live navigation links are unavailable", error));
+  }).catch((error) => console.warn("Could not subscribe to navigation links", error));
   return () => { stopped = true; unsubscribe(); };
 }
 
