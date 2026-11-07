@@ -13,8 +13,13 @@
  * mandatory on every request. Never place a shared mail token/password in the website.
  */
 const PROJECT_ID = "embedx-club-eee";
-const FIREBASE_API_KEY = "AIzaSyBwNaduceEdAcJX0uCRv2nLNVZca2OWSgA";
 const ALLOWED_DOMAIN = "@trp.srmtrichy.edu.in";
+
+function firebaseApiKey_() {
+  const key = PropertiesService.getScriptProperties().getProperty("FIREBASE_API_KEY");
+  if (!key) throw new Error("Configure FIREBASE_API_KEY in this Apps Script project's Script Properties.");
+  return key;
+}
 const MAX_RECIPIENTS = 25;
 const FIRESTORE_BASE = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
 
@@ -28,7 +33,7 @@ function verifyIdentity_(idToken) {
     throw new Error("Sign-in expired. Please sign in again.");
   }
   const response = UrlFetchApp.fetch(
-    `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${FIREBASE_API_KEY}`,
+    `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${encodeURIComponent(firebaseApiKey_())}`,
     { method: "post", contentType: "application/json", payload: JSON.stringify({ idToken }), muteHttpExceptions: true }
   );
   if (response.getResponseCode() !== 200) throw new Error("Sign-in expired. Please sign in again.");

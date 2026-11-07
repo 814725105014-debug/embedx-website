@@ -113,6 +113,22 @@ a confirmation email when their record is first imported. No Web App endpoint, s
 secret, Cloud Function, or paid Firebase service is involved. Share the generated
 sheet only with trusted reviewers.
 
+## Firebase API key and browser security
+
+The Firebase web `apiKey` in `public/js/config.js` is necessarily visible in browser
+DevTools; it identifies the Firebase project and is not an authorization secret. Never
+put service-account JSON, private keys, OAuth refresh tokens, or shared mail passwords
+in public code. Restrict the web key in Google Cloud Console to the production website
+HTTP referrers and only the Firebase APIs this app uses (use a separate key for local
+development). Configure Firebase App Check for the web app and enable enforcement for
+Authentication, Firestore, and Storage after validating the production site. Firestore
+and Storage Security Rules remain the authorization boundary; a visible web key must
+never grant data access by itself.
+
+The optional task-mail Apps Script now reads its Firebase web key from the project's
+Script Properties (`FIREBASE_API_KEY`), not from checked-in source. Set it in Apps
+Script → Project Settings → Script Properties before redeploying that endpoint.
+
 ## Task-email source
 
 Task notifications remain a separate, optional Apps Script web-app deployment.

@@ -120,7 +120,12 @@ async function sdk() {
   authMod = authMod || (await import(`${SDK}/firebase-auth.js`));
   dbMod = dbMod || (await import(`${SDK}/firebase-firestore.js`));
   stMod = stMod || (await import(`${SDK}/firebase-storage.js`));
-  return { auth: authMod.getAuth(app), db: dbMod.getFirestore(app), storage: stMod.getStorage(app) };
+  const storage = stMod.getStorage(app);
+  // Firebase Storage defaults to retrying uploads for up to ten minutes. Bound retries so
+  // the admin UI can report a useful failure instead of appearing stuck indefinitely.
+  stMod.setMaxUploadRetryTime(storage, 60_000);
+  stMod.setMaxOperationRetryTime(storage, 30_000);
+  return { auth: authMod.getAuth(app), db: dbMod.getFirestore(app), storage };
 }
 const $ = (s) => document.querySelector(s);
 const can = (sec) => role === "owner" || perms.includes(sec);
@@ -270,10 +275,82 @@ function loadEditorImage(file) {
     image.src = url;
   }));
 }
-async function uploadOptimizedImage(file, section = PAGE) {
-  if (file.size > 25 * 1024 * 1024) throw new Error("Choose an image under 25 MB.");
-  const decoded = await browserReadableImage(file);
-  const bitmap = await createImageBitmap(decoded);
+const STORAGE_UPLOAD_IDLE_TIMEOUT_MS = 45_000;
+const STORAGE_UPLOAD_TOTAL_TIMEOUT_MS = 180_000;
+
+function withTimeout(promise, timeoutMs, message) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(Object.assign(new Error(message), { code: "upload/timeout" })), timeoutMs);
+  });
+  return Promise.race([Promise.resolve(promise), timeout]).finally(() => clearTimeout(timer));
+}
+
+function uploadErrorMessage(error) {
+  if (["storage/bucket-not-found", "storage/no-default-bucket"].includes(error?.code)) {
+    return "Firebase Storage is not enabled for this project. Use a public Drive image link or ask the owner to provision the configured Storage bucket.";
+  }
+  if (error?.code === "storage/unauthorized") {
+    return "Firebase Storage denied this upload. Check that Storage rules are deployed and your verified admin role can edit this section.";
+  }
+  if (["storage/timeout", "upload/timeout", "storage/retry-limit-exceeded"].includes(error?.code)) {
+    return error.message || "The upload stalled. Check your connection and retry.";
+  }
+  return error?.message || error?.code || "unknown error";
+}
+
+function uploadBlobWithProgress(ref, blob, onProgress = () => {}) {
+  return new Promise((resolve, reject) => {
+    let task;
+    try { task = stMod.uploadBytesResumable(ref, blob, { contentType: "image/webp" }); }
+    catch (error) { reject(error); return; }
+    let finished = false;
+    let idleTimer = null;
+    let totalTimer = null;
+    let unsubscribe = () => {};
+    const cleanup = () => {
+      clearTimeout(idleTimer);
+      clearTimeout(totalTimer);
+      unsubscribe();
+    };
+    const finish = (error, result) => {
+      if (finished) return;
+      finished = true;
+      cleanup();
+      if (error) reject(error); else resolve(result);
+    };
+    const resetIdleTimer = () => {
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => {
+        const error = new Error("No upload progress for 45 seconds. Check the connection and retry.");
+        error.code = "storage/timeout";
+        finish(error);
+        task.cancel();
+      }, STORAGE_UPLOAD_IDLE_TIMEOUT_MS);
+    };
+    totalTimer = setTimeout(() => {
+      const error = new Error("Upload exceeded the 3-minute time limit. Check the connection and retry.");
+      error.code = "storage/timeout";
+      finish(error);
+      task.cancel();
+    }, STORAGE_UPLOAD_TOTAL_TIMEOUT_MS);
+    resetIdleTimer();
+    unsubscribe = task.on("state_changed", (snapshot) => {
+      resetIdleTimer();
+      const percent = snapshot.totalBytes ? Math.floor(snapshot.bytesTransferred / snapshot.totalBytes * 100) : 0;
+      try { onProgress(percent); } catch { /* UI progress must never interrupt the transfer. */ }
+    }, (error) => finish(error), () => finish(null, task.snapshot.ref));
+  });
+}
+
+async function uploadOptimizedImage(file, section = PAGE, onProgress = () => {}) {
+  if (!file || file.size > 25 * 1024 * 1024) throw new Error("Choose an image under 25 MB.");
+  const supported = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"].includes(file.type)
+    || /\.(?:jpe?g|png|webp|heic|heif)$/i.test(file.name || "");
+  if (!supported) throw new Error("Choose a JPG, PNG, WebP, or iPhone HEIC/HEIF image.");
+  onProgress({ phase: "prepare", percent: 0 });
+  const decoded = await withTimeout(browserReadableImage(file), 90_000, "Image conversion took too long. Try a smaller JPG or PNG.");
+  const bitmap = await withTimeout(createImageBitmap(decoded), 60_000, "Image decoding took too long. Try a smaller image.");
   try {
     const scale = Math.min(1, 1920 / bitmap.width, 1920 / bitmap.height);
     const canvas = document.createElement("canvas");
@@ -282,15 +359,19 @@ async function uploadOptimizedImage(file, section = PAGE) {
     const context = canvas.getContext("2d", { alpha: false });
     if (!context) throw new Error("Image editor could not allocate a canvas.");
     context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-    let blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/webp", 0.82));
+    let blob = await withTimeout(new Promise((resolve) => canvas.toBlob(resolve, "image/webp", 0.82)), 30_000, "Image optimization timed out. Try a smaller image.");
     if (!blob) throw new Error("Image optimization failed.");
-    if (blob.size >= 5 * 1024 * 1024) blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/webp", 0.68));
+    if (blob.size >= 5 * 1024 * 1024) blob = await withTimeout(new Promise((resolve) => canvas.toBlob(resolve, "image/webp", 0.68)), 30_000, "Image optimization timed out. Try a smaller image.");
     if (!blob || blob.size >= 5 * 1024 * 1024) throw new Error("Optimized image exceeds the 5 MB upload limit.");
-    const { storage } = await sdk();
+    onProgress({ phase: "connecting", percent: 0 });
+    const { storage } = await withTimeout(sdk(), 30_000, "Could not connect to Firebase Storage. Check your connection and retry.");
     const path = `images/${section}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.webp`;
     const ref = stMod.ref(storage, path);
-    await stMod.uploadBytes(ref, blob, { contentType: "image/webp" });
-    return await stMod.getDownloadURL(ref);
+    const uploadedRef = await uploadBlobWithProgress(ref, blob, (percent) => onProgress({ phase: "upload", percent }));
+    onProgress({ phase: "finish", percent: 100 });
+    const url = await stMod.getDownloadURL(uploadedRef);
+    onProgress({ phase: "done", percent: 100 });
+    return url;
   } finally { bitmap.close?.(); }
 }
 
@@ -839,7 +920,7 @@ async function renderWebsiteSettings() {
         <div class="hero-settings-preview"><img id="heroImagePreview" src="${esc(settings.heroImageUrl)}" alt="Homepage banner preview" style="object-fit:${esc(settings.heroImageFit)};object-position:${settings.heroImagePositionX}% ${settings.heroImagePositionY}%" /><span>Live crop preview</span></div>
         <div class="form-grid admin-site-grid">
           ${siteSettingField("heroImageUrl", "Image URL", settings.heroImageUrl, "/assets/images/... or direct HTTPS image URL", "url")}
-          <div class="field"><label for="heroImageFile">Choose media from your device</label><input id="heroImageFile" type="file" accept="image/png,image/jpeg,image/webp,image/heic,image/heif,.heic,.heif" ${can("site") ? "" : "disabled"} /><small class="muted">Uploads are resized and optimized to WebP (max 25 MB input).</small></div>
+          <div class="field"><label for="heroImageFile">Choose media from your device</label><input id="heroImageFile" type="file" accept="image/png,image/jpeg,image/webp,image/heic,image/heif,.heic,.heif" ${can("site") ? "" : "disabled"} /><small class="muted">Uploads are resized and optimized to WebP (max 25 MB input).</small><small class="muted" id="heroUploadStatus" role="status" aria-live="polite"></small></div>
           ${siteSettingField("heroImageAlt", "Accessibility alt text", settings.heroImageAlt, "Describe the image clearly", "text")}
           <div class="field"><label for="heroImageFit">Image fit</label><select id="heroImageFit" name="heroImageFit" ${can("site") ? "" : "disabled"}><option value="cover" ${settings.heroImageFit === "cover" ? "selected" : ""}>Fill banner (cover)</option><option value="contain" ${settings.heroImageFit === "contain" ? "selected" : ""}>Show full image (contain)</option></select></div>
           <div class="field"><label for="heroImagePositionX">Horizontal focus <output id="heroImagePositionXValue">${settings.heroImagePositionX}%</output></label><input type="range" id="heroImagePositionX" name="heroImagePositionX" min="0" max="100" value="${settings.heroImagePositionX}" ${can("site") ? "" : "disabled"} /></div>
@@ -874,13 +955,25 @@ async function renderWebsiteSettings() {
       if (!isSupportedImage || file.size > 25 * 1024 * 1024) {
         toast("Choose a JPG, PNG, WebP, or iPhone HEIC/HEIF image under 25 MB.", "err"); event.currentTarget.value = ""; return;
       }
-      const picker = event.currentTarget; picker.disabled = true;
+      const picker = event.currentTarget;
+      const status = region.querySelector("#heroUploadStatus");
+      picker.disabled = true;
+      if (status) status.textContent = "Preparing image…";
       try {
-        heroUrlInput.value = await uploadOptimizedImage(file, "site");
+        heroUrlInput.value = await uploadOptimizedImage(file, "site", (progress) => {
+          if (status) status.textContent = progress.phase === "upload"
+            ? `Uploading banner: ${progress.percent}%`
+            : progress.phase === "finish" ? "Finishing upload: getting the public link…"
+              : progress.phase === "connecting" ? "Connecting to Firebase Storage…" : "Preparing optimized banner…";
+        });
         updateHeroPreview();
+        if (status) status.textContent = "Upload complete. Save website settings to publish it.";
         toast("Banner image uploaded and optimized. Save website settings to publish it.", "ok");
-      } catch (error) { toast(`Banner upload failed: ${error.message}`, "err"); }
-      finally { picker.disabled = false; picker.value = ""; }
+      } catch (error) {
+        const message = uploadErrorMessage(error);
+        if (status) status.textContent = `Upload failed: ${message}`;
+        toast(`Banner upload failed: ${message}`, "err");
+      } finally { picker.disabled = false; picker.value = ""; }
     });
     region.querySelector("#saveSiteSettings")?.addEventListener("click", async (event) => {
       const button = event.currentTarget;
@@ -1572,26 +1665,55 @@ function buildField(f, v) {
     uploadInput.addEventListener("change", async () => {
       const files = [...(uploadInput.files || [])];
       if (!files.length) return;
+      if (files.length > 10) {
+        toast("Upload at most 10 event photos at a time. You can add another batch afterward.", "err");
+        uploadInput.value = "";
+        return;
+      }
       uploadInput.disabled = true;
-      let completed = 0;
-      for (const file of files) {
-        uploadStatus.textContent = `Uploading ${file.name}…`;
-        try {
-          const url = await uploadOptimizedImage(file, "events");
-          const caption = file.name.replace(/\.[^.]+$/, "").replace(/[|\r\n]/g, " ").trim();
-          input.value = `${input.value.trim()}${input.value.trim() ? "\n" : ""}image | ${url} | ${caption}`;
-          completed++;
-        } catch (error) {
-          console.error("Event photo upload failed", error);
-          uploadStatus.textContent = `Upload failed for ${file.name}: ${error.message}`;
-          toast(`Could not upload ${file.name}: ${error.message}`, "err");
+      uploadLabel.textContent = "Preparing uploads…";
+      const results = new Array(files.length).fill("");
+      const failures = [];
+      let nextIndex = 0;
+      const uploadNext = async () => {
+        while (nextIndex < files.length) {
+          const index = nextIndex++;
+          const file = files[index];
+          try {
+            results[index] = await uploadOptimizedImage(file, "events", (progress) => {
+              uploadStatus.textContent = progress.phase === "upload"
+                ? `Uploading ${index + 1}/${files.length}: ${file.name} — ${progress.percent}%`
+                : progress.phase === "finish"
+                  ? `Finishing ${index + 1}/${files.length}: getting the public link…`
+                  : progress.phase === "connecting"
+                    ? `Connecting to Firebase Storage for ${file.name}…`
+                    : `Preparing ${index + 1}/${files.length}: ${file.name}…`;
+            });
+          } catch (error) {
+            console.error("Event photo upload failed", { name: file.name, code: error.code, message: error.message });
+            failures.push(`${file.name}: ${uploadErrorMessage(error)}`);
+          }
         }
+      };
+      try {
+        await Promise.all(Array.from({ length: Math.min(2, files.length) }, uploadNext));
+        const uploadedLines = results.flatMap((url, index) => {
+          if (!url) return [];
+          const caption = files[index].name.replace(/\.[^.]+$/, "").replace(/[|\r\n]/g, " ").trim();
+          return [`image | ${url} | ${caption}`];
+        });
+        if (uploadedLines.length) input.value = `${input.value.trim()}${input.value.trim() ? "\n" : ""}${uploadedLines.join("\n")}`;
+        if (failures.length) {
+          uploadStatus.textContent = `${uploadedLines.length} uploaded; ${failures.length} failed. ${failures[0]}`;
+          toast(`${failures.length} event photo upload${failures.length === 1 ? "" : "s"} failed. See the upload status for details.`, "err");
+        } else {
+          uploadStatus.textContent = `${uploadedLines.length} photo${uploadedLines.length === 1 ? "" : "s"} uploaded. Save the event to publish them.`;
+        }
+      } finally {
+        uploadInput.disabled = false;
+        uploadInput.value = "";
+        uploadLabel.textContent = "Upload event photos (HEIC supported)";
       }
-      if (completed) {
-        uploadStatus.textContent = `${completed} photo${completed === 1 ? "" : "s"} uploaded. Save the event to publish them; add video clips using a public Google Drive link above.`;
-      }
-      uploadInput.disabled = false;
-      uploadInput.value = "";
     });
     uploadRow.append(uploadLabel, uploadInput, uploadStatus);
     wrap.appendChild(uploadRow);
@@ -1866,33 +1988,49 @@ function drawEditor() {
 }
 async function applyEditor() {
   const button = $("#editorApply");
-  if (button) { button.disabled = true; button.textContent = "Uploading…"; }
+  const fieldKey = pendingImageField;
+  const tools = button?.parentElement;
+  let status = tools?.querySelector("#editorUploadStatus");
+  if (!status && tools) {
+    status = document.createElement("small");
+    status.id = "editorUploadStatus";
+    status.className = "muted";
+    status.setAttribute("role", "status");
+    status.setAttribute("aria-live", "polite");
+    button.insertAdjacentElement("afterend", status);
+  }
+  if (button) { button.disabled = true; button.textContent = "Preparing…"; }
+  if (status) status.textContent = "Optimizing image…";
   try {
     const canvas = $("#editorCanvas");
-    const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/webp", 0.84));
+    const blob = await withTimeout(new Promise((resolve) => canvas.toBlob(resolve, "image/webp", 0.84)), 30_000, "Image export timed out. Choose a smaller crop or output size.");
     if (!blob) throw new Error("The browser could not export the optimized image.");
     if (blob.size >= 5 * 1024 * 1024) throw new Error("The optimized image is over the 5 MB upload limit. Choose a smaller crop.");
-    const { storage } = await sdk();
+    const { storage } = await withTimeout(sdk(), 30_000, "Could not connect to Firebase Storage. Check your connection and retry.");
     const path = `images/${PAGE}/${Date.now()}-${Math.random().toString(36).slice(2, 7)}.webp`;
     const ref = stMod.ref(storage, path);
-    await stMod.uploadBytes(ref, blob, { contentType: "image/webp" });
-    const url = await stMod.getDownloadURL(ref);
-    const input = document.getElementById(`f-${pendingImageField}`);
+    if (button) button.textContent = "Uploading 0%";
+    const uploadedRef = await uploadBlobWithProgress(ref, blob, (percent) => {
+      if (button?.isConnected) button.textContent = `Uploading ${percent}%`;
+      if (status) status.textContent = `Uploading optimized photo: ${percent}%`;
+    });
+    if (button?.isConnected) button.textContent = "Finishing…";
+    if (status) status.textContent = "Upload complete. Getting the public image link…";
+    const url = await stMod.getDownloadURL(uploadedRef);
+    const input = document.getElementById(`f-${fieldKey}`);
     if (!input) throw new Error("The image field was closed before the upload completed.");
     input.value = url;
-    const urlInput = document.getElementById(`url-${pendingImageField}`);
+    const urlInput = document.getElementById(`url-${fieldKey}`);
     if (urlInput) urlInput.value = url;
-    const prev = document.getElementById(`prev-${pendingImageField}`);
+    const prev = document.getElementById(`prev-${fieldKey}`);
     if (prev) { prev.src = url; prev.style.display = ""; }
+    if (status) status.textContent = "Upload complete. Save the form to publish the photo.";
     closeModals();
     toast("Photo uploaded. Save the form to publish it.", "ok");
   } catch (err) {
     console.error("Image upload failed", err);
-    const message = err.code === "storage/unauthorized"
-      ? "Firebase Storage denied this upload. Confirm the Storage rules are deployed and your account has permission for this section."
-      : err.code === "storage/bucket-not-found" || err.code === "storage/no-default-bucket"
-        ? "Firebase Storage is not enabled for this project yet. Enable the configured bucket, then retry."
-        : `Upload failed: ${err.message || err.code || "unknown error"}`;
+    const message = `Upload failed: ${uploadErrorMessage(err)}`;
+    if (status) status.textContent = message;
     toast(message, "err");
   } finally {
     if (button?.isConnected) { button.disabled = false; button.textContent = "Use this image"; }

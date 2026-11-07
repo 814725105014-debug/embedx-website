@@ -13,6 +13,13 @@ service firebase.storage {
       return /databases/$(firestore)/documents/admin_roles/$(request.auth.token.email);
     }
     function hasRole() { return signedIn() && exists(rolePath()); }
+    function roleNeedsEmailVerification() {
+      let roleData = get(rolePath()).data;
+      return ('emailVerificationRequired' in roleData) && roleData.emailVerificationRequired == true;
+    }
+    function verifiedRole() {
+      return hasRole() && (!roleNeedsEmailVerification() || request.auth.token.email_verified == true);
+    }
     function legacyPerms(r) {
       return r == 'president'         ? ['announcements', 'team', 'achievements', 'tasks']
         :    r == 'event_coordinator' ? ['events']
@@ -26,7 +33,7 @@ service firebase.storage {
         : legacyPerms(get(rolePath()).data.role);
     }
     function canEdit(section) {
-      return isOwner() || (hasRole() && section in permsOf());
+      return isOwner() || (verifiedRole() && section in permsOf());
     }
     function isAllowedSection(section) {
       return section in ['events', 'projects', 'team', 'gallery', 'achievements', 'site'];
