@@ -30,7 +30,9 @@ export async function requireCollegeAccess() {
       <img src="/assets/images/embedx-emblem.webp" alt="EMBEDX emblem" width="64" height="64" />
       <p class="eyebrow">SRM TRP Engineering College</p>
       <h1 id="collegeAccessTitle">College sign-in required</h1>
-      <p class="muted">This website is for verified <strong>@trp.srmtrichy.edu.in</strong> accounts. Sign in, or create an account with your college email and verify it to continue.</p>
+      <p class="muted">Sign in with your <strong>@trp.srmtrichy.edu.in</strong> Google account, or use an email and password provided by the site administrator.</p>
+      <button id="collegeAccessGoogle" class="btn btn-primary college-access-google" type="button">Continue with Google</button>
+      <p class="college-access-divider"><span>or sign in with your assigned password</span></p>
       <form id="collegeAccessLogin" novalidate>
         <div class="field"><label for="collegeAccessEmail">College email</label><input id="collegeAccessEmail" type="email" autocomplete="username" placeholder="name@trp.srmtrichy.edu.in" required /></div>
         <div class="field"><label for="collegeAccessPassword">Password</label><input id="collegeAccessPassword" type="password" autocomplete="current-password" minlength="8" required /></div>
@@ -38,9 +40,8 @@ export async function requireCollegeAccess() {
         <p id="collegeAccessNotice" class="muted college-access-notice" role="status" aria-live="polite"></p>
         <div class="college-access-actions">
           <button id="collegeAccessSignIn" class="btn btn-primary" type="submit">Sign in</button>
-          <button id="collegeAccessSignUp" class="btn btn-ghost" type="button">Create account</button>
         </div>
-        <button id="collegeAccessForgot" class="btn btn-ghost btn-sm college-access-forgot" type="button">Forgot password?</button>
+        <p class="college-access-help">Password accounts are created and managed by the site administrator. Contact them if you need an account or password reset.</p>
       </form>
       <section id="collegeAccessVerify" class="college-access-verify" hidden>
         <h2>Verify your college email</h2>
@@ -51,7 +52,7 @@ export async function requireCollegeAccess() {
         </div>
         <button id="collegeAccessSignOut" class="btn btn-ghost btn-sm college-access-forgot" type="button">Use another email</button>
       </section>
-      <p class="college-access-footnote">The site app requires a verified Firebase account. Only @trp.srmtrichy.edu.in addresses are accepted.</p>
+      <p class="college-access-footnote">Only verified @trp.srmtrichy.edu.in accounts are accepted. Google sign-in suggests the college domain, and the app rejects other domains after authentication.</p>
     </section>`;
   document.body.append(gate);
 
@@ -73,14 +74,16 @@ export async function requireCollegeAccess() {
     loginForm.hidden = true;
     verifyPanel.hidden = false;
     setError("");
-    $("#collegeAccessVerifyText").textContent = `A verification link was sent to ${user.email}. Verify that address, then return here and continue.`;
+    $("#collegeAccessVerifyText").textContent = `The account ${user.email} has not verified its email address. Verify it using the link in your inbox, or request a new link below.`;
   };
   const errorMessage = (error) => ({
     "auth/invalid-credential": "Email or password is incorrect.",
-    "auth/email-already-in-use": "An account already exists for this address. Sign in or reset the password.",
-    "auth/weak-password": "Choose a password with at least 8 characters.",
+    "auth/popup-closed-by-user": "Google sign-in was cancelled.",
+    "auth/popup-blocked": "Your browser blocked the Google sign-in window. Allow pop-ups and try again.",
+    "auth/account-exists-with-different-credential": "This email already has a password account. Sign in with its assigned password or ask the administrator to link Google sign-in.",
     "auth/too-many-requests": "Too many attempts. Wait a few minutes and try again.",
-    "auth/operation-not-allowed": "Email/password sign-in is not enabled for this Firebase project. Contact the site administrator."
+    "auth/operation-not-allowed": "The requested sign-in provider is not enabled in Firebase. Contact the site administrator.",
+    "auth/unauthorized-domain": "This website domain is not authorized for Firebase sign-in. Contact the site administrator."
   })[error?.code] || error?.message || "Authentication failed. Please try again.";
 
   if (!isConfigured) {
@@ -140,6 +143,23 @@ export async function requireCollegeAccess() {
     await authMod.signOut(auth).catch(() => {});
     location.reload();
   });
+  $("#collegeAccessGoogle").addEventListener("click", async (event) => {
+    const button = event.currentTarget;
+    setError(""); setNotice("");
+    button.disabled = true; button.textContent = "Opening Google sign-in…";
+    try {
+      const provider = new authMod.GoogleAuthProvider();
+      // `hd` guides Google's account chooser; checkUser below independently enforces the domain.
+      provider.setCustomParameters({ hd: "trp.srmtrichy.edu.in", prompt: "select_account" });
+      const credential = await authMod.signInWithPopup(auth, provider);
+      if (!collegeEmail(credential.user.email)) {
+        await authMod.signOut(auth).catch(() => {});
+        setError("Choose a Google account ending in @trp.srmtrichy.edu.in.");
+      }
+    } catch (error) { setError(errorMessage(error)); }
+    finally { button.disabled = false; button.textContent = "Continue with Google"; }
+  });
+
   loginForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     setError(""); setNotice("");
@@ -150,30 +170,6 @@ export async function requireCollegeAccess() {
     try { await authMod.signInWithEmailAndPassword(auth, email, passwordInput.value); }
     catch (error) { setError(errorMessage(error)); }
     finally { button.disabled = false; button.textContent = "Sign in"; }
-  });
-  $("#collegeAccessSignUp").addEventListener("click", async () => {
-    setError(""); setNotice("");
-    const email = emailInput.value.trim().toLowerCase();
-    if (!collegeEmail(email)) { setError("Use your @trp.srmtrichy.edu.in college email."); return; }
-    if (passwordInput.value.length < 8) { setError("Choose a password with at least 8 characters."); return; }
-    const button = $("#collegeAccessSignUp");
-    button.disabled = true; button.textContent = "Creating account…";
-    try {
-      const credential = await authMod.createUserWithEmailAndPassword(auth, email, passwordInput.value);
-      await authMod.sendEmailVerification(credential.user);
-      showVerification(credential.user);
-      setNotice("Account created. Check your inbox for the verification link.");
-    } catch (error) { setError(errorMessage(error)); }
-    finally { button.disabled = false; button.textContent = "Create account"; }
-  });
-  $("#collegeAccessForgot").addEventListener("click", async () => {
-    setError(""); setNotice("");
-    const email = emailInput.value.trim().toLowerCase();
-    if (!collegeEmail(email)) { setError("Enter your @trp.srmtrichy.edu.in email first."); return; }
-    try {
-      await authMod.sendPasswordResetEmail(auth, email);
-      setNotice("If an account exists, a password reset email has been sent.");
-    } catch (error) { setError(errorMessage(error)); }
   });
   $("#collegeAccessCheck").addEventListener("click", () => {
     setError(""); setNotice("");

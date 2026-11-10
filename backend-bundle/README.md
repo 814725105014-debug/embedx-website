@@ -65,8 +65,7 @@ node grant-admin.js email@trp.srmtrichy.edu.in --revoke
 
 This project is intended to stay on Firebase Spark. Deploy Firestore rules/indexes
 and Hosting independently of Storage. Firestore reads now require a verified
-`@trp.srmtrichy.edu.in` email. The public UI supports Email/Password account
-creation and email verification; enable the Email/Password provider in Firebase Auth:
+`@trp.srmtrichy.edu.in` email. Enable Google and Email/Password under Firebase Auth → Sign-in method. The public UI supports domain-checked Google sign-in and password sign-in for accounts provisioned by an administrator; it has no self-service password-account creation UI. Google sign-in automatically creates a Firebase Auth user record on first use, and enabling Email/Password also leaves Firebase's account-creation API available outside the UI. A strict policy that prevents unapproved Auth records and permits only pre-provisioned identities requires an Auth blocking function and an admin-managed allowlist (Identity Platform):
 
 ```bash
 npm i -g firebase-tools

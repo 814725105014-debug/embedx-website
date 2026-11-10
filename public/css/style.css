@@ -947,3 +947,8 @@ body.site-access-pending > :not(#collegeAccessGate) { display:none !important; }
 .college-access-verify h2 { font-size:1.2rem; }
 .college-access-verify[hidden] { display:none; }
 .college-access-footnote { margin:1.4rem 0 0; color:var(--text-faint); font-size:.72rem; }
+
+.college-access-google { width:100%; margin-top:.8rem; }
+.college-access-divider { display:flex; align-items:center; gap:.7rem; margin:.9rem 0; color:var(--text-faint); font-size:.76rem; }
+.college-access-divider::before, .college-access-divider::after { content:""; height:1px; flex:1; background:var(--border); }
+.college-access-help { margin:.8rem 0 0; color:var(--text-faint); font-size:.76rem; line-height:1.5; text-align:center; }

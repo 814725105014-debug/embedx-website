@@ -104,7 +104,7 @@ try {
   }
 } catch (err) { fail(`firestore.indexes.json: invalid index schema (${err.message})`); }
 const accessGateSource = await readFile(path.join(pub, "js/access-gate.js"), "utf8");
-if (!accessGateSource.includes("createUserWithEmailAndPassword") || !accessGateSource.includes("sendEmailVerification") || !accessGateSource.includes("trp\\.srmtrichy\\.edu\\.in")) fail("public/js/access-gate.js: site access must require a verified college-domain account");
+if (!accessGateSource.includes("signInWithPopup") || !accessGateSource.includes("GoogleAuthProvider") || !accessGateSource.includes('hd: "trp.srmtrichy.edu.in"') || accessGateSource.includes("createUserWithEmailAndPassword") || !accessGateSource.includes("trp\\.srmtrichy\\.edu\\.in")) fail("public/js/access-gate.js: require college-domain Google/password sign-in and no public account creation");
 for (const file of htmlFiles.filter((entry) => !entry.includes(`${path.sep}admin${path.sep}`))) {
   const source = await readFile(file, "utf8");
   if (!/<body\b[^>]*class=["'][^"']*\bsite-access-pending\b/i.test(source)) fail(`${path.relative(root, file)}: public pages must start behind the college access gate`);
