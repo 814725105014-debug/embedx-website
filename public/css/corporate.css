@@ -14,6 +14,38 @@ body { text-rendering: optimizeLegibility; }
 }
 .cursor-click-ripple { position: fixed; z-index: 9999; width: 18px; height: 18px; pointer-events: none; border: 1px solid rgba(212,175,55,.85); border-radius: 50%; background: rgba(168,85,247,.16); box-shadow: 0 0 18px rgba(168,85,247,.35); transform: translate(-50%,-50%) scale(.35); animation: cursorRipple .52s cubic-bezier(.2,.7,.3,1) forwards; }
 
+/* Resource-page certificate feature, responsive from narrow screens upward. */
+.resource-certificate-link { display:grid; grid-template-columns:auto minmax(0,1fr); align-items:center; gap:.9rem; margin-bottom:1.25rem; padding:1rem; text-decoration:none; border-color:rgba(168,85,247,.3); background:linear-gradient(120deg,rgba(168,85,247,.1),rgba(212,175,55,.055)); }
+.resource-certificate-link:hover { border-color:rgba(212,175,55,.55); transform:translateY(-2px); }
+.resource-certificate-link > .icon-tile { margin:0; }
+.resource-certificate-copy { display:grid; gap:.2rem; min-width:0; }
+.resource-certificate-copy .eyebrow { margin:0; font-size:.68rem; }
+.resource-certificate-copy strong { font:700 1.08rem var(--font-head); color:var(--text); }
+.resource-certificate-copy .muted { margin:0; font-size:.86rem; }
+.resource-certificate-link > .btn { grid-column:1/-1; justify-self:start; }
+@media (min-width:640px) {
+  .resource-certificate-link { grid-template-columns:auto minmax(0,1fr) auto; gap:1rem; padding:1.2rem 1.35rem; }
+  .resource-certificate-link > .btn { grid-column:auto; justify-self:end; }
+}
+
+/* Short logo-led welcome reveal inspired by Embed Club's branded landing. */
+.brand-intro { position:fixed; inset:0; z-index:10001; display:grid; place-items:center; overflow:hidden; background:radial-gradient(ellipse at center,rgba(71,36,92,.28),transparent 58%),#08060c; opacity:1; transition:opacity .55s ease; }
+.brand-intro.is-leaving { opacity:0; pointer-events:none; }
+.brand-intro-content { position:relative; display:grid; justify-items:center; gap:.6rem; padding:1.5rem; color:#fff; text-align:center; animation:brandIntroRise .85s cubic-bezier(.18,.78,.25,1) both; }
+.brand-intro-content img { z-index:1; width:clamp(64px,19vw,88px); height:auto; padding:.28rem; border-radius:50%; background:#fff; object-fit:contain; filter:drop-shadow(0 0 22px rgba(168,85,247,.42)); }
+.brand-intro-orbit { position:absolute; top:1.5rem; left:50%; width:clamp(86px,25vw,116px); aspect-ratio:1; border:1px solid rgba(212,175,55,.5); border-radius:50%; transform:translateX(-50%); animation:brandOrbit 1.8s ease-out both; }
+.brand-intro-wordmark { margin:.15rem 0 0; font:800 clamp(1.6rem,7vw,2.2rem)/1 var(--font-head); letter-spacing:.18em; }
+.brand-intro-wordmark span { color:#d4af37; }
+.brand-intro-tagline { margin:0; color:rgba(255,255,255,.62); font:600 .65rem var(--font-body); letter-spacing:.24em; }
+@keyframes brandIntroRise { from { opacity:0; transform:translateY(18px) scale(.96); } to { opacity:1; transform:translateY(0) scale(1); } }
+@keyframes brandOrbit { from { opacity:0; transform:translateX(-50%) scale(.72) rotate(-25deg); } 55% { opacity:1; } to { opacity:.65; transform:translateX(-50%) scale(1.12) rotate(20deg); } }
+@media (prefers-reduced-motion:reduce) {
+  .brand-intro { transition:none; }
+  .brand-intro-content, .brand-intro-orbit { animation:none !important; }
+  .brand-intro.is-static .brand-intro-content { opacity:1; transform:none; }
+  .brand-intro.is-static .brand-intro-orbit { opacity:.65; transform:translateX(-50%); }
+}
+
 /* Smooth, premium navigation */
 .nav { transition: box-shadow .35s ease, background .35s ease, border-color .35s ease; }
 .nav.scrolled { box-shadow: 0 12px 42px -20px rgba(0, 0, 0, .72); }

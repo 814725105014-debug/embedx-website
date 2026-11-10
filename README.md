@@ -72,9 +72,9 @@ node scripts/check-site.mjs
 2. Paste the `firebaseConfig` object into **`public/js/config.js`**.
 3. Put the project id in **`.firebaserc`** (`projects.default`) and update the production URLs in the sitemap, robots file, canonical links, and task-mail script.
 4. Enable **Cloud Firestore** and Firebase Authentication sign-in providers **Google** and **Email/Password**. The site offers Google sign-in (with the college domain sent as an account-chooser hint and checked after sign-in) or an administrator-provisioned email/password login. There is no self-service password-account creation or password reset in the site UI.
-5. Deploy the checked Firestore rules before enabling the site: all content reads and form writes require a verified college-domain account. Deploy Storage rules too if a bucket is enabled. Firebase Storage is optional for this Spark deployment; do not enable billing just to create a bucket. The admin supports static or HTTPS image URLs while Storage is unavailable.
+5. Deploy the checked Firestore rules before enabling the site: public-facing site collections can be read by visitors, while the Learning Hub resources collection, admin data, and form submissions remain college-account protected. Deploy Storage rules too if a bucket is enabled. Firebase Storage is optional for this Spark deployment; do not enable billing just to create a bucket. The admin supports static or HTTPS image URLs while Storage is unavailable.
 
-Until step 2 is done the access gate remains locked because Firebase Authentication is required; configure the web app before testing the site. Bundled data remains the content fallback after an authorized sign-in.
+Until step 2 is done, the Learning Hub remains locked because Firebase Authentication is required; the rest of the static site can still be viewed. Bundled public data remains the content fallback when Firestore is unavailable.
 
 ## 4. Deploy
 
@@ -125,11 +125,11 @@ Storage.
 | `resources` | `title, category, level, tags[], desc, url, order` | written by the admin portal; Learning Hub; optional HTTPS resource links |
 | `achievements` | `badge, title, subtitle, description, image, team, institution, projectId, highlights[], order` | written by the admin portal; Hall of Achievers |
 | `announcements` | `title, kind, body, pinned, createdAt` | written by the admin portal; home notice board (pinned first) |
-| `forms` | owner-managed form definitions, seeded with Join, Enquiry, and Feedback forms | verified college-email users can read definitions; role-scoped admin writes |
-| `form_responses` | new built-in/custom submissions, registrations, surveys, and feedback (including ratings) | public create only while the matching form is open; assigned Forms admins monitor/export/delete |
-| `members_applications` | legacy Join submissions and fallback writes when no managed definition exists | public create; assigned Forms admins monitor/export/delete |
-| `contact_messages` | legacy Contact submissions and fallback writes when no managed definition exists | public create; assigned Forms admins monitor/export/delete |
-| `site_settings/site` | Website logo, official portal, phone, email, and social links | Verified college-email read; assigned `site` admins write through Website settings |
+| `forms` | owner-managed form definitions, seeded with Join, Enquiry, and Feedback forms | visitors can read open definitions; verified college-email users can read all; role-scoped admin writes |
+| `form_responses` | new built-in/custom submissions, registrations, surveys, and feedback (including ratings) | verified college-email create only while the matching form is open; assigned Forms admins monitor/export/delete |
+| `members_applications` | legacy Join submissions and fallback writes when no managed definition exists | verified college-email create; assigned Forms admins monitor/export/delete |
+| `contact_messages` | legacy Contact submissions and fallback writes when no managed definition exists | verified college-email create; assigned Forms admins monitor/export/delete |
+| `site_settings/site` | Website logo, official portal, phone, email, and social links | Public read; assigned `site` admins write through Website settings |
 
 Image URLs should be **root-absolute local paths** (`/assets/images/foo.webp`) or
 HTTPS URLs. The admin image editor accepts either; file upload/crop is available
@@ -206,25 +206,18 @@ published token must be treated as exposed.
   images under 5 MB and further scoped to the admin's section.
 * Hosting adds `no-store` for `/admin/**`, frame/content-type/referrer/permissions
   headers; the admin HTML also has a restrictive Content Security Policy.
-* Public join/contact writes are schema-validated and create-only. Client-side
-  rate limits are a usability measure, **not** server-side abuse protection.
+* Join/contact submissions require a verified college account and are schema-validated, create-only writes. Client-side rate limits are a usability measure, **not** server-side abuse protection.
 * The Firebase web API key is public by design; never put service-account keys,
   passwords, Apps Script credentials, or other private values in `public/`.
 * Optional production hardening still requires Firebase Console configuration:
   restrict the API key to approved website referrers and configure/enforce Firebase
-  App Check for the web app before relying on client-side public form writes.
+  App Check before relying on public Firestore reads for traffic control.
 
-### College-only website access
+### Public site and college-only Learning Hub
 
-The public pages accept Google sign-in or an administrator-provisioned email/password account. Google sign-in sends `hd=trp.srmtrichy.edu.in` to Google's account chooser as a hint; the app then checks the returned address, and Firestore/Storage rules enforce a verified `@trp.srmtrichy.edu.in` address. The site has no self-service password-account creation or reset UI; provision password users through trusted admin tooling. However, enabling Firebase Email/Password also leaves Firebase's account-creation API available outside this UI. Firebase also automatically creates an Auth user record the first time a person signs in with Google. Preventing new Auth records and restricting sign-in to accounts you provision requires an Auth blocking function and an admin-managed allowlist (Identity Platform); the chooser hint and hidden UI alone are not an access-control boundary. Public pages are marked `noindex`.
+All regular site pages render publicly; only the Learning Hub (`/pages/resources.html`) asks for a verified `@trp.srmtrichy.edu.in` account to open. Form submissions also continue to require a verified account. The Learning Hub accepts Google sign-in or an administrator-provisioned email/password account. Google sign-in sends `hd=trp.srmtrichy.edu.in` as an account-chooser hint and the app checks the returned address. Firestore rules expose only the public-facing site collections to visitors; the `resources` collection, private/admin data, and form submissions remain protected. The site has no self-service password-account creation or reset UI; provision password users through trusted admin tooling. Firebase may still create Auth user records through enabled providers; the chooser hint and hidden UI alone are not an access-control boundary.
 
-In Firebase Console, enable **Google** and **Email/Password** under Authentication → Sign-in method, and add the production custom domain under Authentication → Settings → Authorized domains. Google sign-in must also be configured for the Firebase project.
-
-Firebase Hosting still serves static HTML, JavaScript, and bundled assets directly
-by URL; the sign-in gate protects the rendered app and Firestore/Storage data, but it
-is not a server-side lock on static files. For strict file-level privacy, the hosting
-origin must also be put behind an authenticated edge such as Cloudflare Access or
-another server-side identity proxy.
+Firebase Hosting serves static HTML, JavaScript, and bundled assets directly by URL. The resources-page sign-in is a rendered-app gate, not a server-side lock on every static file; do not put confidential files in the public Hosting bundle. For strict file-level privacy, put protected files behind an authenticated server or edge proxy.
 
 ### Forms and responses
 

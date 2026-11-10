@@ -105,16 +105,40 @@ try {
 } catch (err) { fail(`firestore.indexes.json: invalid index schema (${err.message})`); }
 const accessGateSource = await readFile(path.join(pub, "js/access-gate.js"), "utf8");
 if (!accessGateSource.includes("signInWithPopup") || !accessGateSource.includes("GoogleAuthProvider") || !accessGateSource.includes('hd: "trp.srmtrichy.edu.in"') || accessGateSource.includes("createUserWithEmailAndPassword") || !accessGateSource.includes("trp\\.srmtrichy\\.edu\\.in")) fail("public/js/access-gate.js: require college-domain Google/password sign-in and no public account creation");
+const mainAppSource = await readFile(path.join(pub, "js/main.js"), "utf8");
+const introStart = mainAppSource.indexOf("initializeBrandIntro();");
+const resourcesGate = mainAppSource.indexOf('if (document.body.dataset.page === "resources") await requireCollegeAccess();');
+if (resourcesGate < 0 || introStart < 0 || introStart > resourcesGate) fail("public/js/main.js: show the intro first and gate only the Resources page");
+const resourcesHtml = await readFile(path.join(pub, "pages/resources.html"), "utf8");
+if (!resourcesHtml.includes('href="/pages/certificates.html"')) fail("public/pages/resources.html: needs a visible certificates link");
+const homeHtml = await readFile(path.join(pub, "index.html"), "utf8");
+if (![resourcesHtml, homeHtml].every((source) => source.includes("brandIntro") && source.includes("embedx-emblem.webp"))) fail("Home and Resources pages need the EMBEDX branded intro");
+const corporateCss = await readFile(path.join(pub, "css/corporate.css"), "utf8");
+const siteCss = await readFile(path.join(pub, "css/style.css"), "utf8");
+if (!corporateCss.includes("@media (prefers-reduced-motion:reduce)") || !corporateCss.includes(".brand-intro.is-static")) fail("public/css/corporate.css: branded intro needs a no-motion version for reduced-motion preferences");
+if (!siteCss.includes("body.site-access-pending > #brandIntro")) fail("public/css/style.css: show the Resources intro above its sign-in gate");
 for (const file of htmlFiles.filter((entry) => !entry.includes(`${path.sep}admin${path.sep}`))) {
   const source = await readFile(file, "utf8");
-  if (!/<body\b[^>]*class=["'][^"']*\bsite-access-pending\b/i.test(source)) fail(`${path.relative(root, file)}: public pages must start behind the college access gate`);
-  if (!/<meta\b[^>]*name=["']robots["'][^>]*content=["']noindex, nofollow["']/i.test(source)) fail(`${path.relative(root, file)}: restricted public pages must be noindex`);
-  if (!/frame-src[^;]*https:\/\/embedx-club-eee\.firebaseapp\.com/.test(source) || !/frame-src[^;]*https:\/\/accounts\.google\.com/.test(source)) fail(`${path.relative(root, file)}: Content Security Policy must allow Firebase Auth and Google sign-in frames`);
-  if (!/script-src[^;]*https:\/\/apis\.google\.com/.test(source)) fail(`${path.relative(root, file)}: Content Security Policy must allow the Google Auth helper script`);
-  if (file.endsWith(`${path.sep}404.html`) ? !source.includes("access-only.js") : !source.includes("main.js")) fail(`${path.relative(root, file)}: page is missing its access gate script`);
+  const rel = path.relative(root, file);
+  const isResources = rel === path.join("public", "pages", "resources.html");
+  const isPrivateNoindex = isResources || rel === path.join("public", "pages", "form.html") || rel === path.join("public", "404.html");
+  const pending = /<body\b[^>]*class=["'][^"']*\bsite-access-pending\b/i.test(source);
+  if (isResources && (!pending || !/<body\b[^>]*data-page=["']resources["']/i.test(source))) fail(`${rel}: the Learning Hub must be the only public page behind the college access gate`);
+  if (!isResources && pending) fail(`${rel}: only the Learning Hub may start behind the college access gate`);
+  if (isPrivateNoindex && !/<meta\b[^>]*name=["']robots["'][^>]*content=["']noindex, nofollow["']/i.test(source)) fail(`${rel}: this page must remain noindex`);
+  if (!isPrivateNoindex && !/<meta\b[^>]*name=["']robots["'][^>]*content=["']index, follow["']/i.test(source)) fail(`${rel}: public pages should be indexable`);
+  if (!/frame-src[^;]*https:\/\/embedx-club-eee\.firebaseapp\.com/.test(source) || !/frame-src[^;]*https:\/\/accounts\.google\.com/.test(source)) fail(`${rel}: Content Security Policy must allow Firebase Auth and Google sign-in frames`);
+  if (!/script-src[^;]*https:\/\/apis\.google\.com/.test(source)) fail(`${rel}: Content Security Policy must allow the Google Auth helper script`);
+  if (rel === path.join("public", "404.html") ? source.includes("access-only.js") : !source.includes("main.js")) fail(`${rel}: page boot script does not match the public access policy`);
 }
 const firestoreSource = await readFile(path.join(root, "firestore.rules"), "utf8");
-if (!firestoreSource.includes("function isVerifiedCollegeUser()") || /allow read:\s*if true/.test(firestoreSource)) fail("firestore.rules: site data must not allow anonymous reads");
+if (!firestoreSource.includes("function isVerifiedCollegeUser()")) fail("firestore.rules: verified college checks are missing");
+for (const collection of ["events", "projects", "team", "gallery", "announcements", "achievements"]) {
+  if (!new RegExp(`match \/${collection}\\/\\{id\\}\\s*\\{\\s*allow read: if true;`).test(firestoreSource)) fail(`firestore.rules: ${collection} should be visitor-readable`);
+}
+if (!/match \/resources\/\{id\}\s*\{\s*allow read: if isVerifiedCollegeUser\(\);/.test(firestoreSource)) fail("firestore.rules: Learning Hub data must remain college-only");
+if (!/match \/page_content\/\{pageId\}\s*\{\s*allow read: if pageId != 'resources' \|\| isVerifiedCollegeUser\(\);/.test(firestoreSource)) fail("firestore.rules: Learning Hub page content must remain college-only");
+if (!firestoreSource.includes("match /{document=**}") || !/match \/\{document=\*\*\} \{\s*allow read: if false;/.test(firestoreSource)) fail("firestore.rules: unmatched documents must remain private");
 const storageSource = await readFile(path.join(root, "storage.rules"), "utf8");
 if (!storageSource.includes("function isVerifiedCollegeUser()") || /allow read:\s*if true/.test(storageSource)) fail("storage.rules: stored media must not allow anonymous reads");
 const adminAuthSource = await readFile(path.join(pub, "js/admin-app.js"), "utf8");

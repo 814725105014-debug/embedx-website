@@ -1,4 +1,4 @@
-// Site-wide sign-in gate for verified SRM TRP Engineering College addresses.
+// Learning Hub sign-in gate for verified SRM TRP Engineering College addresses.
 import { firebaseConfig, isConfigured } from "./config.js?v=20261110-domain-access";
 
 const SDK = "https://www.gstatic.com/firebasejs/10.12.5";

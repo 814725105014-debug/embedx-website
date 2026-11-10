@@ -11,8 +11,25 @@ import { domains, tools, careers } from "./data/domains.js";
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
 
-// Auth resolves before page chrome, data reads, or form controls are initialized.
-await requireCollegeAccess();
+function initializeBrandIntro() {
+  const intro = $("#brandIntro");
+  if (!intro) return;
+  const removeIntro = () => intro.remove();
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    // Keep the branded welcome visible without motion for visitors who request reduced motion.
+    intro.classList.add("is-static");
+    window.setTimeout(removeIntro, 1200);
+    return;
+  }
+  window.setTimeout(() => {
+    intro.classList.add("is-leaving");
+    window.setTimeout(removeIntro, 550);
+  }, 1350);
+}
+
+// Start the brand reveal immediately; only the Learning Hub then checks for a college account.
+initializeBrandIntro();
+if (document.body.dataset.page === "resources") await requireCollegeAccess();
 initializeLayout();
 initializeForms();
 
