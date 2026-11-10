@@ -89,9 +89,9 @@ export function teamCard(m) {
   const email = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(m.email || "").trim()) ? String(m.email).trim() : "";
   const socials = [
     linkedin ? `<a class="icon-btn" href="${esc(linkedin)}" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn of ${esc(m.name)}">${icon("linkedin")}</a>` : "",
-    github ? `<a class="icon-btn" href="${esc(github)}" target="_blank" rel="noopener noreferrer" aria-label="GitHub of ${esc(m.name)}">${icon("github")}</a>` : ""
+    github ? `<a class="icon-btn" href="${esc(github)}" target="_blank" rel="noopener noreferrer" aria-label="GitHub of ${esc(m.name)}">${icon("github")}</a>` : "",
+    email ? `<a class="icon-btn" href="mailto:${esc(email)}" aria-label="Email ${esc(m.name)}" title="Email ${esc(m.name)}">${icon("mail")}</a>` : ""
   ].join("");
-  const emailLink = email ? `<a class="team-email" href="mailto:${esc(email)}">${esc(email)}</a>` : "";
   return `
   <article class="card team-card tilt" data-reveal>
     <img src="${esc(asset(m.photoUrl))}" alt="Portrait of ${esc(m.name)}" loading="lazy" decoding="async" width="108" height="108" />
@@ -100,7 +100,6 @@ export function teamCard(m) {
     <p class="meta">${esc(m.focus || "")} • ${esc(m.department || "EEE")}${m.year && m.year !== "Faculty" ? " • " + esc(m.year) : ""}</p>
     <p class="bio">${esc(m.bio || "")}</p>
     ${socials ? `<div class="team-socials">${socials}</div>` : ""}
-    ${emailLink ? `<p class="team-email-wrap">${emailLink}</p>` : ""}
   </article>`;
 }
 
