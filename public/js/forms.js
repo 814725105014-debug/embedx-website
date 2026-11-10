@@ -270,6 +270,7 @@ function wire(formId, { build, successMsg, draftKey, formKey }) {
 
 const req = (d, k, label, n = 120) => validators.required(d[k] || "", label) || validators.max(d[k] || "", n);
 
+function initializeBuiltinForms() {
 wire("joinForm", {
   formKey: "join",
   draftKey: "embedx_join_draft",
@@ -332,6 +333,7 @@ wire("contactForm", {
   },
   successMsg: "Message sent! The EMBEDX team will get back to you soon."
 });
+}
 
 function renderPublicField(field) {
   const wrapper = document.createElement(field.type === "checkboxes" || field.type === "stars" ? "fieldset" : "div");
@@ -487,4 +489,7 @@ async function mountPublicForm() {
   } catch (err) { console.error("Public form load failed", err); mount.innerHTML = `<div class="card"><h2>Form could not load</h2><p class="muted">Check your connection and try again later.</p></div>`; }
 }
 
-mountPublicForm();
+export function initializeForms() {
+  initializeBuiltinForms();
+  mountPublicForm();
+}

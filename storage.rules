@@ -1,9 +1,15 @@
 rules_version = '2';
 
-// EMBEDX Storage rules — public images, uploads scoped to the matching CMS section.
+// EMBEDX Storage rules — verified college reads; uploads scoped to the matching CMS section.
 service firebase.storage {
   match /b/{bucket}/o {
     function signedIn() { return request.auth != null; }
+    function isVerifiedCollegeUser() {
+      return signedIn()
+        && request.auth.token.email is string
+        && request.auth.token.email.matches('^[^@\\s]+@trp\\.srmtrichy\\.edu\\.in$')
+        && request.auth.token.email_verified == true;
+    }
     function isOwner() {
       return signedIn()
              && (request.auth.token.email == '814725105014@trp.srmtrichy.edu.in'
@@ -18,7 +24,8 @@ service firebase.storage {
       return ('emailVerificationRequired' in roleData) && roleData.emailVerificationRequired == true;
     }
     function verifiedRole() {
-      return hasRole() && (!roleNeedsEmailVerification() || request.auth.token.email_verified == true);
+      return isVerifiedCollegeUser() && hasRole()
+        && (!roleNeedsEmailVerification() || request.auth.token.email_verified == true);
     }
     function legacyPerms(r) {
       return r == 'president'         ? ['announcements', 'team', 'achievements', 'tasks']
@@ -33,7 +40,7 @@ service firebase.storage {
         : legacyPerms(get(rolePath()).data.role);
     }
     function canEdit(section) {
-      return isOwner() || (verifiedRole() && section in permsOf());
+      return isVerifiedCollegeUser() && (isOwner() || (verifiedRole() && section in permsOf()));
     }
     function isAllowedSection(section) {
       return section in ['events', 'projects', 'team', 'gallery', 'achievements', 'site'];
@@ -44,11 +51,11 @@ service firebase.storage {
     }
 
     match /images/{section}/{imagePath=**} {
-      allow read: if true;
+      allow read: if isVerifiedCollegeUser();
       allow write: if isAllowedSection(section) && canEdit(section) && validImageUpload();
     }
     match /images/{allPaths=**} {
-      allow read: if true;
+      allow read: if isVerifiedCollegeUser();
       allow write: if false;
     }
     match /{allPaths=**} {

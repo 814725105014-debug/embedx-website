@@ -71,11 +71,10 @@ node scripts/check-site.mjs
 1. Create a Firebase project (Spark/free plan is enough) → add a **Web app**.
 2. Paste the `firebaseConfig` object into **`public/js/config.js`**.
 3. Put the project id in **`.firebaserc`** (`projects.default`) and update the production URLs in the sitemap, robots file, canonical links, and task-mail script.
-4. Enable **Cloud Firestore** and **Firebase Authentication → Email/Password** in the console.
-5. Deploy the checked Firestore rules before enabling production forms/admin. Firebase Storage is optional for this Spark deployment; do not enable billing just to create a bucket. The admin supports static or HTTPS image URLs while Storage is unavailable.
+4. Enable **Cloud Firestore** and **Firebase Authentication → Email/Password** in the console. The public site lets verified `@trp.srmtrichy.edu.in` users create accounts with a password; account verification is required before content loads.
+5. Deploy the checked Firestore rules before enabling the site: all content reads and form writes require a verified college-domain account. Deploy Storage rules too if a bucket is enabled. Firebase Storage is optional for this Spark deployment; do not enable billing just to create a bucket. The admin supports static or HTTPS image URLs while Storage is unavailable.
 
-Until step 2 is done the site runs in *static fallback mode*: every section renders
-from `public/js/data/*.js` and forms show a friendly "backend not connected" toast.
+Until step 2 is done the access gate remains locked because Firebase Authentication is required; configure the web app before testing the site. Bundled data remains the content fallback after an authorized sign-in.
 
 ## 4. Deploy
 
@@ -126,11 +125,11 @@ Storage.
 | `resources` | `title, category, level, tags[], desc, url, order` | written by the admin portal; Learning Hub; optional HTTPS resource links |
 | `achievements` | `badge, title, subtitle, description, image, team, institution, projectId, highlights[], order` | written by the admin portal; Hall of Achievers |
 | `announcements` | `title, kind, body, pinned, createdAt` | written by the admin portal; home notice board (pinned first) |
-| `forms` | owner-managed form definitions, seeded with Join, Enquiry, and Feedback forms | public can read open/closed definitions; role-scoped admin writes |
+| `forms` | owner-managed form definitions, seeded with Join, Enquiry, and Feedback forms | verified college-email users can read definitions; role-scoped admin writes |
 | `form_responses` | new built-in/custom submissions, registrations, surveys, and feedback (including ratings) | public create only while the matching form is open; assigned Forms admins monitor/export/delete |
 | `members_applications` | legacy Join submissions and fallback writes when no managed definition exists | public create; assigned Forms admins monitor/export/delete |
 | `contact_messages` | legacy Contact submissions and fallback writes when no managed definition exists | public create; assigned Forms admins monitor/export/delete |
-| `site_settings/site` | Public logo, official portal, phone, email, and social links | Public read; assigned `site` admins write through Website settings |
+| `site_settings/site` | Website logo, official portal, phone, email, and social links | Verified college-email read; assigned `site` admins write through Website settings |
 
 Image URLs should be **root-absolute local paths** (`/assets/images/foo.webp`) or
 HTTPS URLs. The admin image editor accepts either; file upload/crop is available
@@ -215,14 +214,27 @@ published token must be treated as exposed.
   restrict the API key to approved website referrers and configure/enforce Firebase
   App Check for the web app before relying on client-side public form writes.
 
+### College-only website access
+
+The public pages require Firebase email/password sign-in with a verified
+`@trp.srmtrichy.edu.in` address. New users can create an account from the access
+screen and verify the mailbox; Firestore and Storage rules enforce the same domain
+and verified-email requirement. Public pages are marked `noindex`.
+
+Firebase Hosting still serves static HTML, JavaScript, and bundled assets directly
+by URL; the sign-in gate protects the rendered app and Firestore/Storage data, but it
+is not a server-side lock on static files. For strict file-level privacy, the hosting
+origin must also be put behind an authenticated edge such as Cloudflare Access or
+another server-side identity proxy.
+
 ### Forms and responses
 
 Admin → **Forms & responses** manages the built-in Join and Enquiry forms as well
 as custom forms. Forms admins can edit built-in questions, add or remove questions,
 open/close intake, review submissions, export CSV, and delete custom forms or
 responses. Each form shows its public URL, a one-click **Copy link** action, and an
-open/preview link. Anyone with the link can fill an open form without an Admin
-account. Public built-in forms render their current Firestore definition and save
+open/preview link. Any verified college-email user with the link can fill an open
+form without an Admin account. Built-in forms render their current Firestore definition and save
 new submissions in Firestore; the previous `members_applications` and
 `contact_messages` records remain readable alongside the newer responses. Public
 clients cannot read submissions. No response-to-Google-Sheets sync runs; CSV export

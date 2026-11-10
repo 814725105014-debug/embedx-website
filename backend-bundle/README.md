@@ -64,7 +64,9 @@ node grant-admin.js email@trp.srmtrichy.edu.in --revoke
 ## Firebase setup and deploy
 
 This project is intended to stay on Firebase Spark. Deploy Firestore rules/indexes
-and Hosting independently of Storage:
+and Hosting independently of Storage. Firestore reads now require a verified
+`@trp.srmtrichy.edu.in` email. The public UI supports Email/Password account
+creation and email verification; enable the Email/Password provider in Firebase Auth:
 
 ```bash
 npm i -g firebase-tools
@@ -72,19 +74,23 @@ firebase login
 firebase use embedx-club-eee
 firebase deploy --only firestore:rules,firestore:indexes
 firebase deploy --only hosting
+# If a Storage bucket is enabled, also deploy its college-only read rules:
+# firebase deploy --only storage
 ```
 
 The project currently has no Firebase Storage bucket. Do not initialize Storage if
 Firebase Console asks you to enable billing; static `/assets/` files and HTTPS image
 URLs work without it. If a bucket is later initialized on an approved plan, deploy
-Storage rules with `firebase deploy --only storage`.
+the college-domain restrictions with `firebase deploy --only storage` as well.
+Firebase Hosting serves static files directly, so server-side/edge access control is
+still required if those files themselves must be private.
 
 ## Forms and responses
 
 Admin → Forms & responses manages built-in and custom forms, editable questions,
 open/close controls, response review, CSV export, and visible copyable public links.
-Anyone with an open form link can respond without an Admin account. Public responses
-are stored in Firestore. Existing `members_applications`, `contact_messages`, and
+Any verified college-email user with an open form link can respond without an Admin
+account. Responses are stored in Firestore. Existing `members_applications`, `contact_messages`, and
 `form_responses` data is retained and remains available in the admin portal. No
 Google Sheets response sync runs.
 

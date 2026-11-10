@@ -103,6 +103,20 @@ try {
     }
   }
 } catch (err) { fail(`firestore.indexes.json: invalid index schema (${err.message})`); }
+const accessGateSource = await readFile(path.join(pub, "js/access-gate.js"), "utf8");
+if (!accessGateSource.includes("createUserWithEmailAndPassword") || !accessGateSource.includes("sendEmailVerification") || !accessGateSource.includes("trp\\.srmtrichy\\.edu\\.in")) fail("public/js/access-gate.js: site access must require a verified college-domain account");
+for (const file of htmlFiles.filter((entry) => !entry.includes(`${path.sep}admin${path.sep}`))) {
+  const source = await readFile(file, "utf8");
+  if (!/<body\b[^>]*class=["'][^"']*\bsite-access-pending\b/i.test(source)) fail(`${path.relative(root, file)}: public pages must start behind the college access gate`);
+  if (!/<meta\b[^>]*name=["']robots["'][^>]*content=["']noindex, nofollow["']/i.test(source)) fail(`${path.relative(root, file)}: restricted public pages must be noindex`);
+  if (file.endsWith(`${path.sep}404.html`) ? !source.includes("access-only.js") : !source.includes("main.js")) fail(`${path.relative(root, file)}: page is missing its access gate script`);
+}
+const firestoreSource = await readFile(path.join(root, "firestore.rules"), "utf8");
+if (!firestoreSource.includes("function isVerifiedCollegeUser()") || /allow read:\s*if true/.test(firestoreSource)) fail("firestore.rules: site data must not allow anonymous reads");
+const storageSource = await readFile(path.join(root, "storage.rules"), "utf8");
+if (!storageSource.includes("function isVerifiedCollegeUser()") || /allow read:\s*if true/.test(storageSource)) fail("storage.rules: stored media must not allow anonymous reads");
+const adminAuthSource = await readFile(path.join(pub, "js/admin-app.js"), "utf8");
+if (!adminAuthSource.includes("isCollegeEmail(user.email)") || !adminAuthSource.includes("!user.emailVerified")) fail("public/js/admin-app.js: Admin sign-in must require a verified college-domain email");
 const formsSource = await readFile(path.join(pub, "js/forms.js"), "utf8");
 if (/await\s+submit\(payload\)/.test(formsSource)) fail("public/js/forms.js: public form submit handler must call a defined Firestore writer");
 if (!formsSource.includes("submitApplication(payload)") || !formsSource.includes("submitContact(payload)") || !formsSource.includes("submitFormResponse({ formId: formKey")) fail("public/js/forms.js: built-in forms must support legacy fallback and managed Firestore responses");
