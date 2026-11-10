@@ -1,5 +1,6 @@
 // EMBEDX — Shared chrome: navbar, mobile menu, footer, theme toggle.
 import { icon } from "./icons.js";
+import { toast } from "./ui.js?v=20261108-gallery-media";
 import { initSearch } from "./search.js?v=20261107-admin-controls";
 import { getSiteSettings, subscribeSiteSettings, getPageContent, subscribePageContent, applyPageContent, getSiteLinks, subscribeSiteLinks } from "./store.js?v=college-logo-mark-20261105";
 import { DEFAULT_SITE_LINKS } from "./data/site-links.js?v=20261107-editor";
@@ -63,6 +64,7 @@ export function currentPage() {
 }
 
 function injectChrome() {
+  const isResourcesPage = document.body.dataset.page === "resources";
   const header = document.createElement("header");
   header.className = "nav";
   header.innerHTML = `
@@ -79,29 +81,39 @@ function injectChrome() {
       <div class="nav-actions">
         <button class="icon-btn" id="searchOpen" aria-label="Search the site (Ctrl+K)" title="Search (Ctrl+K)">${icon("search")}</button>
         <button class="icon-btn" id="themeToggle" aria-label="Toggle light / dark theme">${icon("moon")}</button>
-        <button class="btn btn-ghost btn-sm" id="collegeSiteSignOut" type="button">Sign out</button>
+        ${isResourcesPage ? '<button class="btn btn-ghost btn-sm resource-signout-desktop" data-college-signout type="button">Sign out</button>' : ""}
         <a class="btn btn-primary btn-sm nav-join" id="headerJoinLink" href="/pages/join.html">Join EMBEDX</a>
         <button class="icon-btn nav-burger" id="burger" aria-label="Open menu" aria-expanded="false" aria-controls="mobileMenu">${icon("menu")}</button>
       </div>
     </div>`;
   document.body.prepend(header);
-  const signOutButton = header.querySelector("#collegeSiteSignOut");
-  if (signOutButton) {
-    signOutButton.addEventListener("click", () => {
-      signOutButton.disabled = true;
-      signOutButton.textContent = "Signing out…";
-      window.dispatchEvent(new Event("embedx:college-signout"));
-    });
-  }
-
   const mobile = document.createElement("nav");
   mobile.className = "mobile-menu";
   mobile.id = "mobileMenu";
   mobile.setAttribute("aria-label", "Mobile");
   mobile.setAttribute("aria-hidden", "true");
   mobile.inert = true;
-  mobile.innerHTML = `<div id="mobileNavLinks"></div>`;
+  mobile.innerHTML = `<div id="mobileNavLinks"></div>${isResourcesPage ? '<button class="btn btn-ghost btn-sm mobile-resource-signout" data-college-signout type="button">Sign out</button>' : ""}`;
   header.after(mobile);
+  const signOutButtons = [...document.querySelectorAll("[data-college-signout]")];
+  signOutButtons.forEach((button) => button.addEventListener("click", async () => {
+    if (button.disabled) return;
+    signOutButtons.forEach((item) => { item.disabled = true; item.textContent = "Signing out…"; });
+    const result = await new Promise((resolve) => {
+      let settled = false;
+      const finish = (value) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        resolve(value);
+      };
+      const timer = setTimeout(() => finish({ ok: false, message: "Sign-out timed out. Check your connection and try again." }), 12000);
+      window.dispatchEvent(new CustomEvent("embedx:college-signout", { detail: { complete: finish } }));
+    });
+    if (result?.ok) return;
+    signOutButtons.forEach((item) => { item.disabled = false; item.textContent = "Sign out"; });
+    toast(`Could not sign out: ${result?.message || "Please try again."}`, "err");
+  }));
 
   const footer = document.createElement("footer");
   footer.className = "footer";

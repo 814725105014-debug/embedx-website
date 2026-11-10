@@ -290,6 +290,7 @@ button { font: inherit; cursor: pointer; }
 }
 @media (max-width: 720px) {
   .nav-join { display: none; } /* Join stays available inside the mobile menu */
+  .resource-signout-desktop { display:none; }
 }
 
 /* ---------- 5. Hero ---------- */

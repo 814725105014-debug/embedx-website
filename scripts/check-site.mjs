@@ -130,6 +130,9 @@ for (const name of ["js/layout.js", "js/access-gate.js", "js/admin-app.js", "ind
 if (!(await exists(path.join(pub, "assets/images/embedx-circle-logo-512.png")))) fail("PWA icon is missing the provided circular logo asset");
 const layoutCertSource = await readFile(path.join(pub, "js/layout.js"), "utf8");
 if (!layoutCertSource.includes('href: "/pages/certificates.html"') || !layoutCertSource.includes("[...links.footerCommunity, certificatesLink]")) fail("The public footer must retain a Certificates page link even when CMS navigation is customized.");
+if (!layoutCertSource.includes('const isResourcesPage = document.body.dataset.page === "resources";') || !layoutCertSource.includes('mobile-resource-signout') || !layoutCertSource.includes('resource-signout-desktop')) fail("The public sign-out controls must appear only on the Resources page, including the mobile menu.");
+if (!layoutCertSource.includes('new CustomEvent("embedx:college-signout"') || !layoutCertSource.includes("result?.ok") || !layoutCertSource.includes('toast(`Could not sign out:')) fail("Resources sign-out must await auth completion and report failures instead of silently hanging.");
+if (!accessGateSource.includes('window.addEventListener("embedx:college-signout"') || !accessGateSource.includes('await authMod.signOut(auth);') || !accessGateSource.includes('event.detail?.complete?.({ ok: true })')) fail("Resources sign-out must await Firebase sign-out and confirm completion.");
 const homeHtml = await readFile(path.join(pub, "index.html"), "utf8");
 if (![resourcesHtml, homeHtml].every((source) => source.includes("brandIntro") && source.includes("embedx-circle-logo.webp"))) fail("Home and Resources pages need the provided circular logo in the intro");
 const corporateCss = await readFile(path.join(pub, "css/corporate.css"), "utf8");
