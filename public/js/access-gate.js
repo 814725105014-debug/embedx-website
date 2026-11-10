@@ -3,9 +3,53 @@ import { firebaseConfig, isConfigured } from "./config.js?v=20261110-domain-acce
 
 const SDK = "https://www.gstatic.com/firebasejs/10.12.5";
 const COLLEGE_EMAIL = /^[^\s@]+@trp\.srmtrichy\.edu\.in$/i;
+const VERIFIED_SESSION_KEY = "embedx.verified-college-session.v1";
 let firebasePromise;
 
 function collegeEmail(email) { return COLLEGE_EMAIL.test(String(email || "").trim()); }
+function readVerifiedSession() {
+  try {
+    const value = JSON.parse(localStorage.getItem(VERIFIED_SESSION_KEY) || "null");
+    return value && typeof value.uid === "string" && collegeEmail(value.email) ? value : null;
+  } catch { return null; }
+}
+function clearVerifiedSession() {
+  try { localStorage.removeItem(VERIFIED_SESSION_KEY); } catch { /* storage may be unavailable */ }
+}
+function rememberVerifiedSession(user) {
+  try { localStorage.setItem(VERIFIED_SESSION_KEY, JSON.stringify({ uid: user.uid, email: user.email })); }
+  catch { /* Firebase auth remains the source of truth if storage is unavailable */ }
+}
+function refreshIdTokenBriefly(user, timeoutMs = 2500) {
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve();
+    };
+    const timer = setTimeout(finish, timeoutMs);
+    Promise.resolve().then(() => user.getIdToken(true)).then(finish, finish);
+  });
+}
+function waitForInitialUser(auth, authMod, timeoutMs = 10000) {
+  return new Promise((resolve) => {
+    let done = false;
+    let unsubscribe = () => {};
+    const finish = (user) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      unsubscribe();
+      resolve(user || null);
+    };
+    const timer = setTimeout(() => finish(null), timeoutMs);
+    const stop = authMod.onAuthStateChanged(auth, finish, () => finish(null));
+    unsubscribe = stop;
+    if (done) unsubscribe();
+  });
+}
 
 async function firebaseAuth() {
   if (!firebasePromise) firebasePromise = (async () => {
@@ -20,6 +64,34 @@ async function firebaseAuth() {
 }
 
 export async function requireCollegeAccess() {
+  window.addEventListener("embedx:college-signout", async () => {
+    clearVerifiedSession();
+    try {
+      const { auth, authMod } = await firebaseAuth();
+      await authMod.signOut(auth).catch(() => {});
+    } finally { location.reload(); }
+  }, { once: true });
+  window.addEventListener("storage", (event) => {
+    if (event.key === VERIFIED_SESSION_KEY && !event.newValue) location.reload();
+  });
+
+  let existingAuth = null;
+  const cachedSession = readVerifiedSession();
+  if (cachedSession && isConfigured) {
+    // Reuse Firebase's persisted local session without a full-screen gate or forced network refresh.
+    document.body.classList.remove("site-access-pending");
+    try {
+      existingAuth = await firebaseAuth();
+      const user = await waitForInitialUser(existingAuth.auth, existingAuth.authMod);
+      const email = String(user?.email || "").trim().toLowerCase();
+      if (user && user.uid === cachedSession.uid && email === cachedSession.email.toLowerCase() && user.emailVerified) {
+        void user.getIdToken().catch(() => {});
+        return user;
+      }
+    } catch { /* Re-enter the normal sign-in flow if cached auth cannot be restored. */ }
+    clearVerifiedSession();
+  }
+
   document.body.classList.add("site-access-pending");
   const gate = document.createElement("main");
   gate.id = "collegeAccessGate";
@@ -72,6 +144,7 @@ export async function requireCollegeAccess() {
   const setError = (message = "") => { errorNode.textContent = message; };
   const setNotice = (message = "") => { noticeNode.textContent = message; };
   const showLogin = (message = "") => {
+    clearVerifiedSession();
     titleNode.textContent = "College sign-in required";
     introNode.textContent = "Sign in with your @trp.srmtrichy.edu.in Google account, or use an email and password provided by the site administrator.";
     loadingNode.hidden = true;
@@ -82,6 +155,7 @@ export async function requireCollegeAccess() {
     setError(message);
   };
   const showVerification = (user) => {
+    clearVerifiedSession();
     titleNode.textContent = "Verify your college email";
     introNode.textContent = "Your account needs email verification before you can continue.";
     loadingNode.hidden = true;
@@ -108,7 +182,7 @@ export async function requireCollegeAccess() {
   }
 
   let auth, authMod;
-  try { ({ auth, authMod } = await firebaseAuth()); }
+  try { ({ auth, authMod } = existingAuth || await firebaseAuth()); }
   catch (error) {
     showLogin(`Could not connect to the sign-in service: ${error.message}`);
     return new Promise(() => {});
@@ -118,7 +192,7 @@ export async function requireCollegeAccess() {
   let checkingUser = false;
   let resolveAccess;
   const access = new Promise((resolve) => { resolveAccess = resolve; });
-  const checkUser = async (candidate) => {
+  const checkUser = async (candidate, refreshProfile = false) => {
     if (checkingUser) return;
     checkingUser = true;
     try {
@@ -128,7 +202,7 @@ export async function requireCollegeAccess() {
         setNotice("");
         return;
       }
-      await candidate.reload().catch(() => {});
+      if (refreshProfile) await candidate.reload();
       const user = auth.currentUser || candidate;
       const email = String(user.email || "").trim().toLowerCase();
       if (!collegeEmail(email)) {
@@ -142,8 +216,10 @@ export async function requireCollegeAccess() {
         showVerification(user);
         return;
       }
-      // Refresh claims so Firestore rules can confirm email_verified on every request.
-      await user.getIdToken(true);
+      // Refresh claims once for a new verified session, but never keep the page blocked indefinitely.
+      if (refreshProfile) await refreshIdTokenBriefly(user, 5000);
+      else await refreshIdTokenBriefly(user);
+      rememberVerifiedSession(user);
       if (granted) return;
       granted = true;
       gate.remove();
@@ -155,10 +231,6 @@ export async function requireCollegeAccess() {
   };
 
   authMod.onAuthStateChanged(auth, (user) => { void checkUser(user); });
-  window.addEventListener("embedx:college-signout", async () => {
-    await authMod.signOut(auth).catch(() => {});
-    location.reload();
-  });
   $("#collegeAccessGoogle").addEventListener("click", async (event) => {
     const button = event.currentTarget;
     setError(""); setNotice("");
@@ -189,7 +261,7 @@ export async function requireCollegeAccess() {
   });
   $("#collegeAccessCheck").addEventListener("click", () => {
     setError(""); setNotice("");
-    if (auth.currentUser) void checkUser(auth.currentUser);
+    if (auth.currentUser) void checkUser(auth.currentUser, true);
     else showLogin("Sign in again after verifying your email.");
   });
   $("#collegeAccessResend").addEventListener("click", async () => {
