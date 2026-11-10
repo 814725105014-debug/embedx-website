@@ -109,6 +109,8 @@ for (const file of htmlFiles.filter((entry) => !entry.includes(`${path.sep}admin
   const source = await readFile(file, "utf8");
   if (!/<body\b[^>]*class=["'][^"']*\bsite-access-pending\b/i.test(source)) fail(`${path.relative(root, file)}: public pages must start behind the college access gate`);
   if (!/<meta\b[^>]*name=["']robots["'][^>]*content=["']noindex, nofollow["']/i.test(source)) fail(`${path.relative(root, file)}: restricted public pages must be noindex`);
+  if (!/frame-src[^;]*https:\/\/embedx-club-eee\.firebaseapp\.com/.test(source) || !/frame-src[^;]*https:\/\/accounts\.google\.com/.test(source)) fail(`${path.relative(root, file)}: Content Security Policy must allow Firebase Auth and Google sign-in frames`);
+  if (!/script-src[^;]*https:\/\/apis\.google\.com/.test(source)) fail(`${path.relative(root, file)}: Content Security Policy must allow the Google Auth helper script`);
   if (file.endsWith(`${path.sep}404.html`) ? !source.includes("access-only.js") : !source.includes("main.js")) fail(`${path.relative(root, file)}: page is missing its access gate script`);
 }
 const firestoreSource = await readFile(path.join(root, "firestore.rules"), "utf8");
