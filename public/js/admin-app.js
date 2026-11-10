@@ -455,7 +455,7 @@ const SCHEMAS = {
       { k: "role", t: "text", req: true, label: "Role / position" },
       { k: "group", t: "select", opts: ["student", "faculty"], label: "Group" },
       { k: "department", t: "text", label: "Department" },
-      { k: "email", t: "text", label: "Email" },
+      { k: "email", t: "email", label: "Email (optional)" },
       { k: "linkedin", t: "text", label: "LinkedIn URL" },
       { k: "photoUrl", t: "image", label: "Photo" },
       { k: "order", t: "num", label: "Sort order" }
@@ -1864,6 +1864,9 @@ async function saveForm(e) {
     else data[f.k] = String(el.value).trim();
     if (f.req && (!data[f.k] || (Array.isArray(data[f.k]) && !data[f.k].length))) { toast(`“${f.label}” is required.`, "err"); return; }
   }
+  if (sec === "team" && data.email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(data.email)) {
+    toast("Enter a valid email address or leave the field blank.", "err"); return;
+  }
   for (const field of schema.fields.filter((f) => f.t === "image")) {
     if (!isSafeMediaReference(data[field.k])) { toast(`${field.label} must be a local site path or an HTTPS URL.`, "err"); return; }
   }
@@ -1992,6 +1995,8 @@ async function notifyTaskAssignee(taskId) {
 function openEditor(img) {
   editorState = { img, rot: 0 };
   if (!modalReturnFocus) modalReturnFocus = document.activeElement;
+  const widthSelect = $("#widthSel");
+  if (widthSelect) widthSelect.value = PAGE === "team" ? "600" : "800";
   drawEditor();
   $("#editorModal").classList.add("open");
   document.body.style.overflow = "hidden";
@@ -2035,7 +2040,8 @@ async function applyEditor() {
   if (status) status.textContent = "Optimizing image…";
   try {
     const canvas = $("#editorCanvas");
-    const blob = await withTimeout(new Promise((resolve) => canvas.toBlob(resolve, "image/webp", 0.84)), 30_000, "Image export timed out. Choose a smaller crop or output size.");
+    const quality = PAGE === "team" ? 0.76 : 0.80;
+    const blob = await withTimeout(new Promise((resolve) => canvas.toBlob(resolve, "image/webp", quality)), 30_000, "Image export timed out. Choose a smaller crop or output size.");
     if (!blob) throw new Error("The browser could not export the optimized image.");
     if (blob.size >= 5 * 1024 * 1024) throw new Error("The optimized image is over the 5 MB upload limit. Choose a smaller crop.");
     const { storage } = await withTimeout(sdk(), 30_000, "Could not connect to Firebase Storage. Check your connection and retry.");
@@ -2317,7 +2323,7 @@ const MODALS_HTML = `
     <div class="editor-grid">
       <canvas id="editorCanvas" style="max-width:100%;border-radius:var(--r-sm);background:var(--bg-3)"></canvas>
       <div class="editor-tools">
-        <p class="muted" style="font-size:.85rem">Rotate, pick a crop aspect and export size. The result is uploaded as optimized WebP.</p>
+        <p class="muted" style="font-size:.85rem">Rotate, pick a crop aspect and export size. Team portraits default to a smaller WebP to speed up uploads.</p>
         <div style="display:flex;gap:.5rem;flex-wrap:wrap">
           <button type="button" class="btn btn-ghost btn-sm" id="rotL">&#10554; Rotate</button>
           <button type="button" class="btn btn-ghost btn-sm" id="rotR">&#10555; Rotate</button>
@@ -2325,7 +2331,7 @@ const MODALS_HTML = `
         <div class="field" style="margin-top:.8rem"><label for="aspectSel">Crop aspect</label>
           <select id="aspectSel"><option value="0">Original</option><option value="1">Square 1:1</option><option value="1.3333">4:3</option><option value="1.7778">16:9</option><option value="0.75">3:4 portrait</option></select></div>
         <div class="field"><label for="widthSel">Max width</label>
-          <select id="widthSel"><option>800</option><option selected>1200</option><option>1600</option></select></div>
+          <select id="widthSel"><option>400</option><option>600</option><option>800</option><option>1200</option><option>1600</option></select></div>
         <button type="button" class="btn btn-primary" id="editorApply" style="width:100%;margin-top:.6rem">Use this image</button>
       </div>
     </div>
