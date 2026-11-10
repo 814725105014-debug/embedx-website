@@ -259,7 +259,7 @@ export function subscribeSiteLinks(onChange = () => {}) {
 }
 
 export const DEFAULT_SITE_SETTINGS = Object.freeze({
-  collegeLogoUrl: "/assets/images/srm-trp-college-attached.png",
+  collegeLogoUrl: "/assets/images/srm-trp-college-attached.png?v=college-logo-mark-20261105",
   collegeWebsiteUrl: "https://trp.srmtrichy.edu.in",
   collegeWebsiteLabel: "trp.srmtrichy.edu.in",
   contactEmail: "hod.eee@trp.srmtrichy.edu.in",

@@ -1,7 +1,7 @@
 // EMBEDX — Shared chrome: navbar, mobile menu, footer, theme toggle.
 import { icon } from "./icons.js";
 import { initSearch } from "./search.js?v=20261107-admin-controls";
-import { getSiteSettings, subscribeSiteSettings, getPageContent, subscribePageContent, applyPageContent, getSiteLinks, subscribeSiteLinks } from "./store.js?v=college-logo-unified-20261105";
+import { getSiteSettings, subscribeSiteSettings, getPageContent, subscribePageContent, applyPageContent, getSiteLinks, subscribeSiteLinks } from "./store.js?v=college-logo-mark-20261105";
 import { DEFAULT_SITE_LINKS } from "./data/site-links.js?v=20261107-editor";
 
 function safeNavigationHref(value) {
@@ -113,7 +113,7 @@ function injectChrome() {
             <img src="/assets/images/embedx-circle-logo.webp" alt="" width="48" height="48" loading="lazy" decoding="async" />
             <div><strong>EMBEDX</strong><span>Embedded Systems &amp; Automation Club</span></div>
           </div>
-          <div class="college-mark-lockup"><span class="college-logo-frame"><img class="college-mark" src="/assets/images/srm-trp-college-attached.png" alt="SRM TRP Engineering College logo" loading="lazy" decoding="async" /></span><span>SRM TRP Engineering College</span></div>
+          <div class="college-mark-lockup"><span class="college-logo-frame"><img class="college-mark" src="/assets/images/srm-trp-college-attached.png?v=college-logo-mark-20261105" alt="SRM TRP Engineering College logo" loading="lazy" decoding="async" /></span><span>SRM TRP Engineering College</span></div>
           <p class="muted footer-institution">Department of Electrical and Electronics Engineering (EEE)<br />SRM TRP Engineering College (Autonomous)<br />SRM Nagar, Samayapuram, Tiruchirappalli – 621 105.</p>
           <p class="chip chip-accent" style="margin-top:.4rem" data-page-copy="global:footerTagline">INNOVATE • INTEGRATE • INSPIRE</p>
         </div>
@@ -253,7 +253,7 @@ function applySiteSettings(settings) {
   });
   document.querySelectorAll("[data-site-src]").forEach((element) => {
     const isHero = element.dataset.siteSrc === "heroImageUrl";
-    const fallback = isHero ? "/assets/images/robotics-hero.webp" : "/assets/images/srm-trp-college-attached.png";
+    const fallback = isHero ? "/assets/images/robotics-hero.webp" : "/assets/images/srm-trp-college-attached.png?v=college-logo-mark-20261105";
     element.addEventListener("error", () => { element.src = fallback; }, { once: true });
     const value = String(settings[element.dataset.siteSrc] || "").trim();
     if (value.startsWith("/assets/images/") && !value.split(/[?#]/, 1)[0].split("/").includes("..")) { element.src = value; }
