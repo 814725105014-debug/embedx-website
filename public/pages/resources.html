@@ -14,6 +14,7 @@
   <meta property="og:image:alt" content="EMBEDX — Embedded Systems & Automation Club" />
   <meta name="twitter:card" content="summary_large_image" />
   <link rel="icon" type="image/png" href="/assets/images/favicon-64.png" />
+  <link rel="preload" as="image" href="/assets/images/embedx-emblem.webp" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" />
@@ -21,12 +22,20 @@
   <meta name="theme-color" content="#08060c" />
   <link rel="manifest" href="/manifest.webmanifest" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.gstatic.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' https: https://trp.srmtrichy.edu.in https://drive.google.com https://drive.usercontent.google.com https://*.googleusercontent.com data: https://firebasestorage.googleapis.com https://www.google-analytics.com; connect-src 'self' https://www.gstatic.com https://www.google-analytics.com https://analytics.google.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://firebasestorage.googleapis.com https://www.googleapis.com; media-src 'self' https:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src https://embedx-club-eee.firebaseapp.com https://accounts.google.com" />
-  <link rel="stylesheet" href="/css/style.css?v=20261105-mobile-access" />
+  <link rel="stylesheet" href="/css/style.css?v=20261105-resource-intro-fix2" />
   <script src="/js/theme.js?v=20261106"></script>
-  <script type="module" src="/js/main.js?v=gradient-copy-20261105"></script>
-  <link rel="stylesheet" href="/css/corporate.css?v=20261108-gallery-media" />
+  <script type="module" src="/js/main.js?v=20261105-resource-intro-fix2"></script>
+  <link rel="stylesheet" href="/css/corporate.css?v=20261105-resource-intro-fix2" />
 </head>
 <body class="site-access-pending" data-page="resources">
+<div class="brand-intro" id="brandIntro" aria-hidden="true">
+  <div class="brand-intro-content">
+    <span class="brand-intro-orbit" aria-hidden="true"></span>
+    <img src="/assets/images/embedx-emblem.webp" alt="" width="88" height="88" />
+    <p class="brand-intro-wordmark">EMBED<span>X</span></p>
+    <p class="brand-intro-tagline">ENGINEERING THE FUTURE</p>
+  </div>
+</div>
 <a class="skip-link" href="#main">Skip to content</a>
 <main id="main">
   <section class="page-head">
@@ -39,6 +48,11 @@
   </section>
   <section class="section" style="padding-top:0">
     <div class="wrap">
+      <a class="card resource-certificate-link" href="/pages/certificates.html">
+        <span class="icon-tile" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="m15.5 12.5 1.5 9-5-3-5 3 1.5-9"/></svg></span>
+        <span class="resource-certificate-copy"><span class="eyebrow">Free credentials</span><strong>Certificates &amp; badges</strong><span class="muted">See the latest information about EMBEDX learning certificates.</span></span>
+        <span class="btn btn-ghost btn-sm">Explore certificates <span aria-hidden="true">→</span></span>
+      </a>
       <div class="filters" id="resourceFilters" role="group" aria-label="Filter resources by category"></div>
       <div class="grid grid-3" id="resourcesGrid"></div>
     </div>
