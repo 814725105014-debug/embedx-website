@@ -35,7 +35,10 @@ function renderSiteLinks(links) {
   fill(nav, links.primary, { current: true });
   fill(mobile, links.primary, { current: true });
   fill(footerNav, links.footerNavigation);
-  fill(footerCommunity, links.footerCommunity);
+  const certificatesLink = { id: "certificates", label: "Free Certificates", href: "/pages/certificates.html" };
+  const communityLinks = links.footerCommunity.some((item) => item.href === certificatesLink.href)
+    ? links.footerCommunity : [...links.footerCommunity, certificatesLink];
+  fill(footerCommunity, communityLinks);
   const joinLink = makeNavigationLink(links.headerJoin[0] || {}, { button: true });
   if (joinLink) { joinLink.id = "headerJoinLink"; join.replaceWith(joinLink); }
   else { join.hidden = true; join.removeAttribute("href"); join.textContent = ""; }
@@ -65,7 +68,7 @@ function injectChrome() {
   header.innerHTML = `
     <div class="wrap nav-inner">
       <a class="brand" href="/" aria-label="EMBEDX — Department of EEE, SRM TRP Engineering College">
-        <img src="/assets/images/embedx-emblem.webp" alt="" width="40" height="40" />
+        <img src="/assets/images/embedx-circle-logo.webp" alt="" width="40" height="40" />
         <span class="brand-copy">
           <span class="brand-name">EMBED<span>X</span></span>
           <span class="brand-sub">Department of EEE</span>
@@ -107,7 +110,7 @@ function injectChrome() {
       <div class="footer-grid">
         <div class="footer-brand">
           <div class="footer-brand-lockup">
-            <img src="/assets/images/embedx-emblem.webp" alt="" width="48" height="48" loading="lazy" decoding="async" />
+            <img src="/assets/images/embedx-circle-logo.webp" alt="" width="48" height="48" loading="lazy" decoding="async" />
             <div><strong>EMBEDX</strong><span>Embedded Systems &amp; Automation Club</span></div>
           </div>
           <div class="college-mark-lockup"><span class="college-logo-frame"><img class="college-mark" src="/assets/images/srm-trp-college-attached.png" alt="SRM TRP Engineering College logo" loading="lazy" decoding="async" /></span><span>SRM TRP Engineering College</span></div>

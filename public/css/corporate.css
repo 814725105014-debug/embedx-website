@@ -32,7 +32,7 @@ body { text-rendering: optimizeLegibility; }
 .brand-intro { position:fixed; inset:0; z-index:10001; display:grid; place-items:center; overflow:hidden; background:radial-gradient(ellipse at center,rgba(71,36,92,.28),transparent 58%),#08060c; opacity:1; transition:opacity .55s ease; }
 .brand-intro.is-leaving { opacity:0; pointer-events:none; }
 .brand-intro-content { position:relative; display:grid; justify-items:center; gap:.6rem; padding:1.5rem; color:#fff; text-align:center; animation:brandIntroRise .85s cubic-bezier(.18,.78,.25,1) both; }
-.brand-intro-content img { z-index:1; width:clamp(64px,19vw,88px); height:auto; padding:.28rem; border-radius:50%; background:#fff; object-fit:contain; filter:drop-shadow(0 0 22px rgba(168,85,247,.42)); }
+.brand-intro-content img { z-index:1; width:clamp(64px,19vw,88px); height:auto; padding:0; border-radius:0; background:transparent; object-fit:contain; filter:drop-shadow(0 0 22px rgba(168,85,247,.42)); }
 .brand-intro-orbit { position:absolute; top:1.5rem; left:50%; width:clamp(86px,25vw,116px); aspect-ratio:1; border:1px solid rgba(212,175,55,.5); border-radius:50%; transform:translateX(-50%); animation:brandOrbit 1.8s ease-out both; }
 .brand-intro-wordmark { margin:.15rem 0 0; font:800 clamp(1.6rem,7vw,2.2rem)/1 var(--font-head); letter-spacing:.18em; }
 .brand-intro-wordmark span { color:#d4af37; }
