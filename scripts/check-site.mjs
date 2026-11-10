@@ -111,8 +111,17 @@ const resourcesGate = mainAppSource.indexOf('if (document.body.dataset.page === 
 if (resourcesGate < 0 || introStart < 0 || introStart > resourcesGate) fail("public/js/main.js: show the intro first and gate only the Resources page");
 const resourcesHtml = await readFile(path.join(pub, "pages/resources.html"), "utf8");
 if (!resourcesHtml.includes('href="/pages/certificates.html"')) fail("public/pages/resources.html: needs a visible certificates link");
+const circleLogoPath = "/assets/images/embedx-circle-logo.webp";
+for (const name of ["js/layout.js", "js/access-gate.js", "js/admin-app.js", "index.html", "pages/resources.html"]) {
+  const source = await readFile(path.join(pub, name), "utf8");
+  if (!source.includes(circleLogoPath)) fail(`public/${name}: needs the user-provided circular club logo`);
+  if (source.includes("/assets/images/embedx-emblem.webp")) fail(`public/${name}: old circle emblem reference remains`);
+}
+if (!(await exists(path.join(pub, "assets/images/embedx-circle-logo-512.png")))) fail("PWA icon is missing the provided circular logo asset");
+const layoutCertSource = await readFile(path.join(pub, "js/layout.js"), "utf8");
+if (!layoutCertSource.includes('href: "/pages/certificates.html"') || !layoutCertSource.includes("[...links.footerCommunity, certificatesLink]")) fail("The public footer must retain a Certificates page link even when CMS navigation is customized.");
 const homeHtml = await readFile(path.join(pub, "index.html"), "utf8");
-if (![resourcesHtml, homeHtml].every((source) => source.includes("brandIntro") && source.includes("embedx-emblem.webp"))) fail("Home and Resources pages need the EMBEDX branded intro");
+if (![resourcesHtml, homeHtml].every((source) => source.includes("brandIntro") && source.includes("embedx-circle-logo.webp"))) fail("Home and Resources pages need the provided circular logo in the intro");
 const corporateCss = await readFile(path.join(pub, "css/corporate.css"), "utf8");
 const siteCss = await readFile(path.join(pub, "css/style.css"), "utf8");
 if (!corporateCss.includes("@media (prefers-reduced-motion:reduce)") || !corporateCss.includes(".brand-intro.is-static")) fail("public/css/corporate.css: branded intro needs a no-motion version for reduced-motion preferences");

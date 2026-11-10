@@ -99,7 +99,7 @@ export async function requireCollegeAccess() {
   gate.setAttribute("aria-labelledby", "collegeAccessTitle");
   gate.innerHTML = `
     <section class="card glass college-access-card">
-      <img src="/assets/images/embedx-emblem.webp" alt="EMBEDX emblem" width="64" height="64" />
+      <img src="/assets/images/embedx-circle-logo.webp" alt="EMBEDX emblem" width="64" height="64" />
       <p class="eyebrow">SRM TRP Engineering College</p>
       <h1 id="collegeAccessTitle">Checking your access</h1>
       <p id="collegeAccessIntro" class="muted">Verifying your college account…</p>
