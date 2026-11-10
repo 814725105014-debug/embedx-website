@@ -71,7 +71,7 @@ node scripts/check-site.mjs
 1. Create a Firebase project (Spark/free plan is enough) → add a **Web app**.
 2. Paste the `firebaseConfig` object into **`public/js/config.js`**.
 3. Put the project id in **`.firebaserc`** (`projects.default`) and update the production URLs in the sitemap, robots file, canonical links, and task-mail script.
-4. Enable **Cloud Firestore** and **Firebase Authentication → Email/Password** in the console. The public site lets verified `@trp.srmtrichy.edu.in` users create accounts with a password; account verification is required before content loads.
+4. Enable **Cloud Firestore** and Firebase Authentication sign-in providers **Google** and **Email/Password**. The site offers Google sign-in (with the college domain sent as an account-chooser hint and checked after sign-in) or an administrator-provisioned email/password login. There is no self-service password-account creation or password reset in the site UI.
 5. Deploy the checked Firestore rules before enabling the site: all content reads and form writes require a verified college-domain account. Deploy Storage rules too if a bucket is enabled. Firebase Storage is optional for this Spark deployment; do not enable billing just to create a bucket. The admin supports static or HTTPS image URLs while Storage is unavailable.
 
 Until step 2 is done the access gate remains locked because Firebase Authentication is required; configure the web app before testing the site. Bundled data remains the content fallback after an authorized sign-in.
@@ -216,10 +216,9 @@ published token must be treated as exposed.
 
 ### College-only website access
 
-The public pages require Firebase email/password sign-in with a verified
-`@trp.srmtrichy.edu.in` address. New users can create an account from the access
-screen and verify the mailbox; Firestore and Storage rules enforce the same domain
-and verified-email requirement. Public pages are marked `noindex`.
+The public pages accept Google sign-in or an administrator-provisioned email/password account. Google sign-in sends `hd=trp.srmtrichy.edu.in` to Google's account chooser as a hint; the app then checks the returned address, and Firestore/Storage rules enforce a verified `@trp.srmtrichy.edu.in` address. The site has no self-service password-account creation or reset UI; provision password users through trusted admin tooling. However, enabling Firebase Email/Password also leaves Firebase's account-creation API available outside this UI. Firebase also automatically creates an Auth user record the first time a person signs in with Google. Preventing new Auth records and restricting sign-in to accounts you provision requires an Auth blocking function and an admin-managed allowlist (Identity Platform); the chooser hint and hidden UI alone are not an access-control boundary. Public pages are marked `noindex`.
+
+In Firebase Console, enable **Google** and **Email/Password** under Authentication → Sign-in method, and add the production custom domain under Authentication → Settings → Authorized domains. Google sign-in must also be configured for the Firebase project.
 
 Firebase Hosting still serves static HTML, JavaScript, and bundled assets directly
 by URL; the sign-in gate protects the rendered app and Firestore/Storage data, but it
