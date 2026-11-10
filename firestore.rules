@@ -1,10 +1,10 @@
 rules_version = '2';
 
 // EMBEDX Firestore security rules.
-//  • Public read: events, projects, team, gallery, announcements, resources, achievements.
+//  • Website data reads and public form writes require a verified @trp.srmtrichy.edu.in account.
 //  • Portal write: Firebase Auth + role from `admin_roles/{email}` (or legacy admin claim / owner email).
 //  • Roles: owner (all), president, hod (read-only), event_coordinator, social_media, technical.
-//  • Create-only with strict validation: members_applications, contact_messages.
+//  • Verified-college create-only writes with strict validation: members_applications, contact_messages.
 //  • Gallery admins can queue constrained bundled-image deletion requests for a reviewed GitHub PR.
 //  • Everything else denied.
 //
@@ -25,6 +25,12 @@ service cloud.firestore {
              && field.matches('^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$');
     }
     function signedIn() { return request.auth != null; }
+    function isVerifiedCollegeUser() {
+      return signedIn()
+        && request.auth.token.email is string
+        && request.auth.token.email.matches('^[^@\\s]+@trp\\.srmtrichy\\.edu\\.in$')
+        && request.auth.token.email_verified == true;
+    }
     function isOwner() {
       return signedIn()
              && (request.auth.token.email == '814725105014@trp.srmtrichy.edu.in'
@@ -37,7 +43,8 @@ service cloud.firestore {
       return ('emailVerificationRequired' in roleData) && roleData.emailVerificationRequired == true;
     }
     function verifiedRole() {
-      return hasRole() && (!roleNeedsEmailVerification() || request.auth.token.email_verified == true);
+      return isVerifiedCollegeUser() && hasRole()
+        && (!roleNeedsEmailVerification() || request.auth.token.email_verified == true);
     }
     function myRole() { return get(rolePath()).data.role; }
     function isOpenForm(formId) {
@@ -57,32 +64,31 @@ service cloud.firestore {
     function permsOf() {
       return get(rolePath()).data.perms != null ? get(rolePath()).data.perms : legacyPerms(get(rolePath()).data.role);
     }
-    function canWrite(sec) { return isOwner() || (verifiedRole() && sec in permsOf()); }
+    function canWrite(sec) { return isVerifiedCollegeUser() && (isOwner() || (verifiedRole() && sec in permsOf())); }
     function isTaskAssignee(task) {
-      return signedIn() && request.auth.token.email_verified == true
+      return isVerifiedCollegeUser()
         && (task.assigneeEmail == request.auth.token.email
             || (verifiedRole() && task.assigneeRole == myRole()));
     }
 
-    // ---- content collections: public read, role-scoped write ----
-    match /events/{id}        { allow read: if true; allow create, update, delete: if canWrite('events'); }
-    match /projects/{id}      { allow read: if true; allow create, update, delete: if canWrite('projects'); }
-    match /team/{id}          { allow read: if true; allow create, update, delete: if canWrite('team'); }
-    match /gallery/{id}       { allow read: if true; allow create, update, delete: if canWrite('gallery'); }
-    match /announcements/{id} { allow read: if true; allow create, update, delete: if canWrite('announcements'); }
-    match /resources/{id}     { allow read: if true; allow create, update, delete: if canWrite('resources'); }
-    match /achievements/{id}  { allow read: if true; allow create, update, delete: if canWrite('achievements'); }
+    // ---- site content: authenticated college community reads, role-scoped writes ----
+    match /events/{id}        { allow read: if isVerifiedCollegeUser(); allow create, update, delete: if canWrite('events'); }
+    match /projects/{id}      { allow read: if isVerifiedCollegeUser(); allow create, update, delete: if canWrite('projects'); }
+    match /team/{id}          { allow read: if isVerifiedCollegeUser(); allow create, update, delete: if canWrite('team'); }
+    match /gallery/{id}       { allow read: if isVerifiedCollegeUser(); allow create, update, delete: if canWrite('gallery'); }
+    match /announcements/{id} { allow read: if isVerifiedCollegeUser(); allow create, update, delete: if canWrite('announcements'); }
+    match /resources/{id}     { allow read: if isVerifiedCollegeUser(); allow create, update, delete: if canWrite('resources'); }
+    match /achievements/{id}  { allow read: if isVerifiedCollegeUser(); allow create, update, delete: if canWrite('achievements'); }
 
     // ---- portal roles: owner manages the directory; users read their own role; task managers resolve role assignments ----
     // (exception: a user may clear their own password/verification flags after completing those steps)
     match /admin_roles/{email} {
-      allow read: if isOwner()
-        || (signedIn() && request.auth.token.email == email)
-        || canWrite('tasks');
-      allow create, delete: if isOwner();
-      allow update: if isOwner()
-        || (signedIn()
-            && resource.id == request.auth.token.email
+      allow read: if isVerifiedCollegeUser() && (isOwner()
+        || request.auth.token.email == email
+        || canWrite('tasks'));
+      allow create, delete: if isVerifiedCollegeUser() && isOwner();
+      allow update: if isVerifiedCollegeUser() && (isOwner()
+        || (request.auth.token.email == email
             && ((request.resource.data.diff(resource.data).affectedKeys().hasOnly(['mustChangePassword'])
                  && request.resource.data.mustChangePassword == false)
                 || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['emailVerificationRequired'])
@@ -91,16 +97,15 @@ service cloud.firestore {
                 || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastLoginAt'])
                     && request.resource.data.lastLoginAt == request.time)
                 || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastActiveAt'])
-                    && request.resource.data.lastActiveAt == request.time)));
+                    && request.resource.data.lastActiveAt == request.time))));
     }
 
     // ---- permanent content deletion markers: prevent automatic starter sync from resurrecting deletes ----
     match /content_tombstones/{tombstoneId} {
-      allow read: if isOwner()
-        || (signedIn()
-            && resource.data.section in ['announcements', 'events', 'projects', 'team', 'gallery', 'resources', 'achievements', 'forms']
-            && canWrite(resource.data.section));
-      allow create: if signedIn()
+      allow read: if isVerifiedCollegeUser() && (isOwner()
+        || (resource.data.section in ['announcements', 'events', 'projects', 'team', 'gallery', 'resources', 'achievements', 'forms']
+            && canWrite(resource.data.section)));
+      allow create: if isVerifiedCollegeUser()
         && request.resource.data.keys().hasAll(['section', 'contentId', 'deletedBy', 'deletedAt'])
         && request.resource.data.keys().hasOnly(['section', 'contentId', 'deletedBy', 'deletedAt'])
         && request.resource.data.section in ['announcements', 'events', 'projects', 'team', 'gallery', 'resources', 'achievements', 'forms']
@@ -124,12 +129,12 @@ service cloud.firestore {
 
     // ---- owner-managed forms and public responses ----
     match /forms/{formId} {
-      allow read: if true;
+      allow read: if isVerifiedCollegeUser();
       allow create, update, delete: if canWrite('forms');
     }
 
     match /page_content/{pageId} {
-      allow read: if true;
+      allow read: if isVerifiedCollegeUser();
       allow create, update: if canWrite('site')
         && request.resource.data.keys().hasOnly(['navHome', 'navAbout', 'navDomains', 'navProjects', 'navEvents', 'navAchievers', 'navTeam', 'navResources', 'navContact', 'navJoin', 'footerNavHeading', 'footerHome', 'footerAbout', 'footerDomains', 'footerProjects', 'footerEvents', 'footerAchievers', 'footerCommunityHeading', 'footerTeam', 'footerResources', 'footerJoin', 'footerContact', 'footerEventRegistration', 'footerConnectHeading', 'footerConnectDescription', 'footerTagline', 'footerCopyright', 'heroEyebrow', 'heroTitle', 'heroDescription', 'heroTechline', 'aboutTitle', 'aboutDescription', 'communityTitle', 'communityDescription', 'journeyTitle', 'projectsEyebrow', 'projectsTitle', 'projectsDescription', 'achieversEyebrow', 'achieversTitle', 'achieversDescription', 'eventsEyebrow', 'eventsTitle', 'eventsDescription', 'eyebrow', 'title', 'intro', 'overviewTitle', 'overviewDescription', 'missionTitle', 'visionTitle', 'journeyEyebrow', 'journeyDescription', 'toolsEyebrow', 'toolsTitle', 'toolsDescription', 'careersEyebrow', 'careersTitle', 'eligibilityTitle', 'eligibilityDescription', 'processTitle', 'departmentHeading', 'addressLabel', 'address', 'socialHeading', 'blocks', 'updatedAt'])
         && (!('blocks' in request.resource.data) || (request.resource.data.blocks is list && request.resource.data.blocks.size() <= 50));
@@ -137,7 +142,7 @@ service cloud.firestore {
     }
 
     match /site_links/{linkId} {
-      allow read: if true;
+      allow read: if isVerifiedCollegeUser();
       allow create, update: if linkId == 'links' && canWrite('site')
         && request.resource.data.keys().hasAll(['primary', 'headerJoin', 'footerNavigation', 'footerCommunity', 'updatedAt'])
         && request.resource.data.keys().hasOnly(['primary', 'headerJoin', 'footerNavigation', 'footerCommunity', 'updatedAt'])
@@ -150,14 +155,14 @@ service cloud.firestore {
     }
 
     match /site_settings/{settingId} {
-      allow read: if settingId == 'site';
+      allow read: if settingId == 'site' && isVerifiedCollegeUser();
       allow create, update: if settingId == 'site' && canWrite('site');
       allow delete: if false;
     }
     match /form_responses/{responseId} {
       allow read, update, delete: if canWrite('forms');
-      allow create: if
-        request.resource.data.keys().hasAll(['formId', 'formTitle', 'answers', 'submittedAt'])
+      allow create: if isVerifiedCollegeUser()
+        && request.resource.data.keys().hasAll(['formId', 'formTitle', 'answers', 'submittedAt'])
         && request.resource.data.keys().hasOnly(['formId', 'formTitle', 'answers', 'submittedAt'])
         && isStr(request.resource.data.formId, 1, 120)
         && isStr(request.resource.data.formTitle, 1, 160)
@@ -167,13 +172,13 @@ service cloud.firestore {
         && isOpenForm(request.resource.data.formId);
     }
 
-    // ---- club membership applications: public create, admin monitor/delete ----
+    // ---- club membership applications: verified college create, admin monitor/delete ----
     match /members_applications/{applicationId} {
       allow read: if canWrite('forms');
       allow update: if false;
       allow delete: if canWrite('forms');
-      allow create: if
-        request.resource.data.keys().hasAll(['name', 'email', 'regNo', 'department', 'year', 'interest', 'message', 'createdAt'])
+      allow create: if isVerifiedCollegeUser()
+        && request.resource.data.keys().hasAll(['name', 'email', 'regNo', 'department', 'year', 'interest', 'message', 'createdAt'])
         && request.resource.data.keys().hasOnly(['name', 'email', 'regNo', 'department', 'year', 'interest', 'message', 'createdAt', 'formId'])
         && (!('formId' in request.resource.data) || (isStr(request.resource.data.formId, 1, 120) && isOpenForm(request.resource.data.formId)))
         && isStr(request.resource.data.name, 2, 80)
@@ -186,13 +191,13 @@ service cloud.firestore {
         && isIsoDate(request.resource.data.createdAt);
     }
 
-    // ---- contact form messages: public create, admin monitor/delete ----
+    // ---- contact form messages: verified college create, admin monitor/delete ----
     match /contact_messages/{messageId} {
       allow read: if canWrite('forms');
       allow update: if false;
       allow delete: if canWrite('forms');
-      allow create: if
-        request.resource.data.keys().hasAll(['name', 'email', 'subject', 'message', 'createdAt'])
+      allow create: if isVerifiedCollegeUser()
+        && request.resource.data.keys().hasAll(['name', 'email', 'subject', 'message', 'createdAt'])
         && request.resource.data.keys().hasOnly(['name', 'email', 'subject', 'message', 'createdAt', 'formId'])
         && (!('formId' in request.resource.data) || (isStr(request.resource.data.formId, 1, 120) && isOpenForm(request.resource.data.formId)))
         && isStr(request.resource.data.name, 2, 80)

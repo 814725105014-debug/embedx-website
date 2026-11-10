@@ -76,11 +76,20 @@ function injectChrome() {
       <div class="nav-actions">
         <button class="icon-btn" id="searchOpen" aria-label="Search the site (Ctrl+K)" title="Search (Ctrl+K)">${icon("search")}</button>
         <button class="icon-btn" id="themeToggle" aria-label="Toggle light / dark theme">${icon("moon")}</button>
+        <button class="btn btn-ghost btn-sm" id="collegeSiteSignOut" type="button">Sign out</button>
         <a class="btn btn-primary btn-sm nav-join" id="headerJoinLink" href="/pages/join.html">Join EMBEDX</a>
         <button class="icon-btn nav-burger" id="burger" aria-label="Open menu" aria-expanded="false" aria-controls="mobileMenu">${icon("menu")}</button>
       </div>
     </div>`;
   document.body.prepend(header);
+  const signOutButton = header.querySelector("#collegeSiteSignOut");
+  if (signOutButton) {
+    signOutButton.addEventListener("click", () => {
+      signOutButton.disabled = true;
+      signOutButton.textContent = "Signing out…";
+      window.dispatchEvent(new Event("embedx:college-signout"));
+    });
+  }
 
   const mobile = document.createElement("nav");
   mobile.className = "mobile-menu";
@@ -202,12 +211,18 @@ function injectChrome() {
   paint();
 }
 
-injectChrome();
-renderSiteLinks(DEFAULT_SITE_LINKS);
-getSiteLinks().then(renderSiteLinks);
-subscribeSiteLinks(renderSiteLinks);
-getPageContent("global").then((content) => applyPageContent("global", content));
-subscribePageContent("global", (content) => applyPageContent("global", content));
+export function initializeLayout() {
+  injectChrome();
+  renderSiteLinks(DEFAULT_SITE_LINKS);
+  getSiteLinks().then(renderSiteLinks);
+  subscribeSiteLinks(renderSiteLinks);
+  getPageContent("global").then((content) => applyPageContent("global", content));
+  subscribePageContent("global", (content) => applyPageContent("global", content));
+  getSiteSettings()
+    .then(applySiteSettings)
+    .catch((err) => console.warn("Could not apply public website settings", err))
+    .finally(() => subscribeSiteSettings(applySiteSettings));
+}
 
 function validSiteHref(key, value) {
   const text = String(value || "").trim();
@@ -257,8 +272,3 @@ function applySiteSettings(settings) {
   const heroCaption = document.querySelector("[data-site-hero-caption]");
   if (heroCaption) heroCaption.hidden = !String(settings.heroImageCaption || "").trim() && !String(settings.heroImageSubcaption || "").trim();
 }
-
-getSiteSettings()
-  .then(applySiteSettings)
-  .catch((err) => console.warn("Could not apply public website settings", err))
-  .finally(() => subscribeSiteSettings(applySiteSettings));

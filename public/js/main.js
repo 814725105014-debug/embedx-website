@@ -1,6 +1,7 @@
 // EMBEDX — Page controller. Dispatches renderers by body[data-page].
-import "./layout.js?v=20261107-admin-controls";
-import "./forms.js?v=20261108-editable-forms";
+import { requireCollegeAccess } from "./access-gate.js?v=20261110-domain-access";
+import { initializeLayout } from "./layout.js?v=20261110-domain-access";
+import { initializeForms } from "./forms.js?v=20261110-domain-access";
 import { initAll } from "./ui.js?v=20261108-gallery-media";
 import { icon } from "./icons.js";
 import { esc, asset, externalUrl, drivePreviewUrl, skeletons, projectCard, eventCard, eventDateLabel, teamCard, domainCard, resourceCard, achievementCard, announcementCard, galleryButton, driveFileId } from "./render.js?v=20261108-gallery-media";
@@ -9,6 +10,11 @@ import { domains, tools, careers } from "./data/domains.js";
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
+
+// Auth resolves before page chrome, data reads, or form controls are initialized.
+await requireCollegeAccess();
+initializeLayout();
+initializeForms();
 
 /* ---------- shared bits ---------- */
 function filterBar(el, labels, onPick) {

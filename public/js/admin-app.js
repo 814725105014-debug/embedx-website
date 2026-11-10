@@ -29,6 +29,7 @@ const STARTER_CONTENT = {
 const SDK = "https://www.gstatic.com/firebasejs/10.12.5";
 let PAGE = document.body.dataset.adminPage || "overview";
 const OWNER_EMAIL = "814725105014@trp.srmtrichy.edu.in";
+const isCollegeEmail = (email) => /^[^\s@]+@trp\.srmtrichy\.edu\.in$/i.test(String(email || "").trim());
 
 // page metadata — drives instant client-side navigation (SPA with real URLs)
 const PAGES = {
@@ -588,6 +589,14 @@ async function boot() {
       if (me) { try { sessionStorage.removeItem(`embedx-admin-login-recorded:${me}`); } catch { /* storage may be disabled */ } }
       showView("out"); return;
     }
+    await user.reload().catch(() => {});
+    if (!isCollegeEmail(user.email) || !user.emailVerified) {
+      await authMod.signOut(auth);
+      showView("out");
+      $("#loginError").textContent = "Admin access also requires a verified @trp.srmtrichy.edu.in college email.";
+      return;
+    }
+    await user.getIdToken(true);
     const rr = await resolveRole(user);
     if (!rr) {
       await authMod.signOut(auth);
