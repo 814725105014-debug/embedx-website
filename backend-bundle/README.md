@@ -82,8 +82,9 @@ Storage rules with `firebase deploy --only storage`.
 ## Forms and responses
 
 Admin → Forms & responses manages built-in and custom forms, editable questions,
-open/close controls, response review, and CSV export. Public responses are stored
-in Firestore. Existing `members_applications`, `contact_messages`, and
+open/close controls, response review, CSV export, and visible copyable public links.
+Anyone with an open form link can respond without an Admin account. Public responses
+are stored in Firestore. Existing `members_applications`, `contact_messages`, and
 `form_responses` data is retained and remains available in the admin portal. No
 Google Sheets response sync runs.
 

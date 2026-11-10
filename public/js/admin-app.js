@@ -1245,7 +1245,7 @@ async function renderForms() {
       <section class="admin-form-toolbar"><div><h2>Managed forms</h2><p class="muted">Edit built-in or custom form questions, open/close intake, review responses, or export them as CSV. Responses are stored in Firestore.</p></div><div class="admin-form-toolbar-actions"><button class="btn btn-ghost btn-sm" id="refreshForms">Refresh</button>${can("forms") ? `<button class="btn btn-primary btn-sm" id="newManagedForm">+ Create form</button>` : ""}</div></section>
       <div class="admin-managed-forms">${forms.length ? forms.map((form) => `
         <article class="admin-managed-form card">
-          <div class="admin-managed-form-copy"><div class="admin-form-title-line"><strong>${esc(form.title || form.id)}</strong><span class="chip ${form.status === "open" ? "chip-accent" : ""}">${esc(form.status || "draft")}</span>${form.builtin ? `<span class="chip">Built in</span>` : ""}</div><p class="muted">${esc(form.description || "")}</p><small>${(form.fields || []).length} question(s) · ${esc(form.kind || "custom")}</small><p class="muted form-assignment-note">${esc(formAssignmentText(form.id))}</p></div>
+          <div class="admin-managed-form-copy"><div class="admin-form-title-line"><strong>${esc(form.title || form.id)}</strong><span class="chip ${form.status === "open" ? "chip-accent" : ""}">${esc(form.status || "draft")}</span>${form.builtin ? `<span class="chip">Built in</span>` : ""}</div><p class="muted">${esc(form.description || "")}</p><small>${(form.fields || []).length} question(s) · ${esc(form.kind || "custom")}</small><p class="muted form-assignment-note">${esc(formAssignmentText(form.id))}</p><label class="admin-form-share"><span>Share link</span><input type="url" readonly aria-label="Public link for ${esc(form.title || form.id)}" value="${esc(managedFormUrl(form.id, form))}" data-form-share-link="${esc(form.id)}"><button class="btn btn-ghost btn-sm" type="button" data-form-copy="${esc(form.id)}">Copy link</button></label>${form.status === "open" ? "" : `<small class="muted">Open this form before accepting responses.</small>`}</div>
           <div class="admin-row-actions">
             <button class="btn btn-ghost btn-sm" data-form-responses="${esc(form.id)}">View responses</button>
             ${can("forms") ? `<button class="btn btn-ghost btn-sm" data-form-edit="${esc(form.id)}">Edit form</button><button class="btn btn-ghost btn-sm" data-form-toggle="${esc(form.id)}">${form.status === "open" ? "Close" : "Open"}</button>${!form.builtin ? `<button class="btn btn-danger btn-sm" data-form-delete="${esc(form.id)}">Delete</button>` : ""}` : ""}
@@ -1262,6 +1262,7 @@ async function renderForms() {
     region.querySelectorAll("[data-form-delete]").forEach((b) => b.addEventListener("click", () => deleteManagedForm(b.dataset.formDelete)));
     region.querySelectorAll("[data-form-responses]").forEach((b) => b.addEventListener("click", () => showManagedResponses(forms.find((f) => f.id === b.dataset.formResponses))));
     region.querySelectorAll("[data-form-open]").forEach((b) => b.addEventListener("click", () => openManagedFormLink(b.dataset.formOpen, forms.find((f) => f.id === b.dataset.formOpen))));
+    region.querySelectorAll("[data-form-copy]").forEach((b) => b.addEventListener("click", () => copyManagedFormLink(b.dataset.formCopy, forms.find((f) => f.id === b.dataset.formCopy))));
     region.querySelectorAll("[data-delete-legacy]").forEach((b) => b.addEventListener("click", () => deleteLegacyResponse(b.dataset.collection, b.dataset.deleteLegacy)));
     region.querySelector("#exportJoin")?.addEventListener("click", () => exportCsv("embedx-join-applications.csv", allJoin));
     region.querySelector("#exportEnquiries")?.addEventListener("click", () => exportCsv("embedx-enquiries.csv", allEnquiry));
@@ -1343,9 +1344,26 @@ async function toggleManagedForm(form) {
   } catch (err) { toast(`Could not change form status: ${err.message}`, "err"); }
 }
 
+function managedFormUrl(id, form) {
+  const path = form?.kind === "join" ? "/pages/join.html" : form?.kind === "enquiry" ? "/pages/contact.html" : `/pages/form.html?form=${encodeURIComponent(id)}`;
+  return new URL(path, location.origin).href;
+}
+
 function openManagedFormLink(id, form) {
-  const url = form?.kind === "join" ? `${location.origin}/pages/join.html` : form?.kind === "enquiry" ? `${location.origin}/pages/contact.html` : `${location.origin}/pages/form.html?form=${encodeURIComponent(id)}`;
-  window.open(url, "_blank", "noopener,noreferrer");
+  window.open(managedFormUrl(id, form), "_blank", "noopener,noreferrer");
+}
+
+async function copyManagedFormLink(id, form) {
+  const url = managedFormUrl(id, form);
+  try {
+    if (!navigator.clipboard?.writeText) throw new Error("Clipboard access is not available in this browser.");
+    await navigator.clipboard.writeText(url);
+    toast("Public form link copied.", "ok");
+  } catch (err) {
+    const input = document.querySelector(`[data-form-share-link="${CSS.escape(id)}"]`);
+    input?.focus(); input?.select(); input?.setSelectionRange(0, input.value.length);
+    toast(input ? "Select and copy the public link shown on the form card." : "Could not copy the form link. Open the public form and copy its URL.", "err");
+  }
 }
 
 async function deleteManagedForm(formId) {

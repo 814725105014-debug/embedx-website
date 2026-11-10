@@ -108,6 +108,7 @@ if (/await\s+submit\(payload\)/.test(formsSource)) fail("public/js/forms.js: pub
 if (!formsSource.includes("submitApplication(payload)") || !formsSource.includes("submitContact(payload)") || !formsSource.includes("submitFormResponse({ formId: formKey")) fail("public/js/forms.js: built-in forms must support legacy fallback and managed Firestore responses");
 const adminFormsSource = await readFile(path.join(pub, "js/admin-app.js"), "utf8");
 if (!adminFormsSource.includes('id="managedFieldRows"') || !adminFormsSource.includes('data-field-row')) fail("public/js/admin-app.js: managed form questions must be editable");
+if (!adminFormsSource.includes('data-form-share-link') || !adminFormsSource.includes('data-form-copy') || !adminFormsSource.includes('navigator.clipboard.writeText')) fail("public/js/admin-app.js: managed forms need public share URLs and a copy-link action");
 const retiredSyncSource = await readFile(path.join(root, "backend-bundle", "appsscript", "forms-sync.gs"), "utf8");
 if (/SpreadsheetApp|spreadsheets\.googleapis\.com|setupEmbedxSheets|function\s+writeSettings_/.test(retiredSyncSource)) fail("backend-bundle/appsscript/forms-sync.gs: response-to-Sheets sync must remain retired");
 const config = await readFile(path.join(pub, "js/config.js"), "utf8");
