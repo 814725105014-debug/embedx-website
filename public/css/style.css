@@ -396,8 +396,6 @@ button { font: inherit; cursor: pointer; }
 .team-card .meta { color: var(--text-faint); font-size: .82rem; margin-top: .2rem; }
 .team-card .bio { font-size: .88rem; color: var(--text-muted); margin-top: .6rem; }
 .team-socials { display: flex; justify-content: center; gap: .5rem; margin-top: .8rem; }
-.team-email-wrap { margin: .6rem 0 0; overflow-wrap: anywhere; font-size: .82rem; }
-.team-email { color: var(--cyan); text-decoration: underline; text-underline-offset: .18em; }
 
 /* ---------- 9. Forms ---------- */
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
