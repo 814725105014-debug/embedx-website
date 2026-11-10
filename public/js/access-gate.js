@@ -64,13 +64,19 @@ async function firebaseAuth() {
 }
 
 export async function requireCollegeAccess() {
-  window.addEventListener("embedx:college-signout", async () => {
-    clearVerifiedSession();
+  let granted = false;
+  let restoreLoginAfterSignOut = () => location.reload();
+  window.addEventListener("embedx:college-signout", async (event) => {
     try {
       const { auth, authMod } = await firebaseAuth();
-      await authMod.signOut(auth).catch(() => {});
-    } finally { location.reload(); }
-  }, { once: true });
+      await authMod.signOut(auth);
+      clearVerifiedSession();
+      restoreLoginAfterSignOut();
+      event.detail?.complete?.({ ok: true });
+    } catch (error) {
+      event.detail?.complete?.({ ok: false, message: error?.message || "Authentication sign-out failed." });
+    }
+  });
   window.addEventListener("storage", (event) => {
     if (event.key === VERIFIED_SESSION_KEY && !event.newValue) location.reload();
   });
@@ -143,7 +149,12 @@ export async function requireCollegeAccess() {
   const divider = $("#collegeAccessDivider");
   const setError = (message = "") => { errorNode.textContent = message; };
   const setNotice = (message = "") => { noticeNode.textContent = message; };
+  const revealGate = () => {
+    document.body.classList.add("site-access-pending");
+    if (!gate.isConnected) document.body.append(gate);
+  };
   const showLogin = (message = "") => {
+    revealGate();
     clearVerifiedSession();
     titleNode.textContent = "College sign-in required";
     introNode.textContent = "Sign in with your @trp.srmtrichy.edu.in Google account, or use an email and password provided by the site administrator.";
@@ -154,7 +165,13 @@ export async function requireCollegeAccess() {
     verifyPanel.hidden = true;
     setError(message);
   };
+  restoreLoginAfterSignOut = () => {
+    granted = false;
+    showLogin();
+    setNotice("Signed out. Sign in again to access the Learning Hub.");
+  };
   const showVerification = (user) => {
+    revealGate();
     clearVerifiedSession();
     titleNode.textContent = "Verify your college email";
     introNode.textContent = "Your account needs email verification before you can continue.";
@@ -188,7 +205,6 @@ export async function requireCollegeAccess() {
     return new Promise(() => {});
   }
 
-  let granted = false;
   let checkingUser = false;
   let resolveAccess;
   const access = new Promise((resolve) => { resolveAccess = resolve; });
@@ -197,7 +213,7 @@ export async function requireCollegeAccess() {
     checkingUser = true;
     try {
       if (!candidate) {
-        if (granted) { location.reload(); return; }
+        if (granted) granted = false;
         showLogin();
         setNotice("");
         return;
@@ -207,12 +223,16 @@ export async function requireCollegeAccess() {
       const email = String(user.email || "").trim().toLowerCase();
       if (!collegeEmail(email)) {
         await authMod.signOut(auth).catch(() => {});
-        if (granted) { location.reload(); return; }
+        if (granted) granted = false;
         showLogin("Only verified @trp.srmtrichy.edu.in email addresses can use this website.");
         return;
       }
       if (!user.emailVerified) {
-        if (granted) { await authMod.signOut(auth).catch(() => {}); location.reload(); return; }
+        if (granted) {
+          await authMod.signOut(auth).catch(() => {});
+          clearVerifiedSession();
+          granted = false;
+        }
         showVerification(user);
         return;
       }
@@ -272,10 +292,21 @@ export async function requireCollegeAccess() {
       setNotice(`A new verification link was sent to ${auth.currentUser.email}.`);
     } catch (error) { setError(errorMessage(error)); }
   });
-  $("#collegeAccessSignOut").addEventListener("click", async () => {
-    await authMod.signOut(auth).catch(() => {});
-    showLogin("Signed out. Sign in with a verified college account.");
-    setNotice("");
+  $("#collegeAccessSignOut").addEventListener("click", async (event) => {
+    const button = event.currentTarget;
+    button.disabled = true;
+    button.textContent = "Signing out…";
+    try {
+      await authMod.signOut(auth);
+      clearVerifiedSession();
+      showLogin("Signed out. Sign in with a verified college account.");
+      setNotice("");
+    } catch (error) {
+      setError(`Could not sign out: ${errorMessage(error)}`);
+    } finally {
+      button.disabled = false;
+      button.textContent = "Use another email";
+    }
   });
   return access;
 }
