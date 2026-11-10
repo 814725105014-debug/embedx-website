@@ -129,7 +129,7 @@ Storage.
 | `form_responses` | new built-in/custom submissions, registrations, surveys, and feedback (including ratings) | verified college-email create only while the matching form is open; assigned Forms admins monitor/export/delete |
 | `members_applications` | legacy Join submissions and fallback writes when no managed definition exists | verified college-email create; assigned Forms admins monitor/export/delete |
 | `contact_messages` | legacy Contact submissions and fallback writes when no managed definition exists | verified college-email create; assigned Forms admins monitor/export/delete |
-| `site_settings/site` | Website logo, official portal, phone, email, and social links | Public read; assigned `site` admins write through Website settings |
+| `site_settings/site` | Official portal, phone, email, and social links | Public read; assigned `site` admins write through Website settings; the college logo is fixed to the canonical local asset |
 
 Image URLs should be **root-absolute local paths** (`/assets/images/foo.webp`) or
 HTTPS URLs. The admin image editor accepts either; file upload/crop is available
@@ -150,7 +150,7 @@ protect Admin-deleted starter records. The Gallery is upload-only and has no bun
 starter-photo status panel or GitHub deletion queue. Deleting a gallery entry removes
 its public Firestore record; repository images are left untouched.
 
-Owners can also open **Website settings** in Admin to edit the public college logo, official portal URL, phone, email, and LinkedIn/Instagram/Facebook links. These values are read publicly by the shared footer, home-page portal card, and Contact page; updates appear after a page reload. Assign the `site` permission to a trusted admin if they should be able to edit these values.
+Owners can also open **Website settings** in Admin to edit the official portal URL, phone, email, and LinkedIn/Instagram/Facebook links. The SRM TRP college logo is fixed to the exact Department Information asset across the footer, Contact page, admin portal, and preview. Other editable values are read publicly by the shared footer, home-page portal card, and Contact page; updates appear after a page reload. Assign the `site` permission to a trusted admin if they should be able to edit these values.
 
 Event registrations are assigned per event under **Events → Edit → Registration form**. Choose an existing form or leave the event unassigned; create custom event-specific forms under **Forms & responses → Create form**. The Forms page shows both events without an assigned form and forms not assigned to any event. Deleting a custom form clears its event assignments and removes its stored responses. Built-in Join/Enquiry schemas remain protected; use custom forms for event-specific questions.
 

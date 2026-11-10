@@ -1,11 +1,11 @@
 // EMBEDX — Page controller. Dispatches renderers by body[data-page].
 import { requireCollegeAccess } from "./access-gate.js?v=20261110-domain-access";
-import { initializeLayout } from "./layout.js?v=gradient-copy-20261105";
+import { initializeLayout } from "./layout.js?v=college-logo-unified-20261105";
 import { initializeForms } from "./forms.js?v=20261110-domain-access";
 import { initAll } from "./ui.js?v=20261108-gallery-media";
 import { icon } from "./icons.js";
 import { esc, asset, externalUrl, drivePreviewUrl, skeletons, projectCard, eventCard, eventDateLabel, teamCard, domainCard, resourceCard, achievementCard, announcementCard, galleryButton, driveFileId } from "./render.js?v=20261108-gallery-media";
-import { getProjects, getEvents, getTeam, getGallery, getAnnouncements, getResources, getAchievements, getPageContent, subscribePageContent, applyPageContent, getPageBlocks, subscribePageBlocks, subscribePublicCollection } from "./store.js?v=gradient-copy-20261105";
+import { getProjects, getEvents, getTeam, getGallery, getAnnouncements, getResources, getAchievements, getPageContent, subscribePageContent, applyPageContent, getPageBlocks, subscribePageBlocks, subscribePublicCollection } from "./store.js?v=college-logo-unified-20261105";
 import { domains, tools, careers } from "./data/domains.js";
 
 const $ = (s) => document.querySelector(s);

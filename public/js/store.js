@@ -258,11 +258,6 @@ export function subscribeSiteLinks(onChange = () => {}) {
   return () => { stopped = true; unsubscribe(); };
 }
 
-const LEGACY_COLLEGE_LOGO_URLS = new Set([
-  "https://trp.srmtrichy.edu.in/wp-content/uploads/2026/03/TRP.png",
-  "/assets/images/srm-logo.webp",
-  "/assets/images/srm-trp-college-wordmark.webp"
-]);
 export const DEFAULT_SITE_SETTINGS = Object.freeze({
   collegeLogoUrl: "/assets/images/srm-trp-college-attached.png",
   collegeWebsiteUrl: "https://trp.srmtrichy.edu.in",
@@ -286,10 +281,8 @@ export const DEFAULT_SITE_SETTINGS = Object.freeze({
 export function normalizeSiteSettings(overrides = {}) {
   const source = overrides && typeof overrides === "object" ? overrides : {};
   const settings = { ...DEFAULT_SITE_SETTINGS, ...source };
-  const logoUrl = String(settings.collegeLogoUrl || "").trim();
-  if (!logoUrl || LEGACY_COLLEGE_LOGO_URLS.has(logoUrl.split(/[?#]/, 1)[0])) {
-    settings.collegeLogoUrl = DEFAULT_SITE_SETTINGS.collegeLogoUrl;
-  }
+  // Keep the official college mark identical on every page; ignore older CMS overrides.
+  settings.collegeLogoUrl = DEFAULT_SITE_SETTINGS.collegeLogoUrl;
   if (String(settings.collegeWebsiteUrl || "").replace(/\/$/, "") === "https://www.trpengg.ac.in") {
     settings.collegeWebsiteUrl = DEFAULT_SITE_SETTINGS.collegeWebsiteUrl;
     settings.collegeWebsiteLabel = DEFAULT_SITE_SETTINGS.collegeWebsiteLabel;
