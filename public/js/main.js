@@ -1,6 +1,6 @@
 // EMBEDX — Page controller. Dispatches renderers by body[data-page].
 import { requireCollegeAccess } from "./access-gate.js?v=refresh-mobile-20261105";
-import { initializeLayout } from "./layout.js?v=refresh-mobile-20261105";
+import { initializeLayout } from "./layout.js?v=college-logo-mark-20261105";
 import { initializeForms } from "./forms.js?v=20261110-domain-access";
 import { initAll } from "./ui.js?v=20261108-gallery-media";
 import { icon } from "./icons.js";
