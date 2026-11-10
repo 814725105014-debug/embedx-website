@@ -17,7 +17,7 @@ export const team = [
   },
   {
     id: "hod-eee",
-    name: "Head of Department",
+    name: "Dr. Amudha J",
     role: "Chief Patron & Academic Mentor",
     focus: "Department Leadership",
     group: "faculty",
