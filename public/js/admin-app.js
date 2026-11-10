@@ -11,7 +11,7 @@ import { team as starterTeam } from "./data/team.js?v=20261106-admin-controls";
 import { resources as starterResources } from "./data/resources.js?v=20261106-admin-controls";
 import { achievements as starterAchievements } from "./data/achievements.js?v=20261106-admin-controls";
 import { forms as starterForms } from "./data/forms.js?v=20261106-admin-controls";
-import { DEFAULT_SITE_SETTINGS, getSiteSettings, normalizeSiteSettings } from "./store.js?v=20261107-admin-controls";
+import { DEFAULT_SITE_SETTINGS, normalizeSiteSettings } from "./store.js?v=college-logo-consistency-20261105";
 import { PAGE_CONTENT, getPageContentDefaults } from "./data/page-content.js?v=20261107-admin-controls";
 import { DEFAULT_SITE_LINKS, SITE_LINK_GROUPS, normalizeSiteLinks } from "./data/site-links.js?v=20261107-editor";
 
@@ -42,7 +42,7 @@ const PAGES = {
   resources:     { h1: "Resources",      hint: "Learning Hub guides with category filters.", crud: true },
   achievements:  { h1: "Achievers",      hint: "Hall of Achievers cards.", crud: true },
   forms:         { h1: "Forms & responses", hint: "Edit application and enquiry forms, manage intake, and review or export responses.", crud: false },
-  site:          { h1: "Website settings", hint: "Update college contact information, social links, and the official college logo used across the site.", crud: false },
+  site:          { h1: "Website settings", hint: "Update college contact information and social links; the official college logo is fixed across the site.", crud: false },
   tasks:         { h1: "Tasks",          hint: "Assign work to a person or a role; assignees mark tasks done.", crud: true },
   admins:        { h1: "Admins & roles", hint: "Add coordinators, HOD and president in one click; reset or revoke any time.", crud: false }
 };
@@ -724,14 +724,6 @@ function renderShell() {
         <button class="btn btn-ghost btn-sm" id="signOut">Sign out</button>
       </div>
     </div>`;
-  const adminCollegeLogo = $("#adminTop .admin-college-mark");
-  adminCollegeLogo?.addEventListener("error", () => { adminCollegeLogo.src = DEFAULT_SITE_SETTINGS.collegeLogoUrl; }, { once: true });
-  getSiteSettings().then((settings) => {
-    if (!adminCollegeLogo) return;
-    const url = String(settings.collegeLogoUrl || "");
-    if (url.startsWith("/assets/images/") && !url.split(/[?#]/, 1)[0].split("/").includes("..")) adminCollegeLogo.src = url;
-    else { try { const parsed = new URL(url); if (parsed.protocol === "https:" && parsed.hostname === "trp.srmtrichy.edu.in") adminCollegeLogo.src = parsed.href; } catch { /* keep bundled default */ } }
-  }).catch(() => {});
   $("#signOut").addEventListener("click", async () => {
     try { sessionStorage.removeItem(`embedx-admin-login-recorded:${me}`); } catch { /* storage may be disabled */ }
     const { auth } = await sdk(); await authMod.signOut(auth); location.href = "/admin/";
@@ -914,9 +906,8 @@ async function renderWebsiteSettings() {
     const settings = normalizeSiteSettings(snap.exists() ? snap.data() : {});
     if (PAGE !== "site" || !region.isConnected) return;
     region.innerHTML = `<section class="admin-site-settings card"><div class="admin-form-toolbar"><div><h2>Public contact &amp; social links</h2><p class="muted">Edit these once here; the public footer and Contact page update live after saving.</p></div></div>
-      <div class="admin-site-logo-preview"><img id="siteLogoPreview" src="${esc(settings.collegeLogoUrl)}" alt="College logo preview" /><div><strong>College logo</strong><p class="muted">Transparent artwork displays on a white tile. Use an /assets/images/ path or an HTTPS URL on trp.srmtrichy.edu.in.</p></div></div>
+      <div class="admin-site-logo-preview"><img src="${DEFAULT_SITE_SETTINGS.collegeLogoUrl}" alt="Official SRM TRP Engineering College logo" /><div><strong>Official college logo</strong><p class="muted">This exact Department Information logo is used consistently across the footer, contact page, and admin portal.</p></div></div>
       <div class="form-grid admin-site-grid">
-        ${siteSettingField("collegeLogoUrl", "College logo image URL", settings.collegeLogoUrl, "https://trp.srmtrichy.edu.in/... or /assets/images/college.png", "url")}
         ${siteSettingField("collegeWebsiteUrl", "Official college website", settings.collegeWebsiteUrl, "https://www.example.edu", "url")}
         ${siteSettingField("contactEmail", "Public contact email", settings.contactEmail, "department@example.edu", "email")}
         ${siteSettingField("phoneDisplay", "Public phone number", settings.phoneDisplay, "+91 431 2908050", "tel")}
@@ -941,8 +932,6 @@ async function renderWebsiteSettings() {
       ${can("site") ? `<div class="admin-site-actions"><p class="muted" id="siteSettingsMessage" role="status"></p><button class="btn btn-primary" id="saveSiteSettings">Save website settings</button></div>` : `<p class="muted">Read only — ask the owner to grant Website settings permission.</p>`}
     </section><div id="pageCopyEditor"></div>`;
     await renderPageCopyEditor($("#pageCopyEditor"), db);
-    const logoInput = region.querySelector("[name=collegeLogoUrl]");
-    logoInput?.addEventListener("input", () => { const preview = region.querySelector("#siteLogoPreview"); if (preview) preview.src = logoInput.value.trim(); });
     const heroPreview = region.querySelector("#heroImagePreview");
     const heroUrlInput = region.querySelector("[name=heroImageUrl]");
     const updateHeroPreview = () => {
@@ -989,7 +978,6 @@ async function renderWebsiteSettings() {
       const message = region.querySelector("#siteSettingsMessage");
       const fieldValue = (key) => region.querySelector(`[name="${key}"]`).value.trim();
       const updated = {
-        collegeLogoUrl: fieldValue("collegeLogoUrl"),
         collegeWebsiteUrl: fieldValue("collegeWebsiteUrl"),
         contactEmail: fieldValue("contactEmail"),
         phoneDisplay: fieldValue("phoneDisplay"),
@@ -1005,10 +993,7 @@ async function renderWebsiteSettings() {
         heroImageSubcaption: fieldValue("heroImageSubcaption").slice(0, 180)
       };
       const urlValid = (value) => { try { return new URL(value).protocol === "https:"; } catch { return false; } };
-      const logoPathValid = (value) => value.startsWith("/assets/images/") && !value.split(/[?#]/, 1)[0].split("/").includes("..")
-        || (() => { try { const u = new URL(value); return u.protocol === "https:" && u.hostname === "trp.srmtrichy.edu.in"; } catch { return false; } })();
       const heroImageValid = (value) => value.startsWith("/assets/images/") && !value.split(/[?#]/, 1)[0].split("/").includes("..") || urlValid(value);
-      if (!logoPathValid(updated.collegeLogoUrl)) { message.textContent = "Use a local /assets/images/ logo or an HTTPS logo hosted on trp.srmtrichy.edu.in."; return; }
       if (!heroImageValid(updated.heroImageUrl)) { message.textContent = "Use a local /assets/images/ banner or a direct HTTPS image URL (or upload a file above)."; return; }
       if (!["cover", "contain"].includes(updated.heroImageFit)) { message.textContent = "Choose a valid banner image fit."; return; }
       if (updated.heroImageAlt.length > 240) { message.textContent = "Banner alt text must be 240 characters or fewer."; return; }
