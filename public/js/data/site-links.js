@@ -22,6 +22,7 @@ export const DEFAULT_SITE_LINKS = Object.freeze({
   footerCommunity: [
     { id: "team", label: "Meet the Team", href: "/pages/team.html" },
     { id: "resources", label: "Learning Hub", href: "/pages/resources.html" },
+    { id: "certificates", label: "Free Certificates", href: "/pages/certificates.html" },
     { id: "join", label: "Join EMBEDX", href: "/pages/join.html" },
     { id: "contact", label: "Contact Department", href: "/pages/contact.html" },
   ]

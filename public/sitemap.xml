@@ -14,6 +14,7 @@
   <url><loc>https://embedx-club-eee.web.app/pages/achievers</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://embedx-club-eee.web.app/pages/team</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://embedx-club-eee.web.app/pages/resources</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://embedx-club-eee.web.app/pages/certificates</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://embedx-club-eee.web.app/pages/join</loc><changefreq>monthly</changefreq><priority>0.9</priority></url>
   <url><loc>https://embedx-club-eee.web.app/pages/contact</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
 </urlset>
