@@ -29,11 +29,12 @@ export async function requireCollegeAccess() {
     <section class="card glass college-access-card">
       <img src="/assets/images/embedx-emblem.webp" alt="EMBEDX emblem" width="64" height="64" />
       <p class="eyebrow">SRM TRP Engineering College</p>
-      <h1 id="collegeAccessTitle">College sign-in required</h1>
-      <p class="muted">Sign in with your <strong>@trp.srmtrichy.edu.in</strong> Google account, or use an email and password provided by the site administrator.</p>
-      <button id="collegeAccessGoogle" class="btn btn-primary college-access-google" type="button">Continue with Google</button>
-      <p class="college-access-divider"><span>or sign in with your assigned password</span></p>
-      <form id="collegeAccessLogin" novalidate>
+      <h1 id="collegeAccessTitle">Checking your access</h1>
+      <p id="collegeAccessIntro" class="muted">Verifying your college account…</p>
+      <p id="collegeAccessLoading" class="muted college-access-loading" role="status" aria-live="polite">Please wait a moment.</p>
+      <button id="collegeAccessGoogle" class="btn btn-primary college-access-google" type="button" hidden>Continue with Google</button>
+      <p id="collegeAccessDivider" class="college-access-divider" hidden><span>or sign in with your assigned password</span></p>
+      <form id="collegeAccessLogin" novalidate hidden>
         <div class="field"><label for="collegeAccessEmail">College email</label><input id="collegeAccessEmail" type="email" autocomplete="username" placeholder="name@trp.srmtrichy.edu.in" required /></div>
         <div class="field"><label for="collegeAccessPassword">Password</label><input id="collegeAccessPassword" type="password" autocomplete="current-password" minlength="8" required /></div>
         <p id="collegeAccessError" class="error-msg" role="alert" aria-live="assertive"></p>
@@ -63,14 +64,29 @@ export async function requireCollegeAccess() {
   const emailInput = $("#collegeAccessEmail");
   const passwordInput = $("#collegeAccessPassword");
   const verifyPanel = $("#collegeAccessVerify");
+  const titleNode = $("#collegeAccessTitle");
+  const introNode = $("#collegeAccessIntro");
+  const loadingNode = $("#collegeAccessLoading");
+  const googleButton = $("#collegeAccessGoogle");
+  const divider = $("#collegeAccessDivider");
   const setError = (message = "") => { errorNode.textContent = message; };
   const setNotice = (message = "") => { noticeNode.textContent = message; };
   const showLogin = (message = "") => {
+    titleNode.textContent = "College sign-in required";
+    introNode.textContent = "Sign in with your @trp.srmtrichy.edu.in Google account, or use an email and password provided by the site administrator.";
+    loadingNode.hidden = true;
+    googleButton.hidden = false;
+    divider.hidden = false;
     loginForm.hidden = false;
     verifyPanel.hidden = true;
     setError(message);
   };
   const showVerification = (user) => {
+    titleNode.textContent = "Verify your college email";
+    introNode.textContent = "Your account needs email verification before you can continue.";
+    loadingNode.hidden = true;
+    googleButton.hidden = true;
+    divider.hidden = true;
     loginForm.hidden = true;
     verifyPanel.hidden = false;
     setError("");
