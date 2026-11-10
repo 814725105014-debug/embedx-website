@@ -1,7 +1,7 @@
 // EMBEDX — Shared chrome: navbar, mobile menu, footer, theme toggle.
 import { icon } from "./icons.js";
 import { initSearch } from "./search.js?v=20261107-admin-controls";
-import { getSiteSettings, subscribeSiteSettings, getPageContent, subscribePageContent, applyPageContent, getSiteLinks, subscribeSiteLinks } from "./store.js?v=20261107-admin-controls";
+import { getSiteSettings, subscribeSiteSettings, getPageContent, subscribePageContent, applyPageContent, getSiteLinks, subscribeSiteLinks } from "./store.js?v=gradient-copy-20261105";
 import { DEFAULT_SITE_LINKS } from "./data/site-links.js?v=20261107-editor";
 
 function safeNavigationHref(value) {

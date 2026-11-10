@@ -114,7 +114,7 @@ export function getEvents() {
   return readOrFallback(() => loadCollection("events"), async () => (await import("./data/events.js?v=20261106-event-forms")).events);
 }
 export function getTeam() {
-  return readOrFallback(() => loadCollection("team"), async () => (await import("./data/team.js")).team);
+  return readOrFallback(() => loadCollection("team"), async () => (await import("./data/team.js?v=hod-amudha-20261105")).team);
 }
 export function getGallery() {
   return readOrFallback(() => loadCollection("gallery"), async () => (await import("./data/gallery.js")).gallery);
@@ -149,11 +149,36 @@ export async function getPageContent(page) {
     return content;
   }, () => normalizePageContent(page));
 }
+function applyCopyText(element, value) {
+  const gradient = element.querySelector(".grad-text");
+  if (!gradient) { element.textContent = value; return; }
+
+  const anchor = gradient.dataset.copyGradientAnchor || gradient.textContent.trim();
+  gradient.dataset.copyGradientAnchor = anchor;
+  let start = anchor ? value.toLowerCase().indexOf(anchor.toLowerCase()) : -1;
+  let end;
+  if (start >= 0) {
+    end = start + anchor.length;
+  } else {
+    // If CMS copy changes the highlighted wording, keep a visible accent on its final word.
+    const trimmedEnd = value.trimEnd();
+    end = trimmedEnd.length;
+    start = trimmedEnd.lastIndexOf(" ") + 1;
+  }
+
+  gradient.textContent = value.slice(start, end);
+  element.replaceChildren(
+    document.createTextNode(value.slice(0, start)),
+    gradient,
+    document.createTextNode(value.slice(end))
+  );
+}
+
 export function applyPageContent(page, content) {
   const values = normalizePageContent(page, content);
   for (const [key, value] of Object.entries(values)) {
     document.querySelectorAll(`[data-page-copy="${page}:${key}"]`).forEach((element) => {
-      element.textContent = value;
+      applyCopyText(element, value);
     });
   }
 }
