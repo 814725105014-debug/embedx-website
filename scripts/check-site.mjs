@@ -104,7 +104,17 @@ try {
   }
 } catch (err) { fail(`firestore.indexes.json: invalid index schema (${err.message})`); }
 const accessGateSource = await readFile(path.join(pub, "js/access-gate.js"), "utf8");
-if (!accessGateSource.includes("signInWithPopup") || !accessGateSource.includes("GoogleAuthProvider") || !accessGateSource.includes('hd: "trp.srmtrichy.edu.in"') || accessGateSource.includes("createUserWithEmailAndPassword") || !accessGateSource.includes("trp\\.srmtrichy\\.edu\\.in")) fail("public/js/access-gate.js: require college-domain Google/password sign-in and no public account creation");
+if (!accessGateSource.includes("signInWithPopup") || !accessGateSource.includes("GoogleAuthProvider") || !accessGateSource.includes('hd: "trp.srmtrichy.edu.in"') || !accessGateSource.includes("signInWithEmailAndPassword") || !accessGateSource.includes('id="collegeAccessEmail"') || !accessGateSource.includes('id="collegeAccessPassword"') || accessGateSource.includes("createUserWithEmailAndPassword") || !accessGateSource.includes("trp\\.srmtrichy\\.edu\\.in")) fail("public/js/access-gate.js: require college-domain Google/password sign-in and no public account creation");
+const hostingConfig = JSON.parse(await readFile(path.join(root, "firebase.json"), "utf8"));
+for (const source of ["**/*.html", "/", "/manifest.webmanifest"]) {
+  const rule = hostingConfig.hosting.headers.find((entry) => entry.source === source);
+  if (!rule?.headers.some((header) => header.key === "Cache-Control" && header.value.includes("no-store"))) fail(`firebase.json: ${source} must not retain cached HTML/manifest responses`);
+}
+const forceRefreshToken = "refresh-mobile-20261105";
+for (const name of ["index.html", "pages/resources.html", "pages/certificates.html"]) {
+  const source = await readFile(path.join(pub, name), "utf8");
+  if (!source.includes(forceRefreshToken)) fail(`public/${name}: references need the current force-refresh token`);
+}
 const mainAppSource = await readFile(path.join(pub, "js/main.js"), "utf8");
 const introStart = mainAppSource.indexOf("initializeBrandIntro();");
 const resourcesGate = mainAppSource.indexOf('if (document.body.dataset.page === "resources") await requireCollegeAccess();');

@@ -8,8 +8,8 @@
   "background_color": "#08060c",
   "theme_color": "#7c3aed",
   "icons": [
-    { "src": "/assets/images/embedx-circle-favicon.png", "sizes": "64x64", "type": "image/png" },
-    { "src": "/assets/images/embedx-circle-touch.png", "sizes": "180x180", "type": "image/png" },
-    { "src": "/assets/images/embedx-circle-logo-512.png", "sizes": "512x512", "type": "image/png" }
+    { "src": "/assets/images/embedx-circle-favicon.png?v=refresh-mobile-20261105", "sizes": "64x64", "type": "image/png" },
+    { "src": "/assets/images/embedx-circle-touch.png?v=refresh-mobile-20261105", "sizes": "180x180", "type": "image/png" },
+    { "src": "/assets/images/embedx-circle-logo-512.png?v=refresh-mobile-20261105", "sizes": "512x512", "type": "image/png" }
   ]
 }
